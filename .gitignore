@@ -1,0 +1,40 @@
+# Node.js dependencies
+node_modules/
+package-lock.json
+
+# Test reports, logs, outputs
+logs/
+*.log
+*.har
+*.json
+*.zip
+*.csv
+
+# Screenshots and recordings
+*.png
+*.jpg
+*.jpeg
+screenshots/
+recordings/
+
+# OS/system files
+.DS_Store
+Thumbs.db
+
+# Environment files
+.env
+.env.local
+.env.*
+
+# Chrome launcher temp profile
+chrome-user-data/
+
+# Editor/IDE settings
+.vscode/
+.idea/
+*.sw?
+
+# Misc
+coverage/
+tmp/
+.cache/
