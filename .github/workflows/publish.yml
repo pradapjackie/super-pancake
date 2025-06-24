@@ -1,12 +1,7 @@
 name: Manual Publish to npm
 
 on:
-  workflow_dispatch:
-    inputs:
-      version_type:
-        description: "Version bump type (patch, minor, major)"
-        required: true
-        default: "patch"
+  workflow_dispatch:  # Trigger manually from GitHub Actions UI
 
 jobs:
   publish:
@@ -15,8 +10,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # Required to push tags
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -26,17 +19,6 @@ jobs:
 
       - name: Install dependencies
         run: npm install
-
-      - name: Configure Git for PAT push
-        run: |
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
-          git remote set-url origin https://x-access-token:${{ secrets.GH_PAT }}@github.com/${{ github.repository }}
-
-      - name: Bump version and push tag
-        run: |
-          npm version ${{ github.event.inputs.version_type }} -m "🔖 Release %s [skip ci]"
-          git push origin main --follow-tags
 
       - name: Publish to npm
         run: npm publish --access public
