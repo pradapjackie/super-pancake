@@ -1,13 +1,39 @@
 {
-  "name": "automation-framework",
-  "version": "1.0.0",
+  "name": "super-pancake-automation",
+  "version": "1.0.6",
+  "description": "A lightweight DOM-based UI automation framework using Chrome DevTools Protocol",
+  "main": "index.js",
   "type": "module",
+  "keywords": [
+    "automation",
+    "dom",
+    "cdp",
+    "chrome",
+    "testing"
+  ],
+  "author": "Pradap Pandiyan",
+  "license": "MIT",
+  "bin": {
+    "domtest": "./bin/cli.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/pradapjackie/super-pancake"
+  },
+  "homepage": "https://github.com/pradapjackie/super-pancake#readme",
   "scripts": {
     "test": "node tests/sample.test.js"
   },
+  "exports": {
+    ".": "./index.js",
+    "./utils/launcher.js": "./utils/launcher.js",
+    "./core/browser.js": "./core/browser.js",
+    "./core/session.js": "./core/session.js",
+    "./core/dom.js": "./core/dom.js",
+    "./core/assert.js": "./core/assert.js"
+  },
+  "types": "./index.d.ts",
   "dependencies": {
-    "chrome-launcher": "^0.15.1",
-    "ws": "^8.15.1",
-    "node-fetch": "^3.3.2"
+    "chrome-launcher": "^0.15.0"
   }
 }

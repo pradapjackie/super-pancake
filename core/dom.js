@@ -155,18 +155,7 @@ export async function goForward(session) {
     await session.send('Page.goForward');
 }
 
-export async function pressKey(session, key) {
-    await session.send('Input.dispatchKeyEvent', {
-        type: 'keyDown',
-        key,
-        windowsVirtualKeyCode: key.charCodeAt(0),
-    });
-    await session.send('Input.dispatchKeyEvent', {
-        type: 'keyUp',
-        key,
-        windowsVirtualKeyCode: key.charCodeAt(0),
-    });
-}
+
 
 export async function paste(session, selector, text) {
     const nodeId = await querySelector(session, selector);
@@ -281,4 +270,136 @@ async function getBoundingBox(session, nodeId) {
     const { model } = await session.send('DOM.getBoxModel', { nodeId });
     const [x, y] = model.content;
     return { x, y, width: model.width, height: model.height };
+}
+
+
+// Text Input, Date, Time
+export async function fillInput(session, selector, value) {
+    const nodeId = await querySelector(session, selector);
+    const resolved = await session.send('DOM.resolveNode', { nodeId });
+    const { object } = resolved;
+    await session.send('Runtime.callFunctionOn', {
+        objectId: object.objectId,
+        functionDeclaration: `function() {
+      this.focus();
+      this.value = ${JSON.stringify(value)};
+      this.dispatchEvent(new Event('input', { bubbles: true }));
+    }`,
+    });
+}
+
+// Check / Uncheck
+export async function check(session, selector, checked = true) {
+    const nodeId = await querySelector(session, selector);
+    const resolved = await session.send('DOM.resolveNode', { nodeId });
+    const { object } = resolved;
+    await session.send('Runtime.callFunctionOn', {
+        objectId: object.objectId,
+        functionDeclaration: `function() {
+      this.checked = ${checked};
+      this.dispatchEvent(new Event('change', { bubbles: true }));
+    }`,
+    });
+}
+
+// Select Option(s)
+export async function selectOption(session, selector, values) {
+    if (!Array.isArray(values)) values = [values];
+    const nodeId = await querySelector(session, selector);
+    const resolved = await session.send('DOM.resolveNode', { nodeId });
+    const { object } = resolved;
+    await session.send('Runtime.callFunctionOn', {
+        objectId: object.objectId,
+        functionDeclaration: `function() {
+      Array.from(this.options).forEach(o => o.selected = ${JSON.stringify(values)}.includes(o.value));
+      this.dispatchEvent(new Event('change', { bubbles: true }));
+    }`,
+    });
+}
+
+// Click types
+export async function triggerClick(session, selector, options = {}) {
+    const nodeId = await querySelector(session, selector);
+    const resolved = await session.send('DOM.resolveNode', { nodeId });
+    const { object } = resolved;
+    await session.send('Runtime.callFunctionOn', {
+        objectId: object.objectId,
+        functionDeclaration: `function() {
+      this.click();
+    }`
+    });
+}
+
+// Press a key (e.g. Enter, Shift+A)
+export async function pressKey(session, selector, key) {
+    const nodeId = await querySelector(session, selector);
+    const resolved = await session.send('DOM.resolveNode', { nodeId });
+    const { object } = resolved;
+    await session.send('Runtime.callFunctionOn', {
+        objectId: object.objectId,
+        functionDeclaration: `function() {
+      const e = new KeyboardEvent('keydown', { key: ${JSON.stringify(key)}, bubbles: true });
+      this.dispatchEvent(e);
+    }`
+    });
+}
+
+// Focus an element
+export async function focus(session, selector) {
+    const nodeId = await querySelector(session, selector);
+    const resolved = await session.send('DOM.resolveNode', { nodeId });
+    const { object } = resolved;
+    await session.send('Runtime.callFunctionOn', {
+        objectId: object.objectId,
+        functionDeclaration: `function() { this.focus(); }`
+    });
+}
+
+ 
+export async function dragDrop(session, sourceSelector, targetSelector) {
+    const sourceId = await querySelector(session, sourceSelector);
+    const targetId = await querySelector(session, targetSelector);
+
+    const sourceResolved = await session.send('DOM.resolveNode', { nodeId: sourceId });
+    const targetResolved = await session.send('DOM.resolveNode', { nodeId: targetId });
+
+    if (!sourceResolved?.object || !targetResolved?.object) {
+        throw new Error(`❌ Failed to resolve source or target for dragDrop: ${sourceSelector}, ${targetSelector}`);
+    }
+
+    const sourceObj = sourceResolved.object;
+    const targetObj = targetResolved.object;
+
+    await session.send('Runtime.callFunctionOn', {
+        objectId: sourceObj.objectId,
+        functionDeclaration: `function() {
+            const event = new DragEvent('dragstart', { bubbles: true });
+            this.dispatchEvent(event);
+        }`
+    });
+
+    await session.send('Runtime.callFunctionOn', {
+        objectId: targetObj.objectId,
+        functionDeclaration: `function() {
+            const event = new DragEvent('drop', { bubbles: true });
+            this.dispatchEvent(event);
+        }`
+    });
+}
+
+// File Upload from memory buffer
+export async function uploadFileBuffer(session, selector, filename, content) {
+    const nodeId = await querySelector(session, selector);
+    const resolved = await session.send('DOM.resolveNode', { nodeId });
+    const { object } = resolved;
+    await session.send('Runtime.callFunctionOn', {
+        objectId: object.objectId,
+        functionDeclaration: `function() {
+      const file = new File([new Blob([${JSON.stringify(content)}])], '${filename}', { type: 'text/plain' });
+      const dataTransfer = new DataTransfer();
+      dataTransfer.items.add(file);
+      this.files = dataTransfer.files;
+      this.dispatchEvent(new Event('change', { bubbles: true }));
+    }`
+    });
 }

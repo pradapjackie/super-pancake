@@ -2,12 +2,184 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Form Test</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Full UI Elements Playground</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f4f4;
+            padding: 3rem 6rem;
+            max-width: 1280px;
+            margin: auto;
+            color: #333;
+        }
+        h1 {
+            text-align: center;
+        }
+        section {
+            background: white;
+            padding: 2rem;
+            margin-bottom: 2.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        section h2 {
+            margin-top: 0;
+            border-bottom: 1px solid #ccc;
+            padding-bottom: 0.5rem;
+        }
+        label, input, select, textarea, button {
+            display: block;
+            margin-top: 0.5rem;
+            margin-bottom: 1.2rem;
+            width: 100%;
+            font-size: 1rem;
+        }
+        input[type="checkbox"], input[type="radio"] {
+            width: auto;
+            display: inline-block;
+            margin-right: 0.5rem;
+        }
+        textarea {
+            resize: vertical;
+        }
+        button {
+            padding: 0.6rem 1.5rem;
+            background-color: #007bff;
+            border: none;
+            border-radius: 4px;
+            color: white;
+            cursor: pointer;
+            width: auto;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+        th, td {
+            padding: 0.8rem;
+            text-align: left;
+        }
+        iframe {
+            width: 100%;
+            height: 300px;
+            border: 1px solid #ccc;
+        }
+        #drop-area {
+            border: 2px dashed #999;
+            padding: 2rem;
+            text-align: center;
+            background: #fafafa;
+            color: #333;
+            font-weight: bold;
+        }
+        .drag-item {
+            display: inline-block;
+            padding: 1rem 2rem;
+            background: #28a745;
+            color: white;
+            cursor: grab;
+            border-radius: 4px;
+            margin-bottom: 1rem;
+        }
+    </style>
 </head>
 <body>
-<h1>Search Page</h1>
-<input name="q" placeholder="Type here..." />
-<button type="submit" onclick="document.body.setAttribute('data-status', 'submitted')">Search</button>
-<p id="result"></p>
+
+<h1>Full UI Elements Playground</h1>
+
+<section>
+    <h2>Form Elements</h2>
+    <form data-status="">
+        <label>Name: <input type="text" name="name" placeholder="Enter your name"></label>
+        <label>Email: <input type="email" name="email" placeholder="Enter your email"></label>
+        <label>Password: <input type="password" name="password" placeholder="Enter password"></label>
+        <label>Date: <input type="date" name="date"></label>
+        <label>Time: <input type="time" name="time"></label>
+        <label>File Upload: <input type="file" name="file"></label>
+        <label>Textarea: <textarea name="message" rows="4" placeholder="Write your message..."></textarea></label>
+
+        <label>Dropdown:
+            <select name="dropdown">
+                <option value="">-- Choose --</option>
+                <option value="one">One</option>
+                <option value="two">Two</option>
+            </select>
+        </label>
+
+        <label><input type="checkbox" name="subscribe"> Subscribe to newsletter</label>
+        <label><input type="radio" name="gender" value="male"> Male</label>
+        <label><input type="radio" name="gender" value="female"> Female</label>
+
+        <button type="submit" onclick="document.querySelector('form').setAttribute('data-status', 'submitted'); return false;">
+            Submit
+        </button>
+    </form>
+</section>
+
+<section>
+    <h2>Table</h2>
+    <table>
+        <thead>
+        <tr><th>ID</th><th>Name</th><th>Role</th></tr>
+        </thead>
+        <tbody>
+        <tr><td>1</td><td>Alice</td><td>Admin</td></tr>
+        <tr><td>2</td><td>Bob</td><td>User</td></tr>
+        <tr><td>3</td><td>Charlie</td><td>Editor</td></tr>
+        </tbody>
+    </table>
+</section>
+
+<section>
+    <h2>List Views</h2>
+    <ul>
+        <li>Unordered Item 1</li>
+        <li>Unordered Item 2</li>
+        <li>Unordered Item 3</li>
+    </ul>
+    <ol>
+        <li>Ordered Step 1</li>
+        <li>Ordered Step 2</li>
+    </ol>
+</section>
+
+<section>
+    <h2>Embedded Iframe</h2>
+    <iframe src="https://example.com" title="Example Iframe"></iframe>
+</section>
+
+<section>
+    <h2>Drag and Drop</h2>
+    <div class="drag-item" id="drag-item" draggable="true">Drag me</div>
+    <div id="drop-area">Drop here</div>
+</section>
+
+<script>
+    const dragItem = document.getElementById('drag-item');
+    const dropArea = document.getElementById('drop-area');
+
+    dragItem.addEventListener('dragstart', (e) => {
+        e.dataTransfer.setData('text/plain', dragItem.id);
+    });
+
+    dropArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+    });
+
+    dropArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        const data = e.dataTransfer.getData('text');
+        dropArea.textContent = `${data} dropped!`;
+    });
+</script>
+
 </body>
 </html>

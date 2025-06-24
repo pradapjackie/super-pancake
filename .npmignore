@@ -1,0 +1,7 @@
+.idea/
+tests/
+public/
+body-screenshot.png
+.gitignore
+.vscode/
+*.test.js
