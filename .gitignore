@@ -38,3 +38,6 @@ chrome-user-data/
 coverage/
 tmp/
 .cache/
+
+# report
+test-report
