@@ -8,9 +8,8 @@ import { exec } from 'child_process';
  */
 export async function launchChrome({ headed = false } = {}) {
     const chrome = await chromeLauncher.launch({
-        chromePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', // optional
         chromeFlags: [
-            headed ? '' : '--headless=new',
+            ...(!headed ? ['--headless=new'] : []),
             '--disable-gpu',
             '--window-size=1280,800',
             '--disable-infobars',

@@ -1,3 +1,4 @@
+import { describe, it, beforeAll, afterAll } from 'vitest';
 import { launchChrome } from '../utils/launcher.js';
 import { connectToChrome } from '../core/browser.js';
 import { createSession } from '../core/session.js';
@@ -11,60 +12,102 @@ import {
   getAttribute,
   getText,
   waitForSelector,
-  dragDrop
+  takeElementScreenshot
 } from '../core/dom.js';
 import {
   assertEqual,
   assertContainsText,
-  assertExists
 } from '../core/assert.js';
+import { addTestResult, writeReport } from '../reporter/htmlReporter.js';
+import { testWithReport } from '../helpers/testWrapper.js';
+import { config } from '../config.js';
 
-console.log('\n🔷 Playground UI Test Started');
+let chrome, ws, session;
 
-const chrome = await launchChrome({ headless: false });
-const ws = await connectToChrome();
-const session = createSession(ws);
+describe('Playground UI Form Test', () => {
+  beforeAll(async () => {
+    console.log('\n🔷 Playground UI Test Started');
+    chrome = await launchChrome({ headed: true });
+    ws = await connectToChrome();
+    session = createSession(ws);
+    await enableDOM(session);
+  });
 
-try {
-  await enableDOM(session);
-  await navigateTo(session, 'http://localhost:8080/form.html');
+  afterAll(async () => {
+    ws.close();
+    await chrome.kill();
+    writeReport();
+    console.log('\n🧹 Test complete. Chrome closed.');
+  });
 
-  // Fill form fields
-  await fillInput(session, 'input[name="name"]', 'Pradap');
-  await fillInput(session, 'input[name="email"]', 'pradap@example.com');
-  await fillInput(session, 'input[name="password"]', 'supersecret');
-  await fillInput(session, 'input[name="date"]', '2025-06-23');
-  await fillInput(session, 'input[name="time"]', '12:34');
-  await fillInput(session, 'textarea[name="message"]', 'Test message');
+  it('should navigate to form page', { timeout: config.test.timeout }, async () => {
+    await testWithReport('should navigate to form page', async () => {
+      await navigateTo(session, 'http://localhost:8080/form.html');
+    }, session);
+  });
 
-  // Interact with dropdown and checkboxes
-  await selectOption(session, 'select[name="dropdown"]', 'two');
-  await check(session, 'input[name="subscribe"]', true);
-  await check(session, 'input[value="male"]', true);
+  it('should fill in the name input', { timeout: config.test.timeout }, async () => {
+    await testWithReport('should fill in the name input', async () => {
+      await fillInput(session, 'input[name="name"]', 'Pradap');
+    }, session);
+  });
 
-  // Submit form
-  await click(session, 'button[type="submit"]');
+  it('should fill in the email input', { timeout: config.test.timeout }, async () => {
+    await testWithReport('should fill in the email input', async () => {
+      await fillInput(session, 'input[name="email"]', 'pradap@example.com');
+    }, session);
+  });
 
-  // Assert form submission
-  const status = await getAttribute(session, 'form', 'data-status');
-  assertEqual(status, 'submitted', 'Form should be marked as submitted');
+  it('should fill in the password input', { timeout: config.test.timeout }, async () => {
+    await testWithReport('should fill in the password input', async () => {
+      await fillInput(session, 'input[name="password"]', 'supersecret');
+    }, session);
+  });
 
-  // Verify table contents
-  const tableText = await getText(session, await waitForSelector(session, 'table'));
-  assertContainsText(tableText, 'Alice', 'Table should include "Alice"');
-  assertContainsText(tableText, 'Bob', 'Table should include "Bob"');
+  it('should fill in the date and time inputs', { timeout: config.test.timeout }, async () => {
+    await testWithReport('should fill in the date and time inputs', async () => {
+      await fillInput(session, 'input[name="date"]', '2025-06-23');
+      await fillInput(session, 'input[name="time"]', '12:34');
+    }, session);
+  });
 
-  // Check list items
-  const listText = await getText(session, await waitForSelector(session, 'ul'));
-  assertContainsText(listText, 'Unordered Item 2');
+  it('should fill in the message textarea', { timeout: config.test.timeout }, async () => {
+    await testWithReport('should fill in the message textarea', async () => {
+      await fillInput(session, 'textarea[name="message"]', 'Test message');
+    }, session);
+  });
 
- 
- 
-  console.log('✅ All UI automation steps passed!');
-} catch (err) {
-  console.error('❌ Test failed:\n', err);
-} finally {
-  ws.close();
-  await chrome.kill();
-  console.log('\n🧹 Test complete. Chrome closed.');
-}
+  it('should select dropdown and check options', { timeout: config.test.timeout }, async () => {
+    await testWithReport('should select dropdown and check options', async () => {
+      await selectOption(session, 'select[name="dropdown"]', 'two');
+      await check(session, 'input[name="subscribe"]', true);
+      await check(session, 'input[value="male"]', true);
+    }, session);
+  });
+
+  it('should submit the form', { timeout: config.test.timeout }, async () => {
+    await testWithReport('should submit the form', async () => {
+      await click(session, 'button[type="submit"]');
+    }, session);
+  });
+
+  it('should verify table and list contents', { timeout: config.test.timeout }, async () => {
+    await testWithReport('should verify table and list contents', async () => {
+      const status = await getAttribute(session, 'form', 'data-status');
+      assertEqual(status, 'submitted', 'Form should be marked as submitted');
+
+      const tableText = await getText(session, await waitForSelector(session, 'table'));
+      assertContainsText(tableText, 'Alice', 'Table should include "Alice"');
+      assertContainsText(tableText, 'Bob', 'Table should include "Bob"');
+
+      const listText = await getText(session, await waitForSelector(session, 'ul'));
+      assertContainsText(listText, 'Unordered Item 2');
+    }, session);
+  });
+
+  it('should take a screenshot of the form', { timeout: config.test.timeout }, async () => {
+    await testWithReport('should take a screenshot of the form', async () => {
+      await takeElementScreenshot(session, 'form', 'test-report/screenshots/form-screenshot.png');
+    }, session);
+  });
+});
