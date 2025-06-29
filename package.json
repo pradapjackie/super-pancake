@@ -1,6 +1,6 @@
 {
   "name": "super-pancake-automation",
-  "version": "1.0.11",
+  "version": "1.0.12",
   "description": "A lightweight DOM-based UI automation framework using Chrome DevTools Protocol",
   "main": "index.js",
   "type": "module",
@@ -14,7 +14,8 @@
   "author": "Pradap Pandiyan",
   "license": "MIT",
   "bin": {
-    "domtest": "./bin/cli.js"
+    "domtest": "./bin/cli.js",
+    "super-pancake-ui": "./scripts/test-ui.js"
   },
   "repository": {
     "type": "git",
