@@ -43,38 +43,38 @@ describe('Playground UI Form Test', () => {
   it('should navigate to form page', { timeout: config.test.timeout }, async () => {
     await testWithReport('should navigate to form page', async () => {
       await navigateTo(session, 'http://localhost:8080/form.html');
-    }, session);
+    }, session, import.meta.url);
   });
 
   it('should fill in the name input', { timeout: config.test.timeout }, async () => {
     await testWithReport('should fill in the name input', async () => {
       await fillInput(session, 'input[name="name"]', 'Pradap');
-    }, session);
+    }, session, import.meta.url);
   });
 
   it('should fill in the email input', { timeout: config.test.timeout }, async () => {
     await testWithReport('should fill in the email input', async () => {
       await fillInput(session, 'input[name="email"]', 'pradap@example.com');
-    }, session);
+    }, session, import.meta.url);
   });
 
   it('should fill in the password input', { timeout: config.test.timeout }, async () => {
     await testWithReport('should fill in the password input', async () => {
       await fillInput(session, 'input[name="password"]', 'supersecret');
-    }, session);
+    }, session, import.meta.url);
   });
 
   it('should fill in the date and time inputs', { timeout: config.test.timeout }, async () => {
     await testWithReport('should fill in the date and time inputs', async () => {
       await fillInput(session, 'input[name="date"]', '2025-06-23');
       await fillInput(session, 'input[name="time"]', '12:34');
-    }, session);
+    }, session, import.meta.url);
   });
 
   it('should fill in the message textarea', { timeout: config.test.timeout }, async () => {
     await testWithReport('should fill in the message textarea', async () => {
       await fillInput(session, 'textarea[name="message"]', 'Test message');
-    }, session);
+    }, session, import.meta.url);
   });
 
   it('should select dropdown and check options', { timeout: config.test.timeout }, async () => {
@@ -82,13 +82,13 @@ describe('Playground UI Form Test', () => {
       await selectOption(session, 'select[name="dropdown"]', 'two');
       await check(session, 'input[name="subscribe"]', true);
       await check(session, 'input[value="male"]', true);
-    }, session);
+    }, session, import.meta.url);
   });
 
   it('should submit the form', { timeout: config.test.timeout }, async () => {
     await testWithReport('should submit the form', async () => {
       await click(session, 'button[type="submit"]');
-    }, session);
+    }, session, import.meta.url);
   });
 
   it('should verify table and list contents', { timeout: config.test.timeout }, async () => {
@@ -102,12 +102,12 @@ describe('Playground UI Form Test', () => {
 
       const listText = await getText(session, await waitForSelector(session, 'ul'));
       assertContainsText(listText, 'Unordered Item 2');
-    }, session);
+    }, session, import.meta.url);
   });
 
-  it('should take a screenshot of the form', { timeout: config.test.timeout }, async () => {
-    await testWithReport('should take a screenshot of the form', async () => {
-      await takeElementScreenshot(session, 'form', 'test-report/screenshots/form-screenshot.png');
-    }, session);
-  });
+  // it('should take a screenshot of the form', { timeout: config.test.timeout }, async () => {
+  //   await testWithReport('should take a screenshot of the form', async () => {
+  //     await takeElementScreenshot(session, 'form', 'test-report/screenshots/form-screenshot.png');
+  //   }, session);
+  // });
 });

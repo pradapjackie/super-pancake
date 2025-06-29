@@ -22,7 +22,8 @@
   },
   "homepage": "https://github.com/pradapjackie/super-pancake#readme",
   "scripts": {
-    "test": "vitest"
+    "test": "vitest",
+    "super-pancake-ui": "node scripts/test-ui.js"
   },
   "exports": {
     ".": "./index.js",
@@ -34,7 +35,10 @@
   },
   "types": "./index.d.ts",
   "dependencies": {
-    "chrome-launcher": "^0.15.0"
+    "chrome-launcher": "^0.15.0",
+    "express": "^5.1.0",
+    "glob": "^10.4.5",
+    "ws": "^8.18.3"
   },
   "devDependencies": {
     "vitest": "^3.2.4"

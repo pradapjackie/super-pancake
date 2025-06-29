@@ -13,4 +13,5 @@ export * from './utils/launcher.js';
 export * from './reporter/htmlReporter.js';
 export * from './helpers/testWrapper.js';
 
-export * from './config.js'; // <- this must be present
+export * from './config.js';
+export * from './scripts/test-ui.js';

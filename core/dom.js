@@ -212,16 +212,25 @@ export async function reload(session) {
 export async function takeElementScreenshot(session, selector, fileName = 'element.png') {
   const nodeId = await querySelector(session, selector);
   const { model } = await session.send('DOM.getBoxModel', { nodeId });
-  const { data } = await session.send('Page.captureScreenshot', {
-    format: 'png',
-    clip: {
-      x: model.content[0],
-      y: model.content[1],
-      width: model.width,
-      height: model.height,
-      scale: 1,
-    },
-  });
+  let data;
+  try {
+    const result = await session.send('Page.captureScreenshot', {
+      format: 'png',
+      clip: {
+        x: model.content[0],
+        y: model.content[1],
+        width: model.width,
+        height: model.height,
+        scale: 1,
+      },
+    });
+    if (!result || !result.data) {
+      throw new Error('❌ Screenshot capture failed. No data returned.');
+    }
+    data = result.data;
+  } catch (err) {
+    throw new Error(`❌ Screenshot capture failed: ${err.message}`);
+  }
 
   const dir = path.dirname(fileName);
   fs.mkdirSync(dir, { recursive: true });
