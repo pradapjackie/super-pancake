@@ -1,6 +1,6 @@
 {
   "name": "super-pancake-automation",
-  "version": "1.0.12",
+  "version": "1.0.13",
   "description": "A lightweight DOM-based UI automation framework using Chrome DevTools Protocol",
   "main": "index.js",
   "type": "module",
@@ -15,7 +15,7 @@
   "license": "MIT",
   "bin": {
     "domtest": "./bin/cli.js",
-    "super-pancake-ui": "./scripts/test-ui.js"
+    "super-pancake-ui": "./bin/ui-runner.js"
   },
   "repository": {
     "type": "git",
@@ -23,8 +23,7 @@
   },
   "homepage": "https://github.com/pradapjackie/super-pancake#readme",
   "scripts": {
-    "test": "vitest",
-    "super-pancake-ui": "node scripts/test-ui.js"
+    "test": "vitest"
   },
   "exports": {
     ".": "./index.js",
