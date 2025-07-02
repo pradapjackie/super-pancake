@@ -9,7 +9,7 @@ import { createRequire } from 'module';
 
 const require = createRequire(import.meta.url);
 const glob = require('glob');
-
+import open from 'open';
 const app = express();
 const port = 3000;
 const execAsync = promisify(exec);
@@ -294,5 +294,7 @@ function broadcast(message) {
 }
 
 server.listen(port, () => {
-    console.log(`🚀 Test UI running at http://localhost:${port}`);
+    const url = `http://localhost:${port}`;
+    console.log(`🚀 Test UI running at ${url}`);
+    open(url); // This line opens the browser automatically
 });

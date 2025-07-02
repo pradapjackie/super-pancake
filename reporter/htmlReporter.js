@@ -206,3 +206,15 @@ export function writeReport() {
     // console.log(JSON.stringify(Array.from(groupedByFile.entries()), null, 2));
     fs.writeFileSync(path.join(dir, 'report.html'), html, 'utf-8');
 }
+
+
+export function clearPreviousResults() {
+    const dirPath = 'test-report/results';
+    if (fs.existsSync(dirPath)) {
+        const files = fs.readdirSync(dirPath);
+        for (const file of files) {
+            fs.unlinkSync(path.join(dirPath, file));
+        }
+        console.log(`🧹 Cleared old result files in ${dirPath}`);
+    }
+}
