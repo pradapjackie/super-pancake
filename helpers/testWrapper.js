@@ -4,10 +4,10 @@ import { takeElementScreenshot } from '../core/dom.js';
 
 let firstTestRun = true;
 
-export async function testWithReport(name, fn, session) {
+export async function testWithReport(name, fn, session, testFilePath) {
     // Only clear once per run
-    if (firstTestRun) {
-        clearPreviousResults(); // NEW LINE
+    if (firstTestRun && testFilePath) {
+        clearPreviousResults(testFilePath);
         firstTestRun = false;
     }
 

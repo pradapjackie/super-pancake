@@ -1,198 +1,122 @@
-# 🥞 super-pancake-automation
+### 🔍 Actions (from `core/dom.js`)
 
-> A blazing-fast DOM-based UI automation framework using Chrome DevTools Protocol (CDP).  
-Built from scratch to give you fine-grained browser control with no browser UI dependency.
+The following table lists available DOM action methods provided by the framework:
 
----
+| Category              | Function                         | Description |
+|-----------------------|----------------------------------|-------------|
+| **Core**              | `enableDOM(session)`             | Enables required CDP domains for DOM interaction. |
+|                       | `navigateTo(session, url)`       | Navigates to a URL and waits until the page is fully loaded. |
+|                       | `reload(session)`                | Reloads the page. |
+|                       | `goBack(session)`                | Navigates back in browser history. |
+|                       | `goForward(session)`             | Navigates forward in browser history. |
+| **Selectors**         | `querySelector(session, selector)`      | Finds and returns the first matching nodeId. |
+|                       | `querySelectorAll(session, selector)`   | Returns an array of all matching nodeIds. |
+|                       | `waitForSelector(session, selector, timeout)` | Waits until the element appears or timeout. |
+| **Element Actions**   | `click(session, selector)`       | Clicks on an element by selector. |
+|                       | `triggerClick(session, selector)`| Triggers a direct click via JS. |
+|                       | `rightClick(session, selector)`  | Simulates a right-click on the element. |
+|                       | `hover(session, selector)`       | Highlights the element visually. |
+|                       | `type(session, selector, text)`  | Types text into the input field. |
+|                       | `paste(session, selector, text)` | Pastes text into the input field. |
+|                       | `fillInput(session, selector, value)` | Fills the input field and dispatches an input event. |
+|                       | `clearInput(session, selector)`  | Clears the text inside an input. |
+|                       | `check(session, selector, checked)` | Toggles a checkbox element. |
+|                       | `selectOption(session, selector, values)` | Selects dropdown option(s). |
+|                       | `pressKey(session, selector, key)` | Simulates a key press on element. |
+|                       | `focus(session, selector)`       | Focuses the input/element. |
+|                       | `dragDrop(session, sourceSelector, targetSelector)` | Simulates drag and drop between elements. |
+|                       | `uploadFileBuffer(session, selector, filename, content)` | Simulates file upload with given content. |
+| **State & Queries**   | `getText(session, nodeId)`       | Gets the visible text of an element. |
+|                       | `getAttribute(session, selector, attrName)` | Retrieves an attribute value. |
+|                       | `setAttribute(session, selector, attrName, value)` | Sets an attribute value. |
+|                       | `getValue(session, selector)`    | Returns value of an input/textarea. |
+|                       | `isVisible(session, selector)`   | Returns true if the element is visible. |
+|                       | `isEnabled(session, selector)`   | Returns true if the element is enabled. |
+| **Screenshots**       | `takeScreenshot(session, fileName)` | Captures full-page screenshot. |
+|                       | `takeElementScreenshot(session, selector, fileName)` | Captures screenshot of a specific element. |
+| **Utilities**         | `waitForTimeout(ms)`             | Waits for the given time in milliseconds. |
 
-## ✨ Features
+### ✅ Assertions
 
-- Built on **Chrome DevTools Protocol (CDP)**
-- Pure **DOM-level** control (no Selenium/WebDriver)
-- Tiny, fast, and **headless-ready**
-- Powerful API: `click`, `type`, `check`, `dragDrop`, `getText`, `assertEqual`, etc.
-- Easily extendable & testable
-- Ideal for **end-to-end UI automation** or **internal browser control tools**
-
----
-
-## 🚀 Getting Started
-
-### 1. Install
-
-```bash
-npm install super-pancake-automation
-```
-# Custom UI Automation Framework
-
-This documentation explains how to set up and use your custom UI automation framework using Chrome DevTools Protocol (CDP), Vitest, and custom reporters.
-
-
----
-
-## ⚙️ Setup
-
-### 1. Install Dependencies
-
-```bash
-npm install
-```
-
-Make sure Node.js (v18+) and Google Chrome are installed on your system.
-
----
-
-## 🚀 Running Tests
-
-```bash
-npx vitest run
-```
-
-Tests are located in the `tests/` directory and written using `describe` and `it` from `vitest`.
-
----
-
-## 📄 Configuration
-
-The `config.js` file holds your default settings:
+Use assertion methods from `super-pancake-automation/core/assert.js`:
 
 ```js
-export const config = {
-  browser: {
-    type: 'chrome',
-    headless: true,
-    port: 9222
-  },
-  test: {
-    timeout: 20000
-  },
-  timeouts: {
-    waitForSelector: 5000,
-    reload: 1000,
-    navigation: 10000
-  },
-  defaultTimeout: 5000,
-  pollInterval: 100
-};
+import {
+  assertEqual,
+  assertNotEqual,
+  assertDeepEqual,
+  assertExists,
+  assertNotExists,
+  assertTrue,
+  assertFalse,
+  assertContainsText,
+  assertNotContainsText,
+  assertGreaterThan,
+  assertGreaterThanOrEqual,
+  assertLessThan,
+  assertLessThanOrEqual,
+  assertTypeOf,
+  assertInstanceOf,
+  assertArrayIncludes,
+  assertArrayNotIncludes,
+  assertLength,
+  assertMatch,
+  assertNotMatch,
+  assertVisible,
+  assertExists as assertElementExists
+} from 'super-pancake-automation/core/assert.js';
 ```
 
----
-
-## 🧪 Writing Tests
-
-Use the `testWithReport()` wrapper to log results, capture screenshots on failure, and write to HTML reports.
-
-```js
-it('should submit form', async () => {
-  await testWithReport('Submit Form', async () => {
-    await click(session, 'button[type="submit"]');
-    // additional assertions
-  }, session);
-});
-```
-
----
-
-## ✨ DOM Actions
-
-All supported DOM actions are in `core/dom.js`:
-
-- `navigateTo(session, url)`
-- `fillInput(session, selector, value)`
-- `click(session, selector)`
-- `check(session, selector, checked)`
-- `selectOption(session, selector, value)`
-- `waitForSelector(session, selector)`
-- `getText(session, nodeId)`
-- `getAttribute(session, selector, attr)`
-- `takeElementScreenshot(session, selector, fileName)`
+| Assertion Function            | Description |
+|------------------------------|-------------|
+| `assertEqual(a, b)`          | Checks if values are strictly equal |
+| `assertNotEqual(a, b)`       | Asserts that values are not equal |
+| `assertDeepEqual(a, b)`      | Checks deep equality between objects |
+| `assertExists(val)`          | Verifies that value is not null or undefined |
+| `assertNotExists(val)`       | Ensures value is null or undefined |
+| `assertTrue(cond)`           | Asserts condition is true |
+| `assertFalse(cond)`          | Asserts condition is false |
+| `assertContainsText(actual, expected)` | Checks if string contains a substring |
+| `assertNotContainsText(actual, expected)` | Ensures string does not contain substring |
+| `assertGreaterThan(val, threshold)` | Checks if value is greater than threshold |
+| `assertGreaterThanOrEqual(val, threshold)` | Value is greater than or equal to threshold |
+| `assertLessThan(val, threshold)` | Value is less than threshold |
+| `assertLessThanOrEqual(val, threshold)` | Value is less than or equal to threshold |
+| `assertTypeOf(val, type)`    | Validates the type of value |
+| `assertInstanceOf(val, constructor)` | Checks if value is an instance of constructor |
+| `assertArrayIncludes(arr, item)` | Validates that array includes item |
+| `assertArrayNotIncludes(arr, item)` | Ensures array does not include item |
+| `assertLength(val, expected)` | Checks exact length of string/array |
+| `assertMatch(val, regex)`    | Checks if value matches a regular expression |
+| `assertNotMatch(val, regex)` | Ensures value does not match regex |
+| `assertVisible(session, selector)` | Verifies element is visible in DOM |
+| `assertElementExists(session, selector)` | Verifies element exists in DOM |
 
 ---
 
-## ✅ Assertions
+## 📜 Scripts & CLI Commands
 
-Located in `core/assert.js`:
-
-- `assertEqual(actual, expected, message)`
-- `assertContainsText(content, text, message)`
-
----
-
-## 📷 Reporting
-
-Results are saved via:
-
-```js
-addTestResult({
-  name: 'Test Name',
-  status: 'pass' | 'fail',
-  error: 'Stack trace if any',
-  screenshot: 'relative/path.png'
-});
-```
-
-Final report is generated using:
-
-```js
-writeReport(); // in afterAll
-```
-
-Result saved in: `test-report/report.html`
+| Command                | Description                            |
+|------------------------|----------------------------------------|
+| `npx super-pancake-generate`       | Generate a sample test file with cases |
+| `npx super-pancake-ui` | Launch the test runner web UI          |
+| `npx super-pancake-run`| Run tests using the internal runner    |
 
 ---
 
-## 🔁 Test Hooks
+## 🤝 Contributing
 
-```js
-beforeAll(async () => {
-  chrome = await launchChrome({ headed: true });
-  ws = await connectToChrome();
-  session = createSession(ws);
-  await enableDOM(session);
-});
-
-afterAll(async () => {
-  writeReport();
-  ws.close();
-  await chrome.kill();
-});
-```
+Pull requests are welcome! For major changes, open an issue first to discuss what you’d like to change.
 
 ---
 
-## 🧠 Utilities
+## 📄 License
 
-### Launch Browser
-```js
-launchChrome({ headed: true });
-```
-
-### Connect to WebSocket
-```js
-connectToChrome();
-```
-
-### Start CDP Session
-```js
-createSession(ws);
-```
+MIT License  
+© 2025 Pradap Pandiyan
 
 ---
 
-## 📚 Sample Test Output
+## 🌐 Repository
 
-- HTML report with collapsible test sections
-- Error stack trace for failed cases
-- Embedded screenshots (only on failure)
-
----
-
-## 📌 Tips
-
-- You can customize timeouts in `config.js`
-- Ensure test-report directory exists or is created before writing screenshots
-- Use meaningful names in `testWithReport()` to easily track in report
-
----
-
-© 2025 Automation Framework
+[https://github.com/pradapjackie/super-pancake](https://github.com/pradapjackie/super-pancake)

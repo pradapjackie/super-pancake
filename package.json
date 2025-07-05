@@ -1,6 +1,6 @@
 {
   "name": "super-pancake-automation",
-  "version": "1.0.18",
+  "version": "1.0.22",
   "description": "A lightweight DOM-based UI automation framework using Chrome DevTools Protocol",
   "main": "index.js",
   "type": "module",
@@ -15,7 +15,9 @@
   "license": "MIT",
   "bin": {
     "domtest": "./bin/cli.js",
-    "super-pancake-ui": "./bin/ui-runner.js"
+    "super-pancake-ui": "./bin/ui-runner.js",
+    "super-pancake-run": "./bin/super-pancake-run.js",
+    "super-pancake-generate": "./bin/generate-test.js"
   },
   "repository": {
     "type": "git",
@@ -28,10 +30,16 @@
   "exports": {
     ".": "./index.js",
     "./utils/launcher.js": "./utils/launcher.js",
+    "./utils/env.js": "./utils/env.js",
     "./core/browser.js": "./core/browser.js",
     "./core/session.js": "./core/session.js",
     "./core/dom.js": "./core/dom.js",
-    "./core/assert.js": "./core/assert.js"
+    "./core/assert.js": "./core/assert.js",
+    "./reporter/htmlReporter.js": "./reporter/htmlReporter.js",
+    "./reporter/chartUtils.js": "./reporter/chartUtils.js",
+    "./reporter/reportFormatter.js": "./reporter/reportFormatter.js",
+    "./helpers/testWrapper.js": "./helpers/testWrapper.js",
+    "./config.js": "./config.js"
   },
   "types": "./index.d.ts",
   "dependencies": {
