@@ -140,305 +140,385 @@ export function writeReport() {
     let serialCounter = 1;
     const html = `
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Test Execution Report</title>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-  <style>
-    body {
-      font-family: 'Inter', sans-serif;
-      margin: 0;
-      padding: 0;
-      background: #f6f8fa;
-      color: #22223b;
-    }
-    .header-animated {
-      background: linear-gradient(90deg, #6a11cb 0%, #2575fc 100%);
-      padding: 32px 0 20px 0;
-      text-align: center;
-      color: #fff;
-      box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.15);
-      animation: bgmove 3s infinite alternate;
-    }
-    @keyframes bgmove {
-      0% { background-position: 0% 50%; }
-      100% { background-position: 100% 50%; }
-    }
-    .header-animated h1 {
-      margin: 0;
-      font-size: 2.5em;
-      font-weight: 700;
-      letter-spacing: -1px;
-      text-shadow: 0 2px 12px rgba(0,0,0,0.08);
-    }
-    .header-animated h2 {
-      margin: 10px 0 0 0;
-      font-size: 1.2em;
-      font-weight: 400;
-      opacity: 0.93;
-      letter-spacing: 0.5px;
-    }
-    .header-animated .timestamp {
-      margin-top: 8px;
-      font-size: 1em;
-      opacity: 0.9;
-    }
-    .summary-cards {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 18px;
-      justify-content: center;
-      margin: -32px auto 30px auto;
-      max-width: 900px;
-      z-index: 2;
-      position: relative;
-      padding: 0 20px;
-    }
-    .summary-card {
-      background: #fff;
-      border-radius: 16px;
-      box-shadow: 0 4px 16px rgba(0,0,0,0.08);
-      padding: 14px 24px 14px 24px;
-      min-width: 120px;
-      flex: 1 0 100px;
-      text-align: center;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      border-bottom: 4px solid #e0e7ff;
-      transition: box-shadow 0.18s;
-      animation: cardfadein 0.7s;
-    }
-    @keyframes cardfadein {
-      0% { opacity: 0; transform: translateY(18px);}
-      100% { opacity: 1; transform: none;}
-    }
-    .summary-card.total { border-bottom-color: #6366f1; }
-    .summary-card.passed { border-bottom-color: #22c55e; }
-    .summary-card.failed { border-bottom-color: #f43f5e; }
-    .summary-card.skipped { border-bottom-color: #f59e0b; }
-    .summary-card .label {
-      font-size: 1.02em;
-      color: #4b5563;
-      margin-bottom: 7px;
-      text-transform: uppercase;
-      font-weight: 600;
-      letter-spacing: 0.5px;
-    }
-    .summary-card .value {
-      font-size: 2.1em;
-      font-weight: 700;
-      color: #111827;
-      letter-spacing: -1px;
-      margin-bottom: 2px;
-      animation: popin 0.5s;
-    }
-    @keyframes popin {
-      0% { transform: scale(1.3); opacity: 0;}
-      100% { transform: scale(1); opacity: 1;}
-    }
-    .compact-table-section {
-      max-width: 1080px;
-      margin: 0 auto 40px auto;
-      padding: 0 20px;
-      margin-top: 20px;
-    }
-    .compact-table-section h2 {
-      font-size: 1.5em;
-      color: #1e293b;
-      font-weight: 700;
-      margin: 12px 0 10px 0;
-    }
-    table.testcases-table {
-      width: 100%;
-      border-collapse: separate;
-      border-spacing: 0 7px;
-      font-size: 1em;
-      background: none;
-    }
-    table.testcases-table th {
-      background: #e0e7ff;
-      color: #3730a3;
-      font-weight: 700;
-      padding: 9px 6px;
-      border-radius: 6px 6px 0 0;
-      text-align: left;
-      letter-spacing: 0.2px;
-    }
-    table.testcases-table th:nth-child(1) { width: 50px; }
-    table.testcases-table th:nth-child(3) { width: 120px; }
-    table.testcases-table th:nth-child(4),
-    table.testcases-table th:nth-child(5),
-    table.testcases-table th:nth-child(6) { width: 130px; }
-    table.testcases-table td {
-      background: #fff;
-      padding: 8px 7px;
-      border-bottom: 1px solid #f3f4f6;
-      vertical-align: top;
-      border-radius: 0 0 7px 7px;
-      transition: background 0.2s;
-    }
-    table.testcases-table tr:hover td {
-      background: #f1f5fd;
-    }
-    .status-dot {
-      display: inline-block;
-      width: 13px;
-      height: 13px;
-      border-radius: 50%;
-      margin-right: 7px;
-      vertical-align: middle;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.07);
-      animation: popin 0.5s;
-    }
-    .status-dot.passed { background: #22c55e; }
-    .status-dot.failed { background: #f43f5e; }
-    .status-dot.skipped { background: #f59e0b; }
-    .status-dot.broken { background: #f97316; }
-    .expand-btn {
-      background: none;
-      border: none;
-      color: #6366f1;
-      font-size: 1em;
-      cursor: pointer;
-      padding: 0 6px;
-      vertical-align: middle;
-      transition: color 0.14s;
-    }
-    .expand-btn:hover {
-      color: #2563eb;
-      text-decoration: underline;
-    }
-    .details-row {
-      display: none;
-      background: #f4f6fa;
-      border-radius: 0 0 7px 7px;
-      box-shadow: 0 0.5px 2px rgba(36,37,60,0.06);
-    }
-    .details-cell {
-      padding: 13px 18px 13px 32px;
-      font-size: 0.97em;
-      color: #23234c;
-      font-family: 'JetBrains Mono', 'Fira Mono', 'monospace', monospace;
-      word-break: break-word;
-      white-space: pre-wrap;
-    }
-    .details-cell img {
-      margin-top: 8px;
-      max-width: 320px;
-      border-radius: 6px;
-      box-shadow: 0 1px 4px rgba(60,60,100,0.09);
-      display: block;
-      cursor: pointer;
-      transition: box-shadow 0.2s;
-    }
-    .details-cell img:hover {
-      box-shadow: 0 4px 24px #6a11cb88;
-    }
-  </style>
-  <script>
-    function toggleDetails(rowId) {
-      var row = document.getElementById(rowId);
-      if (!row) return;
-      if (row.style.display === 'table-row') {
-        row.style.display = 'none';
-      } else {
-        row.style.display = 'table-row';
-      }
-    }
-  </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Test Execution Report</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f7f8fa;
+            margin: 0;
+            color: #22223b;
+        }
+        .header-animated {
+            background: linear-gradient(90deg, #6a11cb 0%, #2575fc 100%);
+            padding: 36px 0 20px 0;
+            text-align: center;
+            color: #fff;
+            box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.12);
+            animation: bgmove 3s infinite alternate;
+        }
+        @keyframes bgmove {
+            0% { background-position: 0% 50%; }
+            100% { background-position: 100% 50%; }
+        }
+        .header-animated h1 {
+            margin: 0;
+            font-size: 2.7em;
+            font-weight: 700;
+            letter-spacing: -1px;
+            text-shadow: 0 2px 12px rgba(0,0,0,0.09);
+        }
+        .header-animated h2 {
+            margin: 10px 0 0 0;
+            font-size: 1.15em;
+            font-weight: 400;
+            opacity: 0.95;
+            letter-spacing: 0.5px;
+        }
+        .header-animated .timestamp {
+            margin-top: 9px;
+            font-size: 1em;
+            opacity: 0.92;
+        }
+        .summary-section {
+            max-width: 1080px;
+            margin: -40px auto 24px auto;
+            z-index: 2;
+            position: relative;
+            padding: 0 20px;
+        }
+        .summary-cards {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 18px;
+            justify-content: center;
+        }
+        .summary-card {
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.09);
+            padding: 16px 28px 14px 28px;
+            min-width: 130px;
+            flex: 1 0 120px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            border-bottom: 4px solid #e0e7ff;
+            transition: box-shadow 0.18s;
+            animation: cardfadein 0.7s;
+        }
+        @keyframes cardfadein {
+            0% { opacity: 0; transform: translateY(22px);}
+            100% { opacity: 1; transform: none;}
+        }
+        .summary-card.total { border-bottom-color: #6366f1; }
+        .summary-card.passed { border-bottom-color: #22c55e; }
+        .summary-card.failed { border-bottom-color: #f43f5e; }
+        .summary-card.runs { border-bottom-color: #0ea5e9; }
+        .summary-card.passrate { border-bottom-color: #16a34a; }
+        .summary-card.failrate { border-bottom-color: #ef4444; }
+        .summary-card.duration { border-bottom-color: #6366f1; }
+        .summary-card .label {
+            font-size: 1.01em;
+            color: #4b5563;
+            margin-bottom: 7px;
+            text-transform: uppercase;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+        .summary-card .value {
+            font-size: 2.1em;
+            font-weight: 700;
+            color: #111827;
+            letter-spacing: -1px;
+            margin-bottom: 2px;
+            animation: popin 0.5s;
+        }
+        @keyframes popin {
+            0% { transform: scale(1.23); opacity: 0;}
+            100% { transform: scale(1); opacity: 1;}
+        }
+        .overview-table-section {
+            max-width: 1080px;
+            margin: 0 auto 36px auto;
+            padding: 0 20px;
+        }
+        .overview-table-section h2 {
+            font-size: 1.45em;
+            color: #1e293b;
+            font-weight: 700;
+            margin: 18px 0 10px 0;
+        }
+        table.overview-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 1em;
+            margin-bottom: 0;
+            background: #fff;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+        }
+        table.overview-table th, table.overview-table td {
+            padding: 12px 10px;
+            text-align: left;
+        }
+        table.overview-table th {
+            background: #e0e7ff;
+            color: #3730a3;
+            font-weight: 700;
+            letter-spacing: 0.2px;
+        }
+        table.overview-table td {
+            background: #fff;
+            color: #23234c;
+            border-bottom: 1px solid #f3f4f6;
+        }
+        table.overview-table tr:last-child td {
+            border-bottom: none;
+        }
+        .compact-table-section {
+            max-width: 1080px;
+            margin: 0 auto 40px auto;
+            padding: 0 20px;
+            margin-top: 20px;
+        }
+        .compact-table-section h2 {
+            font-size: 1.35em;
+            color: #1e293b;
+            font-weight: 700;
+            margin: 12px 0 10px 0;
+        }
+        table.testcases-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0 7px;
+            font-size: 1em;
+            background: none;
+        }
+        table.testcases-table th {
+            background: #e0e7ff;
+            color: #3730a3;
+            font-weight: 700;
+            padding: 9px 6px;
+            border-radius: 6px 6px 0 0;
+            text-align: left;
+            letter-spacing: 0.2px;
+        }
+        table.testcases-table th:nth-child(1) { width: 50px; }
+        table.testcases-table th:nth-child(3) { width: 120px; }
+        table.testcases-table th:nth-child(4),
+        table.testcases-table th:nth-child(5),
+        table.testcases-table th:nth-child(6) { width: 130px; }
+        table.testcases-table td {
+            background: #fff;
+            padding: 8px 7px;
+            border-bottom: 1px solid #f3f4f6;
+            vertical-align: top;
+            border-radius: 0 0 7px 7px;
+            transition: background 0.2s;
+        }
+        table.testcases-table tr:hover td {
+            background: #f1f5fd;
+        }
+        .status-dot {
+            display: inline-block;
+            width: 13px;
+            height: 13px;
+            border-radius: 50%;
+            margin-right: 7px;
+            vertical-align: middle;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+            animation: popin 0.5s;
+        }
+        .status-dot.passed { background: #22c55e; }
+        .status-dot.failed { background: #f43f5e; }
+        .status-dot.skipped { background: #f59e0b; }
+        .status-dot.broken { background: #f97316; }
+        .expand-btn {
+            background: none;
+            border: none;
+            color: #6366f1;
+            font-size: 1em;
+            cursor: pointer;
+            padding: 0 6px;
+            vertical-align: middle;
+            transition: color 0.14s;
+        }
+        .expand-btn:hover {
+            color: #2563eb;
+            text-decoration: underline;
+        }
+        .details-row {
+            display: none;
+            background: #f4f6fa;
+            border-radius: 0 0 7px 7px;
+            box-shadow: 0 0.5px 2px rgba(36,37,60,0.06);
+        }
+        .details-cell {
+            padding: 13px 18px 13px 32px;
+            font-size: 0.97em;
+            color: #23234c;
+            font-family: 'JetBrains Mono', 'Fira Mono', 'monospace', monospace;
+            word-break: break-word;
+            white-space: pre-wrap;
+        }
+        .details-cell img {
+            margin-top: 8px;
+            max-width: 320px;
+            border-radius: 6px;
+            box-shadow: 0 1px 4px rgba(60,60,100,0.09);
+            display: block;
+            cursor: pointer;
+            transition: box-shadow 0.2s;
+        }
+        .details-cell img:hover {
+            box-shadow: 0 4px 24px #6a11cb88;
+        }
+    </style>
+    <script>
+        function toggleDetails(rowId) {
+            var row = document.getElementById(rowId);
+            if (!row) return;
+            if (row.style.display === 'table-row') {
+                row.style.display = 'none';
+            } else {
+                row.style.display = 'table-row';
+            }
+        }
+    </script>
 </head>
 <body>
-  <div class="header-animated">
-    <h1>Test Execution Report</h1>
-    <h2>Super Pan Cake Report</h2>
-    <div class="timestamp"><small>Generated: ${new Date(timestamp).toLocaleString()}</small></div>
-  </div>
-  <div class="summary-cards">
-    <div class="summary-card total">
-      <div class="label">Total</div>
-      <div class="value">${total}</div>
+    <div class="header-animated">
+        <h1>Test Execution Report</h1>
+        <h2>Advanced Automated Test Report</h2>
+        <div class="timestamp"><small>Generated: ${new Date(timestamp).toLocaleString()}</small></div>
     </div>
-    <div class="summary-card passed">
-      <div class="label">Passed</div>
-      <div class="value">${passed}</div>
+    <div class="summary-section">
+        <div class="summary-cards">
+            <div class="summary-card total">
+                <div class="label">Total Tests</div>
+                <div class="value">${total}</div>
+            </div>
+            <div class="summary-card passed">
+                <div class="label">Passed</div>
+                <div class="value">${passed}</div>
+            </div>
+            <div class="summary-card failed">
+                <div class="label">Failed</div>
+                <div class="value">${failed}</div>
+            </div>
+            <div class="summary-card runs">
+                <div class="label">Test Runs</div>
+                <div class="value">${groupedByFile.size}</div>
+            </div>
+            <div class="summary-card passrate">
+                <div class="label">Pass Rate</div>
+                <div class="value">${passRate}%</div>
+            </div>
+            <div class="summary-card failrate">
+                <div class="label">Failure Rate</div>
+                <div class="value">${(100 - parseFloat(passRate)).toFixed(1)}%</div>
+            </div>
+            <div class="summary-card duration">
+                <div class="label">Duration</div>
+                <div class="value">${duration}</div>
+            </div>
+        </div>
     </div>
-    <div class="summary-card failed">
-      <div class="label">Failed</div>
-      <div class="value">${failed}</div>
-    </div>
-    <div class="summary-card skipped">
-      <div class="label">Skipped</div>
-      <div class="value">${skipped}</div>
-    </div>
-  </div>
-  <div class="compact-table-section">
-    <h2>Test Cases</h2>
-    ${Array.from(groupedByFile.entries()).map(([file, tests], groupIdx) => `
-      <div style="margin-bottom:24px;">
-        <div style="font-size:1.07em;font-weight:600;color:#6366f1;letter-spacing:0.3px;margin-bottom:3px;">${file}</div>
-        <table class="testcases-table">
-          <thead>
+    <div class="overview-table-section">
+        <h2>Execution Environment</h2>
+        <table class="overview-table">
             <tr>
-              <th>S.No</th>
-              <th>Test Name</th>
-              <th>Status</th>
-              <th>Duration</th>
-              <th>Timestamp</th>
-              <th>Details</th>
+                <th>Environment</th>
+                <td>${env || '-'}</td>
+                <th>Browser</th>
+                <td>${browser || '-'}</td>
             </tr>
-          </thead>
-          <tbody>
-            ${tests.map((r, i) => {
-              const rowId = 'details_row_' + groupIdx + '_' + i;
-              const hasDetails = r.error || r.screenshot;
-              return `
-              <tr>
-                <td>${serialCounter++}</td>
-                <td>${r.name || 'Unnamed'}</td>
-                <td>
-                  <span class="status-dot ${r.status}"></span>
-                  <span style="font-weight:600;text-transform:uppercase;">${r.status || ''}</span>
-                </td>
-                <td>${r.duration ? r.duration : '-'}</td>
-                <td>${r.timestamp ? new Date(r.timestamp).toLocaleString() : '-'}</td>
-                <td>
-                  ${hasDetails ? `<button class="expand-btn" onclick="toggleDetails('${rowId}')">Show</button>` : ''}
-                </td>
-              </tr>
-              <tr id="${rowId}" class="details-row">
-                <td colspan="6" class="details-cell">
-                  ${r.error ? `<div><strong>Error:</strong><br>${r.error}</div>` : ''}
-                  ${r.screenshot ? `<div><img src="screenshots/${path.basename(r.screenshot)}" alt="Screenshot" title="Click to view full image" onclick="openImageModal(this.src)"></div>` : ''}
-                </td>
-              </tr>
-              `;
-            }).join('')}
-          </tbody>
+            <tr>
+                <th>Build</th>
+                <td>${build || '-'}</td>
+                <th>Executor</th>
+                <td>${executor || '-'}</td>
+            </tr>
+            <tr>
+                <th>Start Time</th>
+                <td>${started ? started.toLocaleString() : '-'}</td>
+                <th>Finish Time</th>
+                <td>${finished ? finished.toLocaleString() : '-'}</td>
+            </tr>
         </table>
-      </div>
-    `).join('')}
-  </div>
-  <div id="imageModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);justify-content:center;align-items:center;z-index:9999;">
-    <div style="position:relative;max-width:90%;max-height:90%;">
-      <button onclick="closeImageModal()" style="position:absolute;top:10px;right:10px;background:#fff;border:none;font-size:1.2em;padding:4px 10px;cursor:pointer;">✖</button>
-      <img id="modalImage" src="" style="max-width:100%;max-height:100%;border-radius:8px;box-shadow:0 2px 12px rgba(0,0,0,0.4);">
     </div>
-  </div>
-  <script>
-    function openImageModal(src) {
-      const modal = document.getElementById('imageModal');
-      const modalImg = document.getElementById('modalImage');
-      modalImg.src = src;
-      modal.style.display = 'flex';
-    }
-    function closeImageModal() {
-      const modal = document.getElementById('imageModal');
-      modal.style.display = 'none';
-    }
-  </script>
+    <div class="compact-table-section">
+        <h2>Test Cases</h2>
+        ${Array.from(groupedByFile.entries()).map(([file, tests], groupIdx) => `
+            <div style="margin-bottom:24px;">
+                <div style="font-size:1.07em;font-weight:600;color:#6366f1;letter-spacing:0.3px;margin-bottom:3px;">${file}</div>
+                <table class="testcases-table">
+                    <thead>
+                        <tr>
+                            <th>S.No</th>
+                            <th>Test Name</th>
+                            <th>Status</th>
+                            <th>Duration</th>
+                            <th>Timestamp</th>
+                            <th>Details</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${tests.map((r, i) => {
+                            const rowId = 'details_row_' + groupIdx + '_' + i;
+                            const hasDetails = r.error || r.screenshot;
+                            return `
+                            <tr>
+                                <td>${serialCounter++}</td>
+                                <td>${r.name || 'Unnamed'}</td>
+                                <td>
+                                    <span class="status-dot ${r.status}"></span>
+                                    <span style="font-weight:600;text-transform:uppercase;">${r.status || ''}</span>
+                                </td>
+                                <td>${r.duration ? r.duration : '-'}</td>
+                                <td>${r.timestamp ? new Date(r.timestamp).toLocaleString() : '-'}</td>
+                                <td>
+                                    ${hasDetails ? `<button class="expand-btn" onclick="toggleDetails('${rowId}')">Show</button>` : ''}
+                                </td>
+                            </tr>
+                            <tr id="${rowId}" class="details-row">
+                                <td colspan="6" class="details-cell">
+                                    ${r.error ? `<div><strong>Error:</strong><br>${r.error}</div>` : ''}
+                                    ${r.screenshot ? `<div><img src="screenshots/${path.basename(r.screenshot)}" alt="Screenshot" title="Click to view full image" onclick="openImageModal(this.src)"></div>` : ''}
+                                </td>
+                            </tr>
+                            `;
+                        }).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `).join('')}
+    </div>
+    <div id="imageModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);justify-content:center;align-items:center;z-index:9999;">
+        <div style="position:relative;max-width:90%;max-height:90%;">
+            <button onclick="closeImageModal()" style="position:absolute;top:10px;right:10px;background:#fff;border:none;font-size:1.2em;padding:4px 10px;cursor:pointer;">✖</button>
+            <img id="modalImage" src="" style="max-width:100%;max-height:100%;border-radius:8px;box-shadow:0 2px 12px rgba(0,0,0,0.4);">
+        </div>
+    </div>
+    <script>
+        function openImageModal(src) {
+            const modal = document.getElementById('imageModal');
+            const modalImg = document.getElementById('modalImage');
+            modalImg.src = src;
+            modal.style.display = 'flex';
+        }
+        function closeImageModal() {
+            const modal = document.getElementById('imageModal');
+            modal.style.display = 'none';
+        }
+    </script>
 </body>
 </html>
 `;

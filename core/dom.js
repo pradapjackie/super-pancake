@@ -63,6 +63,8 @@ export async function navigateTo(session, url) {
         functionDeclaration: 'function() { this.click(); }',
       });
     } catch (error) {
+      // Only log top-level message, not stack
+      console.error(`❌ Failed to click on "${selectorOrNodeId}": ${error.message}`);
       throw new Error(`❌ Failed to click on "${selectorOrNodeId}": ${error.message}`);
     }
   }
@@ -205,13 +207,23 @@ export async function reload(session) {
 
   export async function takeScreenshot(session, fileName = 'screenshot.png') {
     const { data } = await session.send('Page.captureScreenshot', { format: 'png', fromSurface: true });
-    const fs = await import('fs');
     fs.writeFileSync(fileName, Buffer.from(data, 'base64'));
   }
 
 export async function takeElementScreenshot(session, selector, fileName = 'element.png') {
   const nodeId = await querySelector(session, selector);
   const { model } = await session.send('DOM.getBoxModel', { nodeId });
+  // If element has 0 width or height, log a warning and capture full page screenshot as fallback
+  if (model.width === 0 || model.height === 0) {
+    console.warn(`⚠️ Element has zero width or height for selector: ${selector}. Capturing full page screenshot as fallback.`);
+    const fallbackFileName = fileName.replace(/(\.png)?$/, `_${selector.replace(/[^\w-]/g, '_')}.png`);
+    const { data } = await session.send('Page.captureScreenshot', { format: 'png', fromSurface: true });
+    const dir = path.dirname(fallbackFileName);
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(fallbackFileName, Buffer.from(data, 'base64'));
+    // Return false to indicate fallback screenshot was taken
+    return { fileName: fallbackFileName, isElementScreenshot: false };
+  }
   let data;
   try {
     const result = await session.send('Page.captureScreenshot', {
@@ -235,6 +247,8 @@ export async function takeElementScreenshot(session, selector, fileName = 'eleme
   const dir = path.dirname(fileName);
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(fileName, Buffer.from(data, 'base64'));
+  // Return true to indicate element screenshot was taken
+  return { fileName, isElementScreenshot: true };
 }
   // Utilities
   export async function waitForTimeout(ms) {

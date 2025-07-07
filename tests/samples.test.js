@@ -108,4 +108,9 @@ describe('Playground UI Form Test', () => {
     }, session, import.meta.url);
   });
 
+  // it('should take a screenshot of the form', { timeout: config.test.timeout }, async () => {
+  //   await testWithReport('should take a screenshot of the form', async () => {
+  //     await takeElementScreenshot(session, 'form', 'test-report/screenshots/form-screenshot.png');
+  //   }, session);
+  // });
 });

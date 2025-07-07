@@ -104,6 +104,112 @@ import {
 
 ---
 
+## 🚀 Getting Started with Super Pancake
+
+To quickly get up and running with Super Pancake, use the following steps:
+
+### 1. Scaffold Your Project
+
+```bash
+npm init super-pancake
+```
+
+You'll be prompted to configure your test setup:
+
+- Choose JavaScript or TypeScript (default is JavaScript)
+- Name your tests folder (default is `tests`)
+- Choose whether to add example test cases
+- Optionally set up Git hooks and CI config
+- Decide whether to auto-install dependencies (recommended)
+
+### 2. What Gets Installed
+
+The setup will scaffold the following:
+
+```
+package.json
+test.config.js
+tests/
+  sample.test.js
+core/
+  dom.js
+  assert.js
+scripts/
+  test-ui.js
+test-report/
+  results/
+  index.html
+```
+
+### 3. Running Tests
+
+By default, test files in the `tests/` directory are picked up and run using Vitest.
+
+To run all tests:
+```bash
+npx super-pancake-run
+```
+
+To run a specific test file:
+```bash
+npx super-pancake-run tests/form.test.js
+```
+
+To run tests in watch mode:
+```bash
+npx vitest --watch
+```
+
+### 4. View HTML Reports
+
+After tests complete, an HTML report is available at:
+
+```
+test-report/index.html
+```
+
+Open it manually in your browser, or use:
+
+```bash
+npx super-pancake-show-report
+```
+
+The report includes:
+
+- Pass/fail/skipped stats
+- Screenshots (if captured)
+- Logs and error stack traces
+
+### 5. UI Mode
+
+To run tests with a visual UI:
+
+```bash
+npx super-pancake-ui
+```
+
+This opens a browser-based dashboard where you can:
+
+- Select tests to run
+- View live logs and outputs
+- Rerun individual test cases
+
+### 6. Updating Super Pancake
+
+To update to the latest version:
+
+```bash
+npm install super-pancake-automation@latest
+```
+
+Ensure your test cases remain compatible with any new API features or changes.
+
+---
+
+For more advanced usage and CI/CD integration, visit the full documentation:
+
+[https://github.com/pradapjackie/super-pancake](https://github.com/pradapjackie/super-pancake)
+
 ## 🤝 Contributing
 
 Pull requests are welcome! For major changes, open an issue first to discuss what you’d like to change.
