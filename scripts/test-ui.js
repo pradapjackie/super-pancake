@@ -101,6 +101,26 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(process.cwd(), 'public', 'index.html'));
 });
 
+// Serve the test report
+app.get('/automationTestReport.html', (req, res) => {
+    const reportPath = path.join(process.cwd(), 'automationTestReport.html');
+    if (fs.existsSync(reportPath)) {
+        res.sendFile(reportPath);
+    } else {
+        res.status(404).send(`
+            <html>
+                <head><title>Report Not Found</title></head>
+                <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
+                    <h1>🔍 Test Report Not Found</h1>
+                    <p>The test report has not been generated yet.</p>
+                    <p>Please run some tests first to generate the report.</p>
+                    <a href="/" style="color: #16a34a; text-decoration: none;">← Back to Test Runner</a>
+                </body>
+            </html>
+        `);
+    }
+});
+
 // Test execution route (same as before)
 app.post('/run', express.json(), async (req, res) => {
     const selected = req.body.tests || [];
@@ -203,6 +223,16 @@ app.post('/run', express.json(), async (req, res) => {
     broadcast(`❌ Failed:         ${failed}\n`);
     broadcast(`⚠️ Skipped:        ${skipped}\n`);
     broadcast('--------------------------------------------------\n');
+    
+    // Generate HTML report after all tests complete
+    try {
+        // Import the writeReport function dynamically
+        const { writeReport } = await import('../reporter/htmlReporter.js');
+        writeReport();
+        broadcast(`📊 HTML report generated: automationTestReport.html\n`);
+    } catch (error) {
+        broadcast(`❌ Failed to generate HTML report: ${error.message}\n`);
+    }
 });
 
 // Create HTTP + WebSocket server

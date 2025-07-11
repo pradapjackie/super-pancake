@@ -463,3 +463,21 @@ window.toggleFile = toggleFile;
 window.toggleGroup = toggleGroup;
 window.copyLogs = copyLogs;
 window.clearLogs = clearLogs;
+window.openTestReport = openTestReport;
+
+// Function to open the test report
+function openTestReport() {
+    // Try to open the report in a new tab
+    const reportUrl = '/automationTestReport.html';
+    const newWindow = window.open(reportUrl, '_blank');
+    
+    if (newWindow) {
+        appendToLog('📊 Opening test report in new tab...', 'log-info');
+    } else {
+        // If popup blocked, try to navigate
+        appendToLog('⚠️ Popup blocked. Trying to navigate to report...', 'log-warning');
+        setTimeout(() => {
+            window.location.href = reportUrl;
+        }, 1000);
+    }
+}

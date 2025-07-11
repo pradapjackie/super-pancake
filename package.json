@@ -9,7 +9,20 @@
     "dom",
     "cdp",
     "chrome",
-    "testing"
+    "testing",
+    "ui-testing",
+    "browser-automation",
+    "chrome-devtools",
+    "javascript",
+    "nodejs",
+    "test-framework",
+    "web-automation",
+    "screenshot",
+    "form-testing",
+    "vitest",
+    "playwright-alternative",
+    "puppeteer-alternative",
+    "selenium-alternative"
   ],
   "author": "Pradap Pandiyan",
   "license": "MIT",
@@ -17,16 +30,38 @@
     "domtest": "./bin/cli.js",
     "super-pancake-ui": "./bin/ui-runner.js",
     "super-pancake-run": "./bin/super-pancake-run.js",
-    "super-pancake-generate": "./bin/generate-test.js"
+    "super-pancake-generate": "./bin/generate-test.js",
+    "super-pancake-server": "./bin/ui-server.js"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/pradapjackie/super-pancake"
+    "url": "git+https://github.com/pradapjackie/super-pancake.git"
+  },
+  "bugs": {
+    "url": "https://github.com/pradapjackie/super-pancake/issues",
+    "email": "pradapjackie@gmail.com"
   },
   "homepage": "https://github.com/pradapjackie/super-pancake#readme",
   "scripts": {
-    "test": "vitest"
+    "test": "vitest",
+    "test:ui": "node scripts/test-ui.js",
+    "test:run": "vitest run",
+    "test:watch": "vitest watch",
+    "start": "node scripts/test-ui.js",
+    "ui": "node scripts/test-ui.js",
+    "server": "node bin/ui-server.js",
+    "generate": "node bin/generate-test.js",
+    "lint": "echo 'No linting configured'",
+    "build": "echo 'No build step required'",
+    "prepack": "npm test",
+    "prepare": "npm run build"
   },
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=8.0.0"
+  },
+  "os": ["darwin", "linux", "win32"],
+  "cpu": ["x64", "arm64"],
   "exports": {
     ".": "./index.js",
     "./utils/launcher.js": "./utils/launcher.js",
