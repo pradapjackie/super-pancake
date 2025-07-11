@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>🧪 Test Runner Dashboard</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="app-container">
+    <!-- Left Sidebar - Test Selection -->
+    <div class="sidebar glass-card">
+        <div class="sidebar-header">
+            <div class="header-top">
+                <div class="icon">
+                    🥞
+                </div>
+                <h1>Super Pancake Test Runner</h1>
+            </div>
+            <div class="header-stats">
+                <div class="header-stat-item selected" id="selected-stat">
+                    <span class="header-stat-number" id="selected-count-number">0</span>
+                    <span class="header-stat-label">Selected</span>
+                </div>
+                <div class="header-stat-item files" id="files-stat">
+                    <span class="header-stat-number" id="files-count">0</span>
+                    <span class="header-stat-label">Files</span>
+                </div>
+                <div class="header-stat-item status connected" id="status-stat">
+                    <span class="header-stat-dot"></span>
+                    <span class="header-stat-number" id="status-text-main">Ready</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="btn btn-secondary" onclick="location.reload()">
+                <i class="fas fa-sync-alt"></i>
+                Refresh
+            </button>
+            <button type="submit" class="btn btn-primary" id="run-btn" form="test-form">
+                <i class="fas fa-play"></i>
+                Run Tests
+            </button>
+        </div>
+
+        <form id="test-form">
+            <div class="test-files" id="test-files-container">
+                <!-- Test files will be populated by JavaScript -->
+            </div>
+        </form>
+    </div>
+
+    <!-- Right Side - Full Console -->
+    <div class="main-content">
+        <!-- Console Panel -->
+        <div class="console-panel glass-card">
+            <div class="console-header">
+                <h3>
+                    <i class="fas fa-terminal"></i>
+                    Test Console & Live Reports
+                </h3>
+                <div class="console-controls">
+                    <button class="console-btn" onclick="clearLogs()">
+                        <i class="fas fa-trash-alt"></i>
+                        Clear
+                    </button>
+                    <button class="console-btn" onclick="copyLogs()">
+                        <i class="fas fa-copy"></i>
+                        Copy
+                    </button>
+                    <div class="theme-selector">
+                        <button class="theme-toggle" id="theme-toggle" title="Select Theme">
+                            <i class="fas fa-palette"></i>
+                        </button>
+                        <div class="theme-dropdown" id="theme-dropdown">
+                            <div class="theme-option" data-theme="forest-green">
+                                <div class="theme-preview forest"></div>
+                                <span>Forest Green</span>
+                            </div>
+                            <div class="theme-option" data-theme="sage-green">
+                                <div class="theme-preview sage"></div>
+                                <span>Sage Green</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="status-bar">
+                <div class="status-indicator status-idle" id="status-indicator">
+                    <div class="status-dot"></div>
+                    <span id="status-text">Ready to run tests</span>
+                </div>
+                <div class="status-indicator">
+                    <i class="fas fa-clock"></i>
+                    <span id="execution-time">00:00</span>
+                </div>
+            </div>
+            <div class="log-container" id="log">
+                <div class="log-info">🎯 Welcome to the Test Runner!</div>
+                <div class="log-info">✨ Select tests from the left panel and click "Run Tests" to begin</div>
+                <div class="log-info">📊 Real-time results and reports will appear here</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
