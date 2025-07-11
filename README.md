@@ -21,7 +21,7 @@ Launch the beautiful web interface to run tests visually:
 npx super-pancake-ui
 ```
 
-![Super Pancake UI](./assets/ui-interface.png)
+![Super Pancake UI](assets/ui-interface.png)
 
 ### UI Features:
 - ✅ **Test Selection**: Choose which tests to run
@@ -39,7 +39,7 @@ After running tests, view comprehensive reports:
 open automationTestReport.html
 ```
 
-![Test Report](./assets/test-report.png)
+![Test Report](assets/test-report.png)
 
 ### Report Features:
 - 📈 **Test Statistics**: Pass/fail/skipped counts with charts

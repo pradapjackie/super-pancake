@@ -17,6 +17,11 @@ logs/
 screenshots/
 recordings/
 
+# Allow assets folder images
+!assets/*.png
+!assets/*.jpg
+!assets/*.jpeg
+
 # OS/system files
 .DS_Store
 Thumbs.db
