@@ -8,7 +8,6 @@ let executionTimer = null;
 const form = document.getElementById('test-form');
 const log = document.getElementById('log');
 const runBtn = document.getElementById('run-btn');
-const runBtnMain = document.getElementById('run-btn-main');
 const statusIndicator = document.getElementById('status-indicator');
 const statusText = document.getElementById('status-text');
 const selectedCountNumber = document.getElementById('selected-count-number');
@@ -31,56 +30,82 @@ document.addEventListener('DOMContentLoaded', () => {
 // Theme Management
 function initializeTheme() {
     const themeToggle = document.getElementById('theme-toggle');
+    const themeDropdown = document.getElementById('theme-dropdown');
     const savedTheme = localStorage.getItem('test-runner-theme');
-    const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
 
     // Set initial theme
-    const initialTheme = savedTheme || (systemPrefersDark ? 'dark' : 'light');
+    const initialTheme = savedTheme || 'forest-green';
     setTheme(initialTheme);
 
-    // Setup theme toggle
-    themeToggle.addEventListener('click', toggleTheme);
+    // Setup theme toggle dropdown
+    themeToggle.addEventListener('click', (e) => {
+        e.stopPropagation();
+        themeDropdown.classList.toggle('show');
+    });
 
-    // Listen for system theme changes
-    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
-        if (!localStorage.getItem('test-runner-theme')) {
-            setTheme(e.matches ? 'dark' : 'light');
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!themeToggle.contains(e.target) && !themeDropdown.contains(e.target)) {
+            themeDropdown.classList.remove('show');
         }
+    });
+
+    // Setup theme options
+    const themeOptions = document.querySelectorAll('.theme-option');
+    themeOptions.forEach(option => {
+        option.addEventListener('click', (e) => {
+            const theme = option.getAttribute('data-theme');
+            setTheme(theme);
+            themeDropdown.classList.remove('show');
+        });
     });
 }
 
 function setTheme(theme) {
     const html = document.documentElement;
-    const themeToggle = document.getElementById('theme-toggle');
-    const icon = themeToggle.querySelector('i');
+    const themeOptions = document.querySelectorAll('.theme-option');
+    
+    // Map theme names to data-theme attributes
+    const themeMap = {
+        'forest-green': 'forest-green',
+        'sage-green': 'sage-green'
+    };
 
-    html.setAttribute('data-theme', theme);
+    const dataTheme = themeMap[theme] || theme;
+    
+    // Set the theme
+    html.setAttribute('data-theme', dataTheme);
+    
     localStorage.setItem('test-runner-theme', theme);
 
-    // Update icon with animation
-    icon.style.transform = 'rotate(360deg)';
-    setTimeout(() => {
-        if (theme === 'dark') {
-            icon.className = 'fas fa-sun';
-            themeToggle.title = 'Switch to Light Mode';
-        } else {
-            icon.className = 'fas fa-moon';
-            themeToggle.title = 'Switch to Dark Mode';
+    // Update active theme option
+    themeOptions.forEach(option => {
+        option.classList.remove('active');
+        if (option.getAttribute('data-theme') === theme) {
+            option.classList.add('active');
         }
-        icon.style.transform = 'rotate(0deg)';
-    }, 150);
+    });
 
     // Add a nice theme switch animation
     document.body.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
 
+    // Get theme display name
+    const themeNames = {
+        'forest-green': 'Forest Green',
+        'sage-green': 'Sage Green'
+    };
+
     // Log theme change
-    appendToLog(`🎨 Switched to ${theme} theme`, 'log-info');
+    appendToLog(`🎨 Switched to ${themeNames[theme]} theme`, 'log-info');
 }
 
 function toggleTheme() {
-    const currentTheme = document.documentElement.getAttribute('data-theme');
-    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-    setTheme(newTheme);
+    // This function can be used for cycling through themes if needed
+    const themes = ['forest-green', 'sage-green'];
+    const currentTheme = localStorage.getItem('test-runner-theme') || 'forest-green';
+    const currentIndex = themes.indexOf(currentTheme);
+    const nextIndex = (currentIndex + 1) % themes.length;
+    setTheme(themes[nextIndex]);
 }
 
 // Load test files from server
@@ -133,18 +158,20 @@ async function renderTestFiles(testFiles) {
 
             testFileElements.push(`
               <div class="test-file" id="group-${escapedId}">
-                <div class="test-file-header" onclick="toggleFile('${escapedId}')">
-                  <div class="test-file-title">
-                    <i class="fas fa-file-code"></i>
-                    ${file}
+                <div class="test-file-header">
+                  <div class="test-file-header-left">
+                    <div class="test-file-title">
+                      <i class="fas fa-file-code"></i>
+                      ${file}
+                    </div>
                   </div>
-                  <i class="fas fa-chevron-down toggle-icon" id="toggle-${escapedId}"></i>
+                  <div class="file-select-all">
+                    <input type="checkbox" class="file-select-all-checkbox" onchange="toggleGroup('${escapedId}', this.checked)" id="select-all-${escapedId}">
+                    <label for="select-all-${escapedId}" class="file-select-all-label">All</label>
+                  </div>
+                  <i class="fas fa-chevron-down toggle-icon" onclick="toggleFile('${escapedId}')" id="toggle-${escapedId}"></i>
                 </div>
                 <div class="test-cases" id="cases-${escapedId}">
-                  <div class="test-case-item select-all-item">
-                    <input type="checkbox" class="test-case-checkbox" onchange="toggleGroup('${escapedId}', this.checked)" id="select-all-${escapedId}">
-                    <label for="select-all-${escapedId}" class="test-case-label">Select All (${cases.length})</label>
-                  </div>
                   ${caseHTML}
                 </div>
               </div>
@@ -155,12 +182,18 @@ async function renderTestFiles(testFiles) {
             const escapedId = file.replace(/[^a-zA-Z0-9]/g, '_');
             testFileElements.push(`
               <div class="test-file" id="group-${escapedId}">
-                <div class="test-file-header" onclick="toggleFile('${escapedId}')">
-                  <div class="test-file-title">
-                    <i class="fas fa-file-code"></i>
-                    ${file}
+                <div class="test-file-header">
+                  <div class="test-file-header-left">
+                    <div class="test-file-title">
+                      <i class="fas fa-file-code"></i>
+                      ${file}
+                    </div>
                   </div>
-                  <i class="fas fa-chevron-down toggle-icon" id="toggle-${escapedId}"></i>
+                  <div class="file-select-all">
+                    <input type="checkbox" class="file-select-all-checkbox" onchange="toggleGroup('${escapedId}', this.checked)" id="select-all-${escapedId}">
+                    <label for="select-all-${escapedId}" class="file-select-all-label">All</label>
+                  </div>
+                  <i class="fas fa-chevron-down toggle-icon" onclick="toggleFile('${escapedId}')" id="toggle-${escapedId}"></i>
                 </div>
                 <div class="test-cases" id="cases-${escapedId}">
                   <div class="test-case-item">
@@ -246,18 +279,25 @@ function updateStatus(status, text) {
     statusText.textContent = text;
     statusTextMain.textContent = text;
 
-    // Update stat cards
+    // Update status stat item
     const statusStat = document.getElementById('status-stat');
     const selectedStat = document.getElementById('selected-stat');
 
-    statusStat.className = 'stat-card';
-    selectedStat.className = 'stat-card';
+    // Reset classes
+    statusStat.className = 'header-stat-item status';
 
     if (status === 'running') {
-        statusStat.className = 'stat-card running';
-        selectedStat.className = 'stat-card selected';
+        statusStat.className = 'header-stat-item status running';
+        selectedStat.classList.add('selected-active');
     } else if (status === 'success') {
-        statusStat.className = 'stat-card';
+        statusStat.className = 'header-stat-item status connected';
+        selectedStat.classList.remove('selected-active');
+    } else if (status === 'error') {
+        statusStat.className = 'header-stat-item status disconnected';
+        selectedStat.classList.remove('selected-active');
+    } else {
+        statusStat.className = 'header-stat-item status connected';
+        selectedStat.classList.remove('selected-active');
     }
 }
 
@@ -273,12 +313,12 @@ function updateSelectedCount() {
         file.classList.toggle('has-selected', hasSelected);
     });
 
-    // Update selected stat card
+    // Update selected stat visual feedback
     const selectedStat = document.getElementById('selected-stat');
     if (count > 0) {
-        selectedStat.classList.add('selected');
+        selectedStat.classList.add('has-selection');
     } else {
-        selectedStat.classList.remove('selected');
+        selectedStat.classList.remove('has-selection');
     }
 }
 
@@ -286,10 +326,6 @@ function setButtonsLoading(loading) {
     if (runBtn) {
         runBtn.classList.toggle('loading', loading);
         runBtn.disabled = loading;
-    }
-    if (runBtnMain) {
-        runBtnMain.classList.toggle('loading', loading);
-        runBtnMain.disabled = loading;
     }
 }
 
@@ -427,4 +463,3 @@ window.toggleFile = toggleFile;
 window.toggleGroup = toggleGroup;
 window.copyLogs = copyLogs;
 window.clearLogs = clearLogs;
-window.openReport = openReport;

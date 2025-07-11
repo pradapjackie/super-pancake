@@ -15,13 +15,14 @@ export async function testWithReport(name, fn, session, testFilePath) {
         await fn();
         addTestResult({ name, status: 'pass', timestamp: new Date().toISOString() });
     } catch (error) {
-        const fileName = `test-report/screenshots/${name.replace(/\s+/g, '_')}.png`;
-        await takeElementScreenshot(session, 'body', fileName);
+        const timestamp = Date.now();
+        const fileName = `test-report/screenshots/${name.replace(/\s+/g, '_')}_${timestamp}.png`;
+        const screenshotResult = await takeElementScreenshot(session, 'body', fileName);
         addTestResult({
             name,
             status: 'fail',
             error: error.stack || error.message,
-            screenshot: fileName,
+            screenshot: screenshotResult.fileName,
             timestamp: new Date().toISOString()
         });
         throw error;
