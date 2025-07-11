@@ -17,6 +17,11 @@ on:
         required: false
         type: string
 
+permissions:
+  contents: write
+  packages: write
+  pull-requests: write
+
 jobs:
   publish:
     runs-on: ubuntu-latest
@@ -27,6 +32,7 @@ jobs:
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
+          persist-credentials: true
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -41,6 +47,7 @@ jobs:
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
+          git config --local url."https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/".insteadOf "https://github.com/"
 
       - name: Bump version
         id: bump
