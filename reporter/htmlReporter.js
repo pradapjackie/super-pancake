@@ -89,21 +89,60 @@ export function writeReport() {
 
     // Read all JSON files from test-report/results and merge into aggregatedResults
     if (fs.existsSync(resultsDir)) {
-        const files = fs.readdirSync(resultsDir).filter(f => f.endsWith('.json'));
-        console.log(`Found ${files.length} result files in ${resultsDir}`);
-
-        for (const file of files) {
-            try {
-                const content = fs.readFileSync(path.join(resultsDir, file), 'utf-8');
-                const result = JSON.parse(content);
-                const keyId = `${result.file}|${result.name}|${result.timestamp}`;
-                if (aggregatedResults.has(keyId)) {
-                    const existing = aggregatedResults.get(keyId);
-                    if (new Date(existing.timestamp) > new Date(result.timestamp)) continue;
+        // Recursively find all JSON files in subdirectories
+        const findJsonFiles = (dir) => {
+            const files = [];
+            const items = fs.readdirSync(dir, { withFileTypes: true });
+            
+            for (const item of items) {
+                const fullPath = path.join(dir, item.name);
+                if (item.isDirectory()) {
+                    files.push(...findJsonFiles(fullPath));
+                } else if (item.isFile() && item.name.endsWith('.json')) {
+                    files.push(fullPath);
                 }
-                aggregatedResults.set(keyId, result);
+            }
+            return files;
+        };
+        
+        const files = findJsonFiles(resultsDir);
+        console.log(`Found ${files.length} result files in ${resultsDir} (including subdirectories)`);
+
+        for (const filePath of files) {
+            try {
+                const content = fs.readFileSync(filePath, 'utf-8');
+                const result = JSON.parse(content);
+                
+                // Handle different result formats (Vitest JSON vs custom format)
+                if (result.testResults && Array.isArray(result.testResults)) {
+                    // Vitest JSON format
+                    for (const testSuite of result.testResults) {
+                        if (testSuite.assertionResults && Array.isArray(testSuite.assertionResults)) {
+                            for (const assertion of testSuite.assertionResults) {
+                                const keyId = `${testSuite.name}|${assertion.fullName}|${result.startTime}`;
+                                const enhancedResult = {
+                                    name: assertion.title || assertion.fullName,
+                                    status: assertion.status === 'passed' ? 'pass' : 'fail',
+                                    file: testSuite.name,
+                                    timestamp: new Date(result.startTime).toISOString(),
+                                    duration: assertion.duration ? `${assertion.duration.toFixed(2)}ms` : '-',
+                                    error: assertion.failureMessages && assertion.failureMessages.length > 0 ? assertion.failureMessages.join('\n') : null
+                                };
+                                aggregatedResults.set(keyId, enhancedResult);
+                            }
+                        }
+                    }
+                } else {
+                    // Custom format (existing tests)
+                    const keyId = `${result.file}|${result.name}|${result.timestamp}`;
+                    if (aggregatedResults.has(keyId)) {
+                        const existing = aggregatedResults.get(keyId);
+                        if (new Date(existing.timestamp) > new Date(result.timestamp)) continue;
+                    }
+                    aggregatedResults.set(keyId, result);
+                }
             } catch (e) {
-                console.error(`Failed to read or parse result file: ${file}`, e);
+                console.error(`Failed to read or parse result file: ${filePath}`, e);
             }
         }
     }

@@ -1,7 +1,21 @@
 name: Manual Publish to npm
 
 on:
-  workflow_dispatch:  # Trigger manually from GitHub Actions UI
+  workflow_dispatch:
+    inputs:
+      version_type:
+        description: 'Version increment type'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+      release_notes:
+        description: 'Release notes (optional)'
+        required: false
+        type: string
 
 jobs:
   publish:
@@ -10,6 +24,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -20,7 +37,65 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Configure Git
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+
+      - name: Bump version
+        id: bump
+        run: |
+          OLD_VERSION=$(node -p "require('./package.json').version")
+          NEW_VERSION=$(npm version ${{ github.event.inputs.version_type }} --no-git-tag-version)
+          echo "old_version=$OLD_VERSION" >> $GITHUB_OUTPUT
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "Bumped version from $OLD_VERSION to $NEW_VERSION"
+
+      - name: Commit version bump
+        run: |
+          git add package.json package-lock.json
+          git commit -m "chore: bump version to ${{ steps.bump.outputs.new_version }} [skip ci]"
+          git tag ${{ steps.bump.outputs.new_version }}
+          git push origin main --tags
+          git push origin main
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.bump.outputs.new_version }}
+          name: Release ${{ steps.bump.outputs.new_version }}
+          body: |
+            ## Release ${{ steps.bump.outputs.new_version }}
+            
+            **Previous version:** ${{ steps.bump.outputs.old_version }}
+            **Version type:** ${{ github.event.inputs.version_type }}
+            
+            ### Release Notes
+            ${{ github.event.inputs.release_notes }}
+            
+            ### Installation
+            ```bash
+            npm install super-pancake-automation@${{ steps.bump.outputs.new_version }}
+            ```
+            
+            ### Available Commands
+            - `domtest` - Run DOM tests
+            - `super-pancake-ui` - Launch test runner UI
+            - `super-pancake-server` - Launch UI server
+            - `super-pancake-run` - Run tests programmatically
+            - `super-pancake-generate` - Generate test templates
+          draft: false
+          prerelease: false
+
       - name: Publish to npm
         run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Success notification
+        run: |
+          echo "🎉 Successfully published ${{ steps.bump.outputs.new_version }} to npm!"
+          echo "📦 Package: https://www.npmjs.com/package/super-pancake-automation"
+          echo "🏷️ Release: https://github.com/${{ github.repository }}/releases/tag/${{ steps.bump.outputs.new_version }}"
