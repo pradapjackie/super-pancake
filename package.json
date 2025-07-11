@@ -1,6 +1,6 @@
 {
   "name": "super-pancake-automation",
-  "version": "1.0.25",
+  "version": "1.2.0",
   "description": "A lightweight DOM-based UI automation framework using Chrome DevTools Protocol",
   "main": "index.js",
   "type": "module",
@@ -53,15 +53,21 @@
     "generate": "node bin/generate-test.js",
     "lint": "echo 'No linting configured'",
     "build": "echo 'No build step required'",
-    "prepack": "npm test",
     "prepare": "npm run build"
   },
   "engines": {
     "node": ">=16.0.0",
     "npm": ">=8.0.0"
   },
-  "os": ["darwin", "linux", "win32"],
-  "cpu": ["x64", "arm64"],
+  "os": [
+    "darwin",
+    "linux",
+    "win32"
+  ],
+  "cpu": [
+    "x64",
+    "arm64"
+  ],
   "exports": {
     ".": "./index.js",
     "./utils/launcher.js": "./utils/launcher.js",
