@@ -53,7 +53,6 @@
     "generate": "node bin/generate-test.js",
     "lint": "echo 'No linting configured'",
     "build": "echo 'No build step required'",
-    "prepack": "npm test",
     "prepare": "npm run build"
   },
   "engines": {
