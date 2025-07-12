@@ -42,7 +42,7 @@ describe('Playground UI Form Test', () => {
 
   it('should navigate to form page', { timeout: config.test.timeout }, async () => {
     await testWithReport('should navigate to form page', async () => {
-      await navigateTo(session, 'http://localhost:8080/form.html');
+      await navigateTo(session, 'file://' + process.cwd() + '/public/form.html');
     }, session, import.meta.url);
   });
 

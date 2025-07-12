@@ -40,9 +40,9 @@ describe('Playground UI Form Test', () => {
     console.log('\n🧹 Test complete. Chrome closed.');
   });
 
-  it('should navigate to form page', { timeout: config.test.timeout }, async () => {
+  it('should navigate to form page should navigate to form page', { timeout: config.test.timeout }, async () => {
     await testWithReport('should navigate to form page', async () => {
-      await navigateTo(session, 'http://localhost:8080/form.html');
+      await navigateTo(session, 'file://' + process.cwd() + '/public/form.html');
     }, session, import.meta.url);
   });
 
@@ -104,7 +104,7 @@ describe('Playground UI Form Test', () => {
       assertContainsText(tableText, 'Bob', 'Table should include "Bob"');
 
       const listText = await getText(session, await waitForSelector(session, 'ul'));
-      assertContainsText(listText, 'Unordered Item 2');
+      assertContainsText(listText, 'Unordered Item 21');
     }, session, import.meta.url);
   });
 
