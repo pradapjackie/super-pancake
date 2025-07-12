@@ -183,25 +183,44 @@ it('should extract table data', async () => {
 });
 ```
 
+## 📚 Documentation
+
+Comprehensive guides and resources:
+
+| Document | Description |
+|----------|-------------|
+| **[Configuration Guide](docs/CONFIGURATION.md)** | Complete configuration system with environment profiles |
+| **[Project Roadmap](docs/ROADMAP.md)** | Development roadmap and feature timeline |
+| **[Architecture Guide](docs/ARCHITECTURE.md)** | Framework architecture and component overview |
+| **[Project Status](docs/PROJECT_STATUS.md)** | Current status, metrics, and progress tracking |
+| **[Feature Voting](docs/FEATURE_VOTING.md)** | Community feature requests and voting |
+| **[Development Notes](docs/INFO)** | Internal development notes and context |
+
 ## 🔧 Configuration
 
-### config.js
+The framework provides a comprehensive, environment-aware configuration system. See the **[Configuration Guide](docs/CONFIGURATION.md)** for complete details.
+
+### Quick Configuration Example
 ```javascript
-export const config = {
-  browser: {
-    port: 9222,
-    headed: true,
-    devtools: false
-  },
-  timeouts: {
-    test: 30000,
-    navigation: 10000,
-    waitForSelector: 5000,
-    reload: 3000
-  },
-  pollInterval: 100
-};
+import { config, getConfig, isDevelopment } from './config.js';
+
+// Environment-aware configuration
+if (isDevelopment()) {
+  // Headless disabled, DevTools open, debug logging
+} else {
+  // Production optimizations enabled
+}
+
+// Get specific config values
+const headless = getConfig('browser.headless');
+const timeout = getConfig('timeouts.testTimeout');
 ```
+
+### Environment Profiles
+- **Development**: Browser visible, DevTools open, verbose logging
+- **Testing**: Optimized for automated testing with monitoring
+- **Production**: Minimal logging, strict security, performance optimized
+- **CI/CD**: Single-process mode, conservative resources, JUnit reports
 
 ## 🎨 Features
 

@@ -73,24 +73,72 @@ function extractTestCases(filePath) {
 // Helper to extract valid tests from any result object
 function extractValidTests(result) {
     let tests = [];
-    if (Array.isArray(result?.tests)) {
-        tests = result.tests;
-    } else if (Array.isArray(result?.testResults)) {
+    
+    // Handle Vitest JSON format: result.testResults[].assertionResults[]
+    if (Array.isArray(result?.testResults)) {
         for (const suite of result.testResults) {
             if (Array.isArray(suite.assertionResults)) {
-                tests.push(...suite.assertionResults);
+                tests.push(...suite.assertionResults.map(test => ({
+                    name: test.title || test.fullName || test.name,
+                    status: test.status,
+                    duration: test.duration,
+                    error: test.failureMessages?.join('\n'),
+                    fullName: test.fullName
+                })));
+            }
+            if (Array.isArray(suite.tests)) {
+                tests.push(...suite.tests);
             }
         }
-    } else if (Array.isArray(result?.assertionResults)) {
-        tests = result.assertionResults;
-    } else if (result?.name && result?.status) {
-        tests = [result];
-    } else if (typeof result === 'object' && result !== null) {
+    }
+    
+    // Handle direct tests array
+    if (Array.isArray(result?.tests)) {
+        tests.push(...result.tests);
+    }
+    
+    // Handle assertion results directly
+    if (Array.isArray(result?.assertionResults)) {
+        tests.push(...result.assertionResults.map(test => ({
+            name: test.title || test.fullName || test.name,
+            status: test.status,
+            duration: test.duration,
+            error: test.failureMessages?.join('\n'),
+            fullName: test.fullName
+        })));
+    }
+    
+    // Handle single test object
+    if (result?.name && result?.status) {
         tests = [result];
     }
-    return tests.filter(
-        t => typeof t === 'object' &&
-            ((t.name || t.title || t.fullName || t.test) && (t.status || t.result?.status || t.state))
+    
+    // Handle tasks array (newer Vitest format)
+    if (Array.isArray(result?.tasks)) {
+        function extractFromTasks(tasks) {
+            const extracted = [];
+            tasks.forEach(task => {
+                if (task.type === 'test') {
+                    extracted.push({
+                        name: task.name,
+                        status: task.result?.state || task.state || 'unknown',
+                        duration: task.result?.duration,
+                        error: task.result?.errors?.[0]?.message
+                    });
+                } else if (Array.isArray(task.tasks)) {
+                    extracted.push(...extractFromTasks(task.tasks));
+                }
+            });
+            return extracted;
+        }
+        tests.push(...extractFromTasks(result.tasks));
+    }
+    
+    // Filter valid tests
+    return tests.filter(t => 
+        typeof t === 'object' && t !== null &&
+        (t.name || t.title || t.fullName || t.test) &&
+        (t.status || t.result?.status || t.state || t.result?.state)
     );
 }
 
@@ -221,8 +269,9 @@ app.post('/run', express.json(), async (req, res) => {
             child.stderr.on('data', data => broadcast(data));
 
             child.on('exit', code => {
-                // If JSON file does NOT exist, create a minimal failed result
+                // Check if JSON file exists and create fallback if needed
                 if (!fs.existsSync(outputFile)) {
+                    broadcast(`❌ JSON output file not found, creating fallback results\n`);
                     const results = Array.from(testSet).map(testName => ({
                         name: testName,
                         status: 'failed',
@@ -230,6 +279,7 @@ app.post('/run', express.json(), async (req, res) => {
                     }));
                     fs.writeFileSync(outputFile, JSON.stringify({ tests: results }, null, 2));
                 }
+                
                 broadcast(`\n✅ Finished: ${file} (exit code: ${code})\n`);
                 resolve();
             });
@@ -239,21 +289,48 @@ app.post('/run', express.json(), async (req, res) => {
     // Generate summary and report (same as before)
     let totalTests = 0, passed = 0, failed = 0, skipped = 0;
     const resultsDir = 'test-report/results';
-    const resultFiles = glob.sync(path.join(resultsDir, 'tests/**/*.json'));
+    
+    // Fix Windows path separator issue for glob
+    const globPattern = path.join(resultsDir, '**/*.json').replace(/\\/g, '/');
+    const allFiles = glob.sync(globPattern);
+    
+    // Filter out HTML reporter files (timestamp-based names) and only include Vitest JSON files
+    const resultFiles = allFiles.filter(file => {
+        const filename = path.basename(file);
+        // Keep only files that don't match timestamp pattern (HTML reporter files)
+        // HTML reporter files look like: 1752300813428-hr2m7vpk.json
+        return !filename.match(/^\d{13}-[a-z0-9]+\.json$/);
+    });
+    
+    broadcast(`🔍 Debug - Looking for JSON files in: ${resultsDir}\n`);
+    broadcast(`🔍 Debug - Total files found: ${allFiles.length}\n`);
+    broadcast(`🔍 Debug - Filtered Vitest files: ${resultFiles.length}\n`);
+    broadcast(`🔍 Debug - Using files: ${JSON.stringify(resultFiles, null, 2)}\n`);
     const fileTestCounts = [];
 
     for (const file of resultFiles) {
         try {
             const result = JSON.parse(fs.readFileSync(file, 'utf-8'));
             const validTests = extractValidTests(result);
-            if (validTests.length === 0) continue;
+            
+            if (validTests.length === 0) {
+                broadcast(`⚠️ No valid tests found in ${file}\n`);
+                continue;
+            }
+            
             fileTestCounts.push({ file, count: validTests.length });
             totalTests += validTests.length;
             validTests.forEach(entry => {
-                const status = (entry?.status || entry?.result?.status || entry?.state || '').toLowerCase();
+                const status = (entry?.status || entry?.result?.status || entry?.state || entry?.result?.state || '').toLowerCase();
+                
+                // Handle Vitest state values: 'pass', 'fail', 'skip', 'todo'
                 if (status === 'pass' || status === 'passed') passed++;
                 else if (status === 'fail' || status === 'failed') failed++;
-                else if (status === 'skipped' || status === 'pending') skipped++;
+                else if (status === 'skip' || status === 'skipped' || status === 'pending' || status === 'todo') skipped++;
+                else {
+                    broadcast(`⚠️ Unknown test status: ${status}\n`);
+                    failed++; // Treat unknown status as failed
+                }
             });
         } catch (err) {
             broadcast(`❌ Failed to read result file ${file}: ${err.message}\n`);

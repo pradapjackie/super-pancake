@@ -105,8 +105,18 @@ export function writeReport() {
             return files;
         };
         
-        const files = findJsonFiles(resultsDir);
-        console.log(`Found ${files.length} result files in ${resultsDir} (including subdirectories)`);
+        const allFiles = findJsonFiles(resultsDir);
+        
+        // Filter out HTML reporter files (timestamp-based names) to avoid duplication
+        const files = allFiles.filter(file => {
+            const filename = path.basename(file);
+            // Keep only files that don't match timestamp pattern (HTML reporter files)
+            // HTML reporter files look like: 1752300813428-hr2m7vpk.json
+            return !filename.match(/^\d{13}-[a-z0-9]+\.json$/);
+        });
+        
+        console.log(`Found ${allFiles.length} result files in ${resultsDir} (including subdirectories)`);
+        console.log(`Using ${files.length} files after filtering out HTML reporter duplicates`);
 
         for (const filePath of files) {
             try {
