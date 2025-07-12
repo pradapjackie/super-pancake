@@ -12,7 +12,32 @@ import { dirname } from 'path';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const packageRoot = path.join(__dirname, '..');
+
+// Find the package root - handle both dev and installed package scenarios
+let packageRoot;
+try {
+  // Try to find package.json starting from current directory
+  let currentDir = __dirname;
+  while (currentDir !== path.dirname(currentDir)) {
+    const packageJsonPath = path.join(currentDir, 'package.json');
+    if (fs.existsSync(packageJsonPath)) {
+      const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+      if (packageJson.name === 'super-pancake-automation') {
+        packageRoot = currentDir;
+        break;
+      }
+    }
+    currentDir = path.dirname(currentDir);
+  }
+  
+  // Fallback to relative path
+  if (!packageRoot) {
+    packageRoot = path.join(__dirname, '..');
+  }
+} catch (error) {
+  // Final fallback
+  packageRoot = path.join(__dirname, '..');
+}
 
 const require = createRequire(import.meta.url);
 const glob = require('glob');
@@ -104,7 +129,24 @@ app.post('/api/test-cases', express.json(), (req, res) => {
 
 // Main UI route - serve the HTML file
 app.get('/', (req, res) => {
-    res.sendFile(path.join(packageRoot, 'public', 'index.html'));
+    const indexPath = path.join(packageRoot, 'public', 'index.html');
+    if (fs.existsSync(indexPath)) {
+        res.sendFile(indexPath);
+    } else {
+        console.error(`❌ index.html not found at: ${indexPath}`);
+        console.error(`Package root: ${packageRoot}`);
+        res.status(404).send(`
+            <html>
+                <head><title>UI Not Found</title></head>
+                <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
+                    <h1>🔍 UI Files Not Found</h1>
+                    <p>Could not find the UI files at: <code>${indexPath}</code></p>
+                    <p>Package root detected as: <code>${packageRoot}</code></p>
+                    <p>Please ensure the package is properly installed.</p>
+                </body>
+            </html>
+        `);
+    }
 });
 
 // Serve the test report
@@ -245,16 +287,64 @@ app.post('/run', express.json(), async (req, res) => {
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
 
+// Memory leak prevention
+const connectedClients = new Set();
+
+wss.on('connection', (ws) => {
+    connectedClients.add(ws);
+    
+    ws.on('close', () => {
+        connectedClients.delete(ws);
+    });
+    
+    ws.on('error', (error) => {
+        console.error('WebSocket error:', error);
+        connectedClients.delete(ws);
+    });
+});
+
 function broadcast(message) {
-    wss.clients.forEach(client => {
+    // Clean up closed connections
+    for (const client of connectedClients) {
+        if (client.readyState !== 1) {
+            connectedClients.delete(client);
+        } else {
+            try {
+                client.send(message.toString());
+            } catch (error) {
+                console.error('Failed to send message to client:', error);
+                connectedClients.delete(client);
+            }
+        }
+    }
+}
+
+// Cleanup on process exit
+process.on('SIGINT', () => {
+    console.log('\nShutting down gracefully...');
+    connectedClients.forEach(client => {
         if (client.readyState === 1) {
-            client.send(message.toString());
+            client.close();
         }
     });
-}
+    connectedClients.clear();
+    server.close(() => {
+        process.exit(0);
+    });
+});
 
 server.listen(port, () => {
     const url = `http://localhost:${port}`;
     console.log(`🚀 Test UI running at ${url}`);
     open(url);
+});
+
+// Handle server errors
+server.on('error', (error) => {
+    if (error.code === 'EADDRINUSE') {
+        console.error(`❌ Port ${port} is already in use. Please stop other services or use a different port.`);
+    } else {
+        console.error('❌ Server error:', error);
+    }
+    process.exit(1);
 });

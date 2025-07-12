@@ -15,3 +15,14 @@ export * from './helpers/testWrapper.js';
 
 export * from './config.js';
 export * from './scripts/test-ui.js';
+
+// Export API utilities
+export * from './core/api.js';
+
+// Export caching utilities
+export { 
+  getCacheStats, 
+  clearQueryCache, 
+  invalidateCacheForSelector, 
+  configureCaching 
+} from './core/query-cache.js';

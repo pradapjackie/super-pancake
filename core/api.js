@@ -1,10 +1,19 @@
 import axios from 'axios';
 import Ajv from 'ajv';
+import {
+  SuperPancakeError,
+  ValidationError,
+  SecurityError,
+  validateText
+} from './errors.js';
 
 let authToken = null;
 
 // Set a global auth token
 export function setAuthToken(token) {
+  if (token !== null && typeof token !== 'string') {
+    throw new ValidationError('token', 'string or null', typeof token);
+  }
   authToken = token;
 }
 
@@ -23,6 +32,21 @@ export function buildHeaders(additionalHeaders = {}) {
 
 // Build URL with query parameters
 export function buildUrlWithParams(url, params = {}) {
+  if (!url || typeof url !== 'string') {
+    throw new ValidationError('url', 'non-empty string', typeof url);
+  }
+  
+  // Basic URL validation
+  try {
+    new URL(url);
+  } catch {
+    throw new ValidationError('url', 'valid URL', url);
+  }
+  
+  if (params && typeof params !== 'object') {
+    throw new ValidationError('params', 'object', typeof params);
+  }
+  
   const query = new URLSearchParams(params).toString();
   return query ? `${url}?${query}` : url;
 }
@@ -50,31 +74,52 @@ export async function retryRequest(requestFn, retries = 3, delay = 1000) {
 
 // HTTP Methods
 export async function sendGet(url, headers = {}) {
+  if (!url || typeof url !== 'string') {
+    throw new ValidationError('url', 'non-empty string', typeof url);
+  }
   return await timedRequest(() => axios.get(url, { headers: withAuth(headers) }));
 }
 
 export async function sendPost(url, body = {}, headers = {}) {
+  if (!url || typeof url !== 'string') {
+    throw new ValidationError('url', 'non-empty string', typeof url);
+  }
   return await timedRequest(() => axios.post(url, body, { headers: withAuth(headers) }));
 }
 
 export async function sendPut(url, body = {}, headers = {}) {
+  if (!url || typeof url !== 'string') {
+    throw new ValidationError('url', 'non-empty string', typeof url);
+  }
   return await timedRequest(() => axios.put(url, body, { headers: withAuth(headers) }));
 }
 
 export async function sendPatch(url, body = {}, headers = {}) {
+  if (!url || typeof url !== 'string') {
+    throw new ValidationError('url', 'non-empty string', typeof url);
+  }
   return await timedRequest(() => axios.patch(url, body, { headers: withAuth(headers) }));
 }
 
 export async function sendDelete(url, headers = {}) {
+  if (!url || typeof url !== 'string') {
+    throw new ValidationError('url', 'non-empty string', typeof url);
+  }
   return await timedRequest(() => axios.delete(url, { headers: withAuth(headers) }));
 }
 
 export async function sendOptions(url, headers = {}) {
+  if (!url || typeof url !== 'string') {
+    throw new ValidationError('url', 'non-empty string', typeof url);
+  }
   return await timedRequest(() => axios.options(url, { headers: withAuth(headers) }));
 }
 
 // HEAD request
 export async function sendHead(url, headers = {}) {
+  if (!url || typeof url !== 'string') {
+    throw new ValidationError('url', 'non-empty string', typeof url);
+  }
   return await timedRequest(() => axios.head(url, { headers: withAuth(headers) }));
 }
 
@@ -226,6 +271,10 @@ export const apiConfig = {
 
 // Prepend base URL to relative paths
 export function withBaseUrl(path) {
+  if (!path || typeof path !== 'string') {
+    throw new ValidationError('path', 'non-empty string', typeof path);
+  }
+  
   return path.startsWith('http') ? path : `${apiConfig.baseUrl}${path}`;
 }
 
