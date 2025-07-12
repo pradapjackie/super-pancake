@@ -5,6 +5,11 @@ on:
     branches: [ main ]
     types: [opened, synchronize, reopened, ready_for_review]
 
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
 jobs:
   quality-gate:
     name: 🚪 Quality Gate
@@ -118,11 +123,14 @@ jobs:
     - name: 💬 Comment test results
       uses: actions/github-script@v7
       if: matrix.node-version == '20.x' && always()
+      continue-on-error: true
       with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |
           const fs = require('fs');
           
-          const testPassed = '${{ steps.test-summary.outputs.all-tests-passed }}' === 'true';
+          try {
+            const testPassed = '${{ steps.test-summary.outputs.all-tests-passed }}' === 'true';
           const totalSuites = '${{ steps.test-summary.outputs.total-suites }}';
           const passedSuites = '${{ steps.test-summary.outputs.passed-suites }}';
           const successRate = '${{ steps.test-summary.outputs.success-rate }}';
@@ -131,43 +139,25 @@ jobs:
           let status = testPassed ? 'PASSED' : 'FAILED';
           let color = testPassed ? '🟢' : '🔴';
           
-          let commentBody = `## ${emoji} Test Results for PR #${{ github.event.pull_request.number }}
-          
-${color} **Status:** ${status}
-
-### 📊 Quick Summary
-- **Test Suites:** ${passedSuites}/${totalSuites} passed
-- **Success Rate:** ${successRate}
-- **Node.js:** Multiple versions tested (18.x, 20.x)
-- **Environment:** CI/Test Mode
-
-`;
+          let commentBody = "## " + emoji + " Test Results for PR #${{ github.event.pull_request.number }}\n\n" + 
+            color + " **Status:** " + status + "\n\n" +
+            "### 📊 Quick Summary\n" +
+            "- **Test Suites:** " + passedSuites + "/" + totalSuites + " passed\n" +
+            "- **Success Rate:** " + successRate + "\n" +
+            "- **Node.js:** Multiple versions tested (18.x, 20.x)\n" +
+            "- **Environment:** CI/Test Mode\n\n";
 
           // Add detailed report if available
           if (fs.existsSync('TEST_REPORT.md')) {
             const report = fs.readFileSync('TEST_REPORT.md', 'utf8');
-            commentBody += `
-### 📋 Detailed Test Report
-
-<details>
-<summary>Click to expand full test report</summary>
-
-\`\`\`
-${report}
-\`\`\`
-
-</details>
-
-`;
+            commentBody += "\n### 📋 Detailed Test Report\n\n<details>\n<summary>Click to expand full test report</summary>\n\n```\n" + report + "\n```\n\n</details>\n\n";
           }
           
-          commentBody += `
-### 🔗 Artifacts
-- [📊 HTML Test Report](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
-- [📈 Detailed Results](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
-
----
-*Automated by 🥞 Super Pancake Framework CI • [View Workflow](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})*`;
+          commentBody += "\n### 🔗 Artifacts\n" +
+            "- [📊 HTML Test Report](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})\n" +
+            "- [📈 Detailed Results](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})\n\n" +
+            "---\n" +
+            "*Automated by 🥞 Super Pancake Framework CI • [View Workflow](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})*";
 
           // Find existing comment to update
           const { data: comments } = await github.rest.issues.listComments({
@@ -177,7 +167,7 @@ ${report}
           });
           
           const existingComment = comments.find(comment => 
-            comment.body.includes('Test Results for PR #${{ github.event.pull_request.number }}')
+            comment.body.includes('Test Results for PR #' + '${{ github.event.pull_request.number }}')
           );
           
           if (existingComment) {
@@ -194,6 +184,14 @@ ${report}
               issue_number: context.issue.number,
               body: commentBody
             });
+          }
+          } catch (error) {
+            console.log('❌ Could not post test results comment:', error.message);
+            console.log('ℹ️ This might be due to permissions or repository settings');
+            console.log('📊 Test Results Summary:');
+            console.log('- Status:', testPassed ? 'PASSED' : 'FAILED');
+            console.log('- Suites:', passedSuites + '/' + totalSuites + ' passed');
+            console.log('- Success Rate:', successRate);
           }
 
   require-tests:
