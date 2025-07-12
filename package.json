@@ -30,8 +30,10 @@
     "domtest": "./bin/cli.js",
     "super-pancake-ui": "./bin/ui-runner.js",
     "super-pancake-run": "./bin/super-pancake-run.js",
+    "super-pancake-test": "./bin/super-pancake-run-alt.js",
     "super-pancake-generate": "./bin/generate-test.js",
-    "super-pancake-server": "./bin/ui-server.js"
+    "super-pancake-server": "./bin/ui-server.js",
+    "super-pancake-check": "./bin/check-install.js"
   },
   "repository": {
     "type": "git",

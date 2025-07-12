@@ -7,6 +7,12 @@ import http from 'http';
 import { WebSocketServer } from 'ws';
 import { createRequire } from 'module';
 import path from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const packageRoot = path.join(__dirname, '..');
 
 const require = createRequire(import.meta.url);
 const glob = require('glob');
@@ -18,7 +24,7 @@ const execAsync = promisify(exec);
 
 // Middleware
 app.use(express.json());
-app.use(express.static('public')); // Serve static files from public directory
+app.use(express.static(path.join(packageRoot, 'public'))); // Serve static files from package public directory
 
 // Extract test cases from .test.js files
 function extractTestCases(filePath) {
@@ -98,7 +104,7 @@ app.post('/api/test-cases', express.json(), (req, res) => {
 
 // Main UI route - serve the HTML file
 app.get('/', (req, res) => {
-    res.sendFile(path.join(process.cwd(), 'public', 'index.html'));
+    res.sendFile(path.join(packageRoot, 'public', 'index.html'));
 });
 
 // Serve the test report
