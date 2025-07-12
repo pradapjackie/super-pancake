@@ -7,6 +7,16 @@ import { exec } from 'child_process';
  * @param {boolean} options.headed - If true, launch with visible window
  */
 export async function launchChrome({ headed = false } = {}) {
+    // Try to kill any existing Chrome processes on port 9222
+    try {
+        exec('lsof -ti:9222 | xargs kill -9 2>/dev/null || true');
+        exec('pkill -f "Chrome.*--remote-debugging-port=9222" 2>/dev/null || true');
+        // Small delay to let processes cleanup
+        await new Promise(resolve => setTimeout(resolve, 1000));
+    } catch (error) {
+        // Ignore cleanup errors
+    }
+
     const chrome = await chromeLauncher.launch({
         chromeFlags: [
             ...(!headed ? ['--headless=new'] : []),
@@ -18,7 +28,9 @@ export async function launchChrome({ headed = false } = {}) {
             '--start-maximized',
             '--no-sandbox',
             '--disable-dev-shm-usage',
-            '--enable-automation'
+            '--enable-automation',
+            '--disable-web-security',
+            '--disable-features=VizDisplayCompositor'
         ],
         port: 9222,
     });
