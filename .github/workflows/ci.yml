@@ -74,11 +74,7 @@ jobs:
                 issue_number: context.issue.number,
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                body: `## 🧪 Test Results (Node.js ${{ matrix.node-version }})
-                
-${report}
-
-[📊 View detailed HTML report in artifacts](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})`
+                body: "## 🧪 Test Results (Node.js ${{ matrix.node-version }})\n\n" + report + "\n\n[📊 View detailed HTML report in artifacts](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
               });
             }
           } catch (error) {
