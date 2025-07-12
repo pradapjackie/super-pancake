@@ -131,43 +131,25 @@ jobs:
           let status = testPassed ? 'PASSED' : 'FAILED';
           let color = testPassed ? '🟢' : '🔴';
           
-          let commentBody = `## ${emoji} Test Results for PR #${{ github.event.pull_request.number }}
-          
-${color} **Status:** ${status}
-
-### 📊 Quick Summary
-- **Test Suites:** ${passedSuites}/${totalSuites} passed
-- **Success Rate:** ${successRate}
-- **Node.js:** Multiple versions tested (18.x, 20.x)
-- **Environment:** CI/Test Mode
-
-`;
+          let commentBody = "## " + emoji + " Test Results for PR #${{ github.event.pull_request.number }}\n\n" + 
+            color + " **Status:** " + status + "\n\n" +
+            "### 📊 Quick Summary\n" +
+            "- **Test Suites:** " + passedSuites + "/" + totalSuites + " passed\n" +
+            "- **Success Rate:** " + successRate + "\n" +
+            "- **Node.js:** Multiple versions tested (18.x, 20.x)\n" +
+            "- **Environment:** CI/Test Mode\n\n";
 
           // Add detailed report if available
           if (fs.existsSync('TEST_REPORT.md')) {
             const report = fs.readFileSync('TEST_REPORT.md', 'utf8');
-            commentBody += `
-### 📋 Detailed Test Report
-
-<details>
-<summary>Click to expand full test report</summary>
-
-\`\`\`
-${report}
-\`\`\`
-
-</details>
-
-`;
+            commentBody += "\n### 📋 Detailed Test Report\n\n<details>\n<summary>Click to expand full test report</summary>\n\n```\n" + report + "\n```\n\n</details>\n\n";
           }
           
-          commentBody += `
-### 🔗 Artifacts
-- [📊 HTML Test Report](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
-- [📈 Detailed Results](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
-
----
-*Automated by 🥞 Super Pancake Framework CI • [View Workflow](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})*`;
+          commentBody += "\n### 🔗 Artifacts\n" +
+            "- [📊 HTML Test Report](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})\n" +
+            "- [📈 Detailed Results](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})\n\n" +
+            "---\n" +
+            "*Automated by 🥞 Super Pancake Framework CI • [View Workflow](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})*";
 
           // Find existing comment to update
           const { data: comments } = await github.rest.issues.listComments({
@@ -177,7 +159,7 @@ ${report}
           });
           
           const existingComment = comments.find(comment => 
-            comment.body.includes('Test Results for PR #${{ github.event.pull_request.number }}')
+            comment.body.includes('Test Results for PR #' + '${{ github.event.pull_request.number }}')
           );
           
           if (existingComment) {
