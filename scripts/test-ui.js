@@ -264,9 +264,21 @@ app.post('/run', express.json(), async (req, res) => {
 
         await new Promise((resolve) => {
             const child = exec(cmd);
+            let stderrOutput = '';
+            let hasError = false;
 
             child.stdout.on('data', data => broadcast(data));
-            child.stderr.on('data', data => broadcast(data));
+            child.stderr.on('data', data => {
+                broadcast(data);
+                stderrOutput += data.toString();
+                
+                // Check for specific error types
+                if (data.includes('Error') || data.includes('Failed') || data.includes('Cannot') || 
+                    data.includes('TypeError') || data.includes('SyntaxError') || data.includes('ReferenceError')) {
+                    hasError = true;
+                    broadcast(`🚨 Error detected: ${data.trim()}\n`);
+                }
+            });
 
             child.on('exit', code => {
                 // Check if JSON file exists and create fallback if needed
@@ -278,6 +290,90 @@ app.post('/run', express.json(), async (req, res) => {
                         error: 'Test did not complete (Vitest may have crashed or not output JSON)'
                     }));
                     fs.writeFileSync(outputFile, JSON.stringify({ tests: results }, null, 2));
+                } else if (code !== 0) {
+                    // Test file exists but exit code indicates failure
+                    // Check if it's a configuration/syntax error (0 tests but failure)
+                    try {
+                        const result = JSON.parse(fs.readFileSync(outputFile, 'utf-8'));
+                        if (result.numTotalTests === 0 && code === 1) {
+                            // Extract specific error details from stderr
+                            let errorDetails = 'Configuration or syntax error - check test file and imports.';
+                            let errorType = 'Unknown Error';
+                            
+                            if (stderrOutput) {
+                                // Parse common error patterns
+                                if (stderrOutput.includes('Cannot read properties of undefined')) {
+                                    const match = stderrOutput.match(/Cannot read properties of undefined \(reading '([^']+)'\)/);
+                                    if (match) {
+                                        errorType = 'Configuration Error';
+                                        errorDetails = `Cannot read property '${match[1]}' - likely incorrect configuration path. Check config.js structure.`;
+                                        
+                                        if (match[1] === 'timeout') {
+                                            errorDetails += '\n\nSuggestion: Use config.timeouts.testTimeout instead of config.test.timeout';
+                                        }
+                                    }
+                                } else if (stderrOutput.includes('SyntaxError')) {
+                                    errorType = 'Syntax Error';
+                                    const syntaxMatch = stderrOutput.match(/SyntaxError: (.+)/);
+                                    errorDetails = syntaxMatch ? syntaxMatch[1] : 'Syntax error in test file';
+                                } else if (stderrOutput.includes('TypeError')) {
+                                    errorType = 'Type Error';
+                                    const typeMatch = stderrOutput.match(/TypeError: (.+)/);
+                                    errorDetails = typeMatch ? typeMatch[1] : 'Type error in test file';
+                                } else if (stderrOutput.includes('Cannot resolve')) {
+                                    errorType = 'Import Error';
+                                    errorDetails = 'Cannot resolve module - check import paths and file locations';
+                                } else if (stderrOutput.includes('ENOENT')) {
+                                    errorType = 'File Not Found';
+                                    errorDetails = 'Required file or module not found - check file paths';
+                                }
+                                
+                                // Add the raw error output for debugging
+                                errorDetails += '\n\nFull error output:\n' + stderrOutput.trim();
+                            }
+                            
+                            broadcast(`❌ ${errorType} detected\n`);
+                            broadcast(`📋 Error Details: ${errorDetails}\n`);
+                            
+                            // Create fallback results showing the specific error
+                            const results = Array.from(testSet).map(testName => ({
+                                name: testName,
+                                status: 'failed',
+                                error: `${errorType}: ${errorDetails}`,
+                                timestamp: new Date().toISOString(),
+                                duration: '0ms',
+                                file: file
+                            }));
+                            
+                            // Override the JSON with error information
+                            const now = Date.now();
+                            const errorResult = {
+                                testResults: [{
+                                    assertionResults: results.map(test => ({
+                                        title: test.name,
+                                        status: 'failed',
+                                        duration: 0,
+                                        failureMessages: [test.error],
+                                        fullName: test.name
+                                    })),
+                                    status: 'failed',
+                                    name: file,
+                                    message: `${errorType}: ${errorDetails}`,
+                                    startTime: now,
+                                    endTime: now
+                                }],
+                                numTotalTests: results.length,
+                                numFailedTests: results.length,
+                                numPassedTests: 0,
+                                success: false,
+                                startTime: now,
+                                endTime: now
+                            };
+                            fs.writeFileSync(outputFile, JSON.stringify(errorResult, null, 2));
+                        }
+                    } catch (err) {
+                        broadcast(`❌ Error reading test results: ${err.message}\n`);
+                    }
                 }
                 
                 broadcast(`\n✅ Finished: ${file} (exit code: ${code})\n`);
@@ -310,7 +406,10 @@ app.post('/run', express.json(), async (req, res) => {
 
     for (const file of resultFiles) {
         try {
-            const result = JSON.parse(fs.readFileSync(file, 'utf-8'));
+            const content = fs.readFileSync(file, 'utf-8');
+            const result = JSON.parse(content);
+            
+            
             const validTests = extractValidTests(result);
             
             if (validTests.length === 0) {
