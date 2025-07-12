@@ -1,6 +1,6 @@
 {
   "name": "super-pancake-automation",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "A lightweight DOM-based UI automation framework using Chrome DevTools Protocol",
   "main": "index.js",
   "type": "module",
