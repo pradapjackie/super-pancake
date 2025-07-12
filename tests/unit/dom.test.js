@@ -109,7 +109,7 @@ describe('DOM Operations', () => {
       cachedQuerySelector.mockResolvedValueOnce(null);
       
       await expect(querySelector(mockSession, '#notfound'))
-        .rejects.toThrow(ElementNotFoundError);
+        .rejects.toThrow('Element not found for selector: "#notfound"');
     });
 
     it('should support disabling cache', async () => {

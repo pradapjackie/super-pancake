@@ -42,9 +42,10 @@ try {
 const require = createRequire(import.meta.url);
 const glob = require('glob');
 import open from 'open';
+import { ensurePortAvailable } from '../utils/port-finder.js';
 
 const app = express();
-const port = 3000;
+const defaultPort = process.env.PORT || 3000;
 const execAsync = promisify(exec);
 
 // Middleware
@@ -509,10 +510,24 @@ process.on('SIGINT', () => {
     });
 });
 
-server.listen(port, () => {
-    const url = `http://localhost:${port}`;
-    console.log(`🚀 Test UI running at ${url}`);
-    open(url);
+// Start server with automatic port finding
+async function startServer() {
+    const port = await ensurePortAvailable(defaultPort, true);
+    
+    server.listen(port, () => {
+        const url = `http://localhost:${port}`;
+        console.log(`🚀 Test UI running at ${url}`);
+        
+        // Only open browser if not in test environment
+        if (!process.env.CI && !process.env.NODE_ENV?.includes('test')) {
+            open(url);
+        }
+    });
+}
+
+startServer().catch(error => {
+    console.error('❌ Failed to start server:', error);
+    process.exit(1);
 });
 
 // Handle server errors

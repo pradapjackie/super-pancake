@@ -1,0 +1,221 @@
+name: 🧪 Test on Pull Request
+
+on:
+  pull_request:
+    branches: [ main ]
+    types: [opened, synchronize, reopened, ready_for_review]
+
+jobs:
+  quality-gate:
+    name: 🚪 Quality Gate
+    runs-on: ubuntu-latest
+    if: '!github.event.pull_request.draft'
+    
+    outputs:
+      should-run-tests: ${{ steps.changes.outputs.should-test }}
+      
+    steps:
+    - name: 📥 Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        
+    - name: 🔍 Check for relevant changes
+      id: changes
+      run: |
+        # Check if there are changes to source code, tests, or config
+        if git diff --name-only origin/main...HEAD | grep -E '\.(js|json|md)$|^tests/|^core/|^utils/|package\.json|\.github/workflows/'; then
+          echo "should-test=true" >> $GITHUB_OUTPUT
+          echo "✅ Found relevant changes - will run tests"
+        else
+          echo "should-test=false" >> $GITHUB_OUTPUT
+          echo "ℹ️ No relevant changes detected - skipping tests"
+        fi
+
+  test-pr:
+    name: 🧪 Test Pull Request
+    runs-on: ubuntu-latest
+    needs: quality-gate
+    if: needs.quality-gate.outputs.should-run-tests == 'true'
+    
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+        
+    steps:
+    - name: 📥 Checkout PR
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ github.event.pull_request.head.sha }}
+        
+    - name: 🔧 Setup Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+        
+    - name: 📦 Install dependencies
+      run: npm ci
+      
+    - name: 🔍 Lint code (if available)
+      run: |
+        if npm run lint --silent 2>/dev/null; then
+          echo "🔍 Running linter..."
+          npm run lint
+        else
+          echo "ℹ️ No lint script found, skipping..."
+        fi
+      continue-on-error: false
+      
+    - name: 🧪 Run test suite
+      run: npm run test:all-no-server
+      env:
+        NODE_ENV: test
+        CI: true
+        GITHUB_ACTIONS: true
+        
+    - name: 📊 Generate test report
+      run: |
+        echo "📊 Generating test reports..."
+        npm run test:report
+      if: always()
+      
+    - name: 📈 Create test summary
+      id: test-summary
+      if: always()
+      run: |
+        if [ -f "TEST_REPORT.md" ]; then
+          echo "test-report-exists=true" >> $GITHUB_OUTPUT
+          
+          # Extract key metrics from the report
+          TOTAL_SUITES=$(grep -o "Total Test Suites.*[0-9]" TEST_REPORT.md | grep -o "[0-9]*$" || echo "0")
+          PASSED_SUITES=$(grep -o "✅ Passed.*[0-9]" TEST_REPORT.md | grep -o "[0-9]*$" || echo "0")
+          SUCCESS_RATE=$(grep -o "Success Rate.*[0-9.]*%" TEST_REPORT.md | grep -o "[0-9.]*%" || echo "0%")
+          
+          echo "total-suites=$TOTAL_SUITES" >> $GITHUB_OUTPUT
+          echo "passed-suites=$PASSED_SUITES" >> $GITHUB_OUTPUT
+          echo "success-rate=$SUCCESS_RATE" >> $GITHUB_OUTPUT
+          
+          if [ "$TOTAL_SUITES" = "$PASSED_SUITES" ]; then
+            echo "all-tests-passed=true" >> $GITHUB_OUTPUT
+          else
+            echo "all-tests-passed=false" >> $GITHUB_OUTPUT
+          fi
+        else
+          echo "test-report-exists=false" >> $GITHUB_OUTPUT
+        fi
+        
+    - name: 📋 Upload test artifacts
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: pr-test-results-${{ matrix.node-version }}-${{ github.event.pull_request.number }}
+        path: |
+          test-report.html
+          TEST_REPORT.md
+          automationTestReport.html
+        retention-days: 14
+        
+    - name: 💬 Comment test results
+      uses: actions/github-script@v7
+      if: matrix.node-version == '20.x' && always()
+      with:
+        script: |
+          const fs = require('fs');
+          
+          const testPassed = '${{ steps.test-summary.outputs.all-tests-passed }}' === 'true';
+          const totalSuites = '${{ steps.test-summary.outputs.total-suites }}';
+          const passedSuites = '${{ steps.test-summary.outputs.passed-suites }}';
+          const successRate = '${{ steps.test-summary.outputs.success-rate }}';
+          
+          let emoji = testPassed ? '✅' : '❌';
+          let status = testPassed ? 'PASSED' : 'FAILED';
+          let color = testPassed ? '🟢' : '🔴';
+          
+          let commentBody = `## ${emoji} Test Results for PR #${{ github.event.pull_request.number }}
+          
+${color} **Status:** ${status}
+
+### 📊 Quick Summary
+- **Test Suites:** ${passedSuites}/${totalSuites} passed
+- **Success Rate:** ${successRate}
+- **Node.js:** Multiple versions tested (18.x, 20.x)
+- **Environment:** CI/Test Mode
+
+`;
+
+          // Add detailed report if available
+          if (fs.existsSync('TEST_REPORT.md')) {
+            const report = fs.readFileSync('TEST_REPORT.md', 'utf8');
+            commentBody += `
+### 📋 Detailed Test Report
+
+<details>
+<summary>Click to expand full test report</summary>
+
+\`\`\`
+${report}
+\`\`\`
+
+</details>
+
+`;
+          }
+          
+          commentBody += `
+### 🔗 Artifacts
+- [📊 HTML Test Report](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+- [📈 Detailed Results](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+
+---
+*Automated by 🥞 Super Pancake Framework CI • [View Workflow](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})*`;
+
+          // Find existing comment to update
+          const { data: comments } = await github.rest.issues.listComments({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.issue.number,
+          });
+          
+          const existingComment = comments.find(comment => 
+            comment.body.includes('Test Results for PR #${{ github.event.pull_request.number }}')
+          );
+          
+          if (existingComment) {
+            await github.rest.issues.updateComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: existingComment.id,
+              body: commentBody
+            });
+          } else {
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: commentBody
+            });
+          }
+
+  require-tests:
+    name: 🛡️ Require Tests
+    runs-on: ubuntu-latest
+    needs: [quality-gate, test-pr]
+    if: always()
+    
+    steps:
+    - name: ✅ Check test results
+      run: |
+        echo "Quality Gate: ${{ needs.quality-gate.result }}"
+        echo "Tests: ${{ needs.test-pr.result }}"
+        
+        if [ "${{ needs.quality-gate.outputs.should-run-tests }}" = "true" ]; then
+          if [ "${{ needs.test-pr.result }}" != "success" ]; then
+            echo "❌ Tests failed - cannot merge"
+            exit 1
+          else
+            echo "✅ All tests passed - ready to merge"
+          fi
+        else
+          echo "ℹ️ No tests required for this PR"
+        fi

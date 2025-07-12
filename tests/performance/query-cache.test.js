@@ -156,8 +156,13 @@ describe('Query Cache', () => {
       configureCaching({ maxSize: 2, ttl: 30000 });
       
       const nodeId = 123;
-      mockSession.send.mockResolvedValue({ root: { nodeId: 1 } });
-      mockSession.send.mockResolvedValue({ nodeId });
+      mockSession.send
+        .mockResolvedValueOnce({ root: { nodeId: 1 } })
+        .mockResolvedValueOnce({ nodeId })
+        .mockResolvedValueOnce({ root: { nodeId: 1 } })
+        .mockResolvedValueOnce({ nodeId })
+        .mockResolvedValueOnce({ root: { nodeId: 1 } })
+        .mockResolvedValueOnce({ nodeId });
       
       // Fill cache to capacity
       await cachedQuerySelector(mockSession, '#test1');
