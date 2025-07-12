@@ -40,44 +40,44 @@ describe('Playground UI Form Test', () => {
     console.log('\n🧹 Test complete. Chrome closed.');
   });
 
-  it('should navigate to form page', { timeout: config.test.timeout }, async () => {
+  it('should navigate to form page', { timeout: config.timeouts.testTimeout }, async () => {
     await testWithReport('should navigate to form page', async () => {
       await navigateTo(session, 'file://' + process.cwd() + '/public/form.html');
     }, session, import.meta.url);
   });
 
-  it('should fill in the name input', { timeout: config.test.timeout }, async () => {
+  it('should fill in the name input', { timeout: config.timeouts.testTimeout }, async () => {
     await testWithReport('should fill in the name input', async () => {
       await fillInput(session, 'input[name="name"]', 'Pradap');
     }, session, import.meta.url);
   });
 
-  it('should fill in the email input', { timeout: config.test.timeout }, async () => {
+  it('should fill in the email input', { timeout: config.timeouts.testTimeout }, async () => {
     await testWithReport('should fill in the email input', async () => {
       await fillInput(session, 'input[name="email"]', 'pradap@example.com');
     }, session, import.meta.url);
   });
 
-  it('should fill in the password input', { timeout: config.test.timeout }, async () => {
+  it('should fill in the password input', { timeout: config.timeouts.testTimeout }, async () => {
     await testWithReport('should fill in the password input', async () => {
       await fillInput(session, 'input[name="password"]', 'supersecret');
     }, session, import.meta.url);
   });
 
-  it('should fill in the date and time inputs', { timeout: config.test.timeout }, async () => {
+  it('should fill in the date and time inputs', { timeout: config.timeouts.testTimeout }, async () => {
     await testWithReport('should fill in the date and time inputs', async () => {
       await fillInput(session, 'input[name="date"]', '2025-06-23');
       await fillInput(session, 'input[name="time"]', '12:34');
     }, session, import.meta.url);
   });
 
-  it('should fill in the message textarea', { timeout: config.test.timeout }, async () => {
+  it('should fill in the message textarea', { timeout: config.timeouts.testTimeout }, async () => {
     await testWithReport('should fill in the message textarea', async () => {
       await fillInput(session, 'textarea[name="message"]', 'Test message');
     }, session, import.meta.url);
   });
 
-  it('should select dropdown and check options', { timeout: config.test.timeout }, async () => {
+  it('should select dropdown and check options', { timeout: config.timeouts.testTimeout }, async () => {
     await testWithReport('should select dropdown and check options', async () => {
       await selectOption(session, 'select[name="dropdown"]', 'two');
       await check(session, 'input[name="subscribe"]', true);
@@ -85,7 +85,7 @@ describe('Playground UI Form Test', () => {
     }, session, import.meta.url);
   });
 
-  it('should submit the form', { timeout: config.test.timeout }, async () => {
+  it('should submit the form', { timeout: config.timeouts.testTimeout }, async () => {
     await testWithReport('should submit the form', async () => {
       await click(session, 'button[type="submit"]');
     }, session, import.meta.url);
@@ -94,7 +94,7 @@ describe('Playground UI Form Test', () => {
 
 
 
-  it('should verify table and list contents', { timeout: config.test.timeout }, async () => {
+  it('should verify table and list contents', { timeout: config.timeouts.testTimeout }, async () => {
     await testWithReport('should verify table and list contents', async () => {
       const status = await getAttribute(session, 'form', 'data-status');
       assertEqual(status, 'submitted', 'Form should be marked as submitted');
@@ -108,7 +108,7 @@ describe('Playground UI Form Test', () => {
     }, session, import.meta.url);
   });
 
-  // it('should take a screenshot of the form', { timeout: config.test.timeout }, async () => {
+  // it('should take a screenshot of the form', { timeout: config.timeouts.testTimeout }, async () => {
   //   await testWithReport('should take a screenshot of the form', async () => {
   //     await takeElementScreenshot(session, 'form', 'test-report/screenshots/form-screenshot.png');
   //   }, session);

@@ -134,7 +134,7 @@ export function writeReport() {
                                     name: assertion.title || assertion.fullName,
                                     status: assertion.status === 'passed' ? 'pass' : 'fail',
                                     file: testSuite.name,
-                                    timestamp: new Date(result.startTime).toISOString(),
+                                    timestamp: result.startTime ? new Date(result.startTime).toISOString() : new Date().toISOString(),
                                     duration: assertion.duration ? `${assertion.duration.toFixed(2)}ms` : '-',
                                     error: assertion.failureMessages && assertion.failureMessages.length > 0 ? assertion.failureMessages.join('\n') : null
                                 };
@@ -144,10 +144,18 @@ export function writeReport() {
                     }
                 } else {
                     // Custom format (existing tests)
-                    const keyId = `${result.file}|${result.name}|${result.timestamp}`;
+                    const keyId = `${result.file}|${result.name}|${result.timestamp || new Date().toISOString()}`;
                     if (aggregatedResults.has(keyId)) {
                         const existing = aggregatedResults.get(keyId);
-                        if (new Date(existing.timestamp) > new Date(result.timestamp)) continue;
+                        try {
+                            if (new Date(existing.timestamp) > new Date(result.timestamp)) continue;
+                        } catch (e) {
+                            // Invalid timestamp comparison, just use the new result
+                        }
+                    }
+                    // Ensure timestamp is valid
+                    if (!result.timestamp || isNaN(new Date(result.timestamp))) {
+                        result.timestamp = new Date().toISOString();
                     }
                     aggregatedResults.set(keyId, result);
                 }
