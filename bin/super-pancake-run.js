@@ -4,6 +4,10 @@ import fs from 'fs';
 import path from 'path';
 import { spawn } from 'child_process';
 
+// Windows compatibility - npx needs .cmd extension on Windows
+const isWindows = process.platform === 'win32';
+const npxCommand = isWindows ? 'npx.cmd' : 'npx';
+
 const resultsDir = path.resolve('test-report/results');
 if (fs.existsSync(resultsDir)) {
   const files = fs.readdirSync(resultsDir);
@@ -24,7 +28,10 @@ if (fs.existsSync(resultsDir)) {
 
 console.log('\n🚀 Starting Vitest run...\n');
 
-const vitest = spawn('npx', ['vitest', 'run'], { stdio: ['ignore', 'pipe', 'pipe'] });
+const vitest = spawn(npxCommand, ['vitest', 'run'], { 
+  stdio: ['ignore', 'pipe', 'pipe'],
+  shell: isWindows // Use shell on Windows for better compatibility
+});
 
 let stdoutData = '';
 let stderrData = '';
