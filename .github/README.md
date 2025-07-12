@@ -52,6 +52,11 @@ Each workflow generates and stores:
 - `NPM_TOKEN`: NPM authentication token for publishing
 - `GITHUB_TOKEN`: Automatically provided by GitHub Actions
 
+### Dependency Management:
+- Uses `package.json` only (no lock files)
+- `npm install` for fresh dependency resolution
+- Ensures latest compatible versions in CI
+
 ### Environment Protection:
 - Production environment requires manual approval for publishing
 - All tests must pass before any publish operation
