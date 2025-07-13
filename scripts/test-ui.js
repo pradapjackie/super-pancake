@@ -310,7 +310,7 @@ app.post('/run', express.json(), async (req, res) => {
                                         errorDetails = `Cannot read property '${match[1]}' - likely incorrect configuration path. Check config.js structure.`;
                                         
                                         if (match[1] === 'timeout') {
-                                            errorDetails += '\n\nSuggestion: Use config.timeouts.testTimeout instead of config.test.timeout';
+                                            errorDetails += '\n\nSuggestion: Use config.timeouts.testTimeout instead of config.timeouts.testTimeout';
                                         }
                                     }
                                 } else if (stderrOutput.includes('SyntaxError')) {
