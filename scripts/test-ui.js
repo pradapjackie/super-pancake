@@ -218,39 +218,80 @@ app.get('/automationTestReport.html', (req, res) => {
     }
 });
 
-// Test execution route (same as before)
+// Test execution route with enhanced error handling
 app.post('/run', express.json(), async (req, res) => {
-    const selected = req.body.tests || [];
-    if (selected.length === 0) {
-        res.sendStatus(400);
-        return;
-    }
-
-    res.sendStatus(200);
-
-    // Cleanup all old result JSON files before running new tests
-    const resultDirRoot = 'test-report/results';
-    const allOldResults = glob.sync(path.join(resultDirRoot, '**/*.json'));
-    for (const oldFile of allOldResults) {
-        try {
-            fs.unlinkSync(oldFile);
-        } catch (err) {
-            console.warn(`⚠️ Failed to delete old result file ${oldFile}: ${err.message}`);
+    try {
+        const selected = req.body.tests || [];
+        if (selected.length === 0) {
+            res.status(400).json({ error: 'No tests selected' });
+            return;
         }
-    }
 
-    const fileToTests = {};
-    for (const entry of selected) {
-        const [file, test] = entry.split('::');
-        if (!fileToTests[file]) fileToTests[file] = new Set();
-        fileToTests[file].add(test);
-    }
+        res.status(200).json({ message: 'Test execution started', count: selected.length });
 
-    for (const [file, testSet] of Object.entries(fileToTests)) {
+        // Execute tests in background to prevent blocking
+        setImmediate(async () => {
+            try {
+                await executeTests(selected);
+            } catch (error) {
+                console.error('❌ Test execution error:', error);
+                broadcast(`❌ Test execution failed: ${error.message}\n`);
+            }
+        });
+    } catch (error) {
+        console.error('❌ Route error:', error);
+        res.status(500).json({ error: 'Server error', details: error.message });
+    }
+});
+
+async function executeTests(selected) {
+    try {
+        broadcast(`🚀 Starting test execution of ${selected.length} tests...\n`);
+        
+        // Limit concurrent tests to prevent system overload
+        if (selected.length > 20) {
+            broadcast(`⚠️ Large test suite detected (${selected.length} tests). Running in smaller batches to prevent system overload.\n`);
+        }
+        
+        // Cleanup all old result JSON files before running new tests
+        const resultDirRoot = 'test-report/results';
+        try {
+            const allOldResults = glob.sync(path.join(resultDirRoot, '**/*.json'));
+            for (const oldFile of allOldResults) {
+                try {
+                    fs.unlinkSync(oldFile);
+                } catch (err) {
+                    console.warn(`⚠️ Failed to delete old result file ${oldFile}: ${err.message}`);
+                }
+            }
+        } catch (err) {
+            broadcast(`⚠️ Warning: Could not clean old results: ${err.message}\n`);
+        }
+
+        const fileToTests = {};
+        for (const entry of selected) {
+            const [file, test] = entry.split('::');
+            if (!fileToTests[file]) fileToTests[file] = new Set();
+            fileToTests[file].add(test);
+        }
+
+        // Process files one by one to prevent overload
+        let fileIndex = 0;
+        for (const [file, testSet] of Object.entries(fileToTests)) {
+            fileIndex++;
+            broadcast(`📁 Processing file ${fileIndex}/${Object.keys(fileToTests).length}: ${file}\n`);
+            
+            // Add a small delay between files to prevent system overload
+            if (fileIndex > 1) {
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
         const testPattern = Array.from(testSet)
             .map(name => name.replace(/[-[\]/{}()*+?.\\^$|]/g, '\\$&'))
             .join('|');
-        const resultsSubDir = path.join('test-report', 'results', path.dirname(file).replace(/\//g, '_'), path.basename(file, '.test.js'));
+        // Create proper directory structure for results
+        const fileDir = path.dirname(file).replace(/\//g, '_');
+        const fileName = path.basename(file, '.test.js');
+        const resultsSubDir = path.join('test-report', 'results', fileDir, fileName);
 
         // Clean only that test file's result subdirectory
         if (fs.existsSync(resultsSubDir)) {
@@ -259,127 +300,267 @@ app.post('/run', express.json(), async (req, res) => {
         fs.mkdirSync(resultsSubDir, { recursive: true });
 
         const outputFile = path.join(resultsSubDir, 'results.json');
-        const cmd = `npx vitest run "${file}" -t "${testPattern}" --outputFile="${outputFile}" --reporter=json`;
+        const absoluteOutputFile = path.resolve(outputFile);
+        const cmd = `npx vitest run "${file}" -t "${testPattern}" --outputFile="${absoluteOutputFile}" --reporter=json`;
 
+        broadcast(`📁 Creating directory: ${resultsSubDir}\n`);
+        broadcast(`📄 Output file will be: ${outputFile}\n`);
+        broadcast(`📄 Absolute path: ${absoluteOutputFile}\n`);
+        broadcast(`🔍 Directory exists: ${fs.existsSync(resultsSubDir)}\n`);
         broadcast(`\n▶ Running: ${cmd}\n`);
 
         await new Promise((resolve) => {
-            const child = exec(cmd);
-            let stderrOutput = '';
-            let hasError = false;
-
-            child.stdout.on('data', data => broadcast(data));
-            child.stderr.on('data', data => {
-                broadcast(data);
-                stderrOutput += data.toString();
-                
-                // Check for specific error types
-                if (data.includes('Error') || data.includes('Failed') || data.includes('Cannot') || 
-                    data.includes('TypeError') || data.includes('SyntaxError') || data.includes('ReferenceError')) {
-                    hasError = true;
-                    broadcast(`🚨 Error detected: ${data.trim()}\n`);
+            let childProcess;
+            let isResolved = false;
+            
+            const safeResolve = () => {
+                if (!isResolved) {
+                    isResolved = true;
+                    resolve();
                 }
-            });
+            };
+            
+            // Set a timeout to prevent hanging
+            const timeoutId = setTimeout(() => {
+                if (childProcess && !childProcess.killed) {
+                    broadcast(`⏰ Test execution timeout, terminating process\n`);
+                    childProcess.kill('SIGTERM');
+                    setTimeout(() => {
+                        if (!childProcess.killed) {
+                            childProcess.kill('SIGKILL');
+                        }
+                    }, 5000);
+                }
+                safeResolve();
+            }, 120000); // 2 minute timeout
+            
+            try {
+                childProcess = exec(cmd, { 
+                    maxBuffer: 1024 * 1024 * 10, // 10MB buffer (reduced)
+                    timeout: 120000, // 2 minute timeout (reduced)
+                    killSignal: 'SIGTERM',
+                    env: {
+                        ...process.env,
+                        NODE_OPTIONS: '--max-old-space-size=512' // Limit memory to 512MB
+                    }
+                });
+                
+                let stderrOutput = '';
+                let hasError = false;
 
-            child.on('exit', code => {
-                // Check if JSON file exists and create fallback if needed
-                if (!fs.existsSync(outputFile)) {
-                    broadcast(`❌ JSON output file not found, creating fallback results\n`);
-                    const results = Array.from(testSet).map(testName => ({
-                        name: testName,
-                        status: 'failed',
-                        error: 'Test did not complete (Vitest may have crashed or not output JSON)'
-                    }));
-                    fs.writeFileSync(outputFile, JSON.stringify({ tests: results }, null, 2));
-                } else if (code !== 0) {
-                    // Test file exists but exit code indicates failure
-                    // Check if it's a configuration/syntax error (0 tests but failure)
+                const safeBroadcast = (message) => {
                     try {
-                        const result = JSON.parse(fs.readFileSync(outputFile, 'utf-8'));
-                        if (result.numTotalTests === 0 && code === 1) {
-                            // Extract specific error details from stderr
-                            let errorDetails = 'Configuration or syntax error - check test file and imports.';
-                            let errorType = 'Unknown Error';
-                            
-                            if (stderrOutput) {
-                                // Parse common error patterns
-                                if (stderrOutput.includes('Cannot read properties of undefined')) {
-                                    const match = stderrOutput.match(/Cannot read properties of undefined \(reading '([^']+)'\)/);
-                                    if (match) {
-                                        errorType = 'Configuration Error';
-                                        errorDetails = `Cannot read property '${match[1]}' - likely incorrect configuration path. Check config.js structure.`;
-                                        
-                                        if (match[1] === 'timeout') {
-                                            errorDetails += '\n\nSuggestion: Use config.timeouts.testTimeout instead of config.timeouts.testTimeout';
-                                        }
-                                    }
-                                } else if (stderrOutput.includes('SyntaxError')) {
-                                    errorType = 'Syntax Error';
-                                    const syntaxMatch = stderrOutput.match(/SyntaxError: (.+)/);
-                                    errorDetails = syntaxMatch ? syntaxMatch[1] : 'Syntax error in test file';
-                                } else if (stderrOutput.includes('TypeError')) {
-                                    errorType = 'Type Error';
-                                    const typeMatch = stderrOutput.match(/TypeError: (.+)/);
-                                    errorDetails = typeMatch ? typeMatch[1] : 'Type error in test file';
-                                } else if (stderrOutput.includes('Cannot resolve')) {
-                                    errorType = 'Import Error';
-                                    errorDetails = 'Cannot resolve module - check import paths and file locations';
-                                } else if (stderrOutput.includes('ENOENT')) {
-                                    errorType = 'File Not Found';
-                                    errorDetails = 'Required file or module not found - check file paths';
-                                }
-                                
-                                // Add the raw error output for debugging
-                                errorDetails += '\n\nFull error output:\n' + stderrOutput.trim();
-                            }
-                            
-                            broadcast(`❌ ${errorType} detected\n`);
-                            broadcast(`📋 Error Details: ${errorDetails}\n`);
-                            
-                            // Create fallback results showing the specific error
+                        if (message && message.length > 0) {
+                            broadcast(message);
+                        }
+                    } catch (err) {
+                        console.error('Error in safeBroadcast:', err);
+                    }
+                };
+
+                childProcess.stdout?.on('data', data => {
+                    try {
+                        const message = data.toString();
+                        // Send in smaller chunks to prevent overload
+                        if (message.length > 500) {
+                            const chunks = message.match(/.{1,500}/g) || [];
+                            chunks.forEach((chunk, index) => {
+                                setTimeout(() => safeBroadcast(chunk), index * 50);
+                            });
+                        } else {
+                            safeBroadcast(message);
+                        }
+                    } catch (err) {
+                        console.error('Error handling stdout:', err);
+                    }
+                });
+                
+                childProcess.stderr?.on('data', data => {
+                    try {
+                        const message = data.toString();
+                        stderrOutput += message;
+                        
+                        // Send stderr in chunks
+                        if (message.length > 500) {
+                            const chunks = message.match(/.{1,500}/g) || [];
+                            chunks.forEach((chunk, index) => {
+                                setTimeout(() => safeBroadcast(chunk), index * 50);
+                            });
+                        } else {
+                            safeBroadcast(message);
+                        }
+                        
+                        // Check for specific error types
+                        if (message.includes('Error') || message.includes('Failed') || message.includes('Cannot') || 
+                            message.includes('TypeError') || message.includes('SyntaxError') || message.includes('ReferenceError')) {
+                            hasError = true;
+                            safeBroadcast(`🚨 Error detected: ${message.trim()}\n`);
+                        }
+                    } catch (err) {
+                        console.error('Error handling stderr:', err);
+                    }
+                });
+
+                childProcess.on('error', (error) => {
+                    try {
+                        clearTimeout(timeoutId);
+                        safeBroadcast(`❌ Process error: ${error.message}\n`);
+                        console.error('Child process error:', error);
+                    } catch (err) {
+                        console.error('Error handling process error:', err);
+                    }
+                    safeResolve();
+                });
+
+                childProcess.on('exit', (code) => {
+                    try {
+                        clearTimeout(timeoutId);
+                        
+                        // Check if JSON file exists and create fallback if needed
+                        if (!fs.existsSync(outputFile)) {
+                            safeBroadcast(`❌ JSON output file not found, creating fallback results\n`);
                             const results = Array.from(testSet).map(testName => ({
                                 name: testName,
                                 status: 'failed',
-                                error: `${errorType}: ${errorDetails}`,
-                                timestamp: new Date().toISOString(),
-                                duration: '0ms',
-                                file: file
+                                error: 'Test did not complete (Vitest may have crashed or not output JSON)'
                             }));
-                            
-                            // Override the JSON with error information
-                            const now = Date.now();
-                            const errorResult = {
-                                testResults: [{
-                                    assertionResults: results.map(test => ({
-                                        title: test.name,
+                            fs.writeFileSync(outputFile, JSON.stringify({ tests: results }, null, 2));
+                        } else if (code !== 0) {
+                            // Test file exists but exit code indicates failure
+                            try {
+                                const result = JSON.parse(fs.readFileSync(outputFile, 'utf-8'));
+                                if (result.numTotalTests === 0 && code === 1) {
+                                    // Extract specific error details from stderr
+                                    let errorDetails = 'Configuration or syntax error - check test file and imports.';
+                                    let errorType = 'Unknown Error';
+                                    
+                                    if (stderrOutput) {
+                                        // Parse common error patterns
+                                        if (stderrOutput.includes('Cannot read properties of undefined')) {
+                                            const match = stderrOutput.match(/Cannot read properties of undefined \(reading '([^']+)'\)/);
+                                            if (match) {
+                                                errorType = 'Configuration Error';
+                                                errorDetails = `Cannot read property '${match[1]}' - likely incorrect configuration path. Check config.js structure.`;
+                                            }
+                                        } else if (stderrOutput.includes('SyntaxError')) {
+                                            errorType = 'Syntax Error';
+                                            const syntaxMatch = stderrOutput.match(/SyntaxError: (.+)/);
+                                            errorDetails = syntaxMatch ? syntaxMatch[1] : 'Syntax error in test file';
+                                        } else if (stderrOutput.includes('TypeError')) {
+                                            errorType = 'Type Error';
+                                            const typeMatch = stderrOutput.match(/TypeError: (.+)/);
+                                            errorDetails = typeMatch ? typeMatch[1] : 'Type error in test file';
+                                        } else if (stderrOutput.includes('Cannot resolve')) {
+                                            errorType = 'Import Error';
+                                            errorDetails = 'Cannot resolve module - check import paths and file locations';
+                                        } else if (stderrOutput.includes('ENOENT')) {
+                                            errorType = 'File Not Found';
+                                            errorDetails = 'Required file or module not found - check file paths';
+                                        }
+                                        
+                                        // Add the raw error output for debugging (truncated)
+                                        const truncatedError = stderrOutput.length > 1000 ? 
+                                            stderrOutput.substring(0, 1000) + '...[truncated]' : 
+                                            stderrOutput;
+                                        errorDetails += '\n\nError output:\n' + truncatedError.trim();
+                                    }
+                                    
+                                    safeBroadcast(`❌ ${errorType} detected\n`);
+                                    safeBroadcast(`📋 Error Details: ${errorDetails.substring(0, 500)}...\n`);
+                                    
+                                    // Create fallback results showing the specific error
+                                    const results = Array.from(testSet).map(testName => ({
+                                        name: testName,
                                         status: 'failed',
-                                        duration: 0,
-                                        failureMessages: [test.error],
-                                        fullName: test.name
-                                    })),
-                                    status: 'failed',
-                                    name: file,
-                                    message: `${errorType}: ${errorDetails}`,
-                                    startTime: now,
-                                    endTime: now
-                                }],
-                                numTotalTests: results.length,
-                                numFailedTests: results.length,
-                                numPassedTests: 0,
-                                success: false,
-                                startTime: now,
-                                endTime: now
-                            };
-                            fs.writeFileSync(outputFile, JSON.stringify(errorResult, null, 2));
+                                        error: `${errorType}: ${errorDetails}`,
+                                        timestamp: new Date().toISOString(),
+                                        duration: '0ms',
+                                        file: file
+                                    }));
+                                    
+                                    // Override the JSON with error information
+                                    const now = Date.now();
+                                    const errorResult = {
+                                        testResults: [{
+                                            assertionResults: results.map(test => ({
+                                                title: test.name,
+                                                status: 'failed',
+                                                duration: 0,
+                                                failureMessages: [test.error],
+                                                fullName: test.name
+                                            })),
+                                            status: 'failed',
+                                            name: file,
+                                            message: `${errorType}: ${errorDetails}`,
+                                            startTime: now,
+                                            endTime: now
+                                        }],
+                                        numTotalTests: results.length,
+                                        numFailedTests: results.length,
+                                        numPassedTests: 0,
+                                        success: false,
+                                        startTime: now,
+                                        endTime: now
+                                    };
+                                    fs.writeFileSync(outputFile, JSON.stringify(errorResult, null, 2));
+                                }
+                            } catch (err) {
+                                safeBroadcast(`❌ Error reading test results: ${err.message}\n`);
+                            }
                         }
+                        
+                        // Check if output file was actually created - multiple checks
+                        const checkFile = (attempt = 1) => {
+                            if (fs.existsSync(outputFile)) {
+                                const fileStats = fs.statSync(outputFile);
+                                safeBroadcast(`📄 JSON report created: ${outputFile} (${fileStats.size} bytes)\n`);
+                                
+                                // Read and validate the JSON content
+                                try {
+                                    const content = fs.readFileSync(outputFile, 'utf-8');
+                                    const parsed = JSON.parse(content);
+                                    const testCount = parsed.numTotalTests || (parsed.testResults ? parsed.testResults.reduce((sum, suite) => sum + (suite.assertionResults?.length || 0), 0) : 0);
+                                    safeBroadcast(`📊 File contains ${testCount} tests\n`);
+                                } catch (err) {
+                                    safeBroadcast(`⚠️ Warning: Could not parse JSON file: ${err.message}\n`);
+                                }
+                            } else {
+                                safeBroadcast(`⚠️ Warning: Expected output file not found (attempt ${attempt}): ${outputFile}\n`);
+                                safeBroadcast(`🔍 Directory contents: ${fs.existsSync(resultsSubDir) ? fs.readdirSync(resultsSubDir).join(', ') : 'Directory does not exist'}\n`);
+                                
+                                // Try again with longer delay (up to 3 attempts)
+                                if (attempt < 3) {
+                                    setTimeout(() => checkFile(attempt + 1), 500 * attempt);
+                                } else {
+                                    // Try to create a dummy file to test file creation
+                                    try {
+                                        const testFile = path.join(resultsSubDir, 'test-write.json');
+                                        fs.writeFileSync(testFile, '{"test": true}');
+                                        safeBroadcast(`✅ Directory is writable (created test file)\n`);
+                                        fs.unlinkSync(testFile);
+                                    } catch (writeErr) {
+                                        safeBroadcast(`❌ Directory write test failed: ${writeErr.message}\n`);
+                                    }
+                                }
+                            }
+                        };
+                        
+                        // Start checking immediately, then with delays
+                        checkFile();
+                        
+                        safeBroadcast(`\n✅ Finished: ${file} (exit code: ${code})\n`);
                     } catch (err) {
-                        broadcast(`❌ Error reading test results: ${err.message}\n`);
+                        console.error('Error in exit handler:', err);
                     }
-                }
+                    safeResolve();
+                });
                 
-                broadcast(`\n✅ Finished: ${file} (exit code: ${code})\n`);
-                resolve();
-            });
+            } catch (err) {
+                clearTimeout(timeoutId);
+                console.error('Error creating child process:', err);
+                safeBroadcast(`❌ Failed to start test execution: ${err.message}\n`);
+                safeResolve();
+            }
         });
     }
 
@@ -451,6 +632,25 @@ app.post('/run', express.json(), async (req, res) => {
     
     // Generate HTML report after all tests complete
     try {
+        // Add a small delay to ensure all files are written
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Verify all expected files exist before generating report
+        broadcast('🔍 Verifying test result files...\n');
+        const allExpectedFiles = [];
+        for (const [file] of Object.entries(fileToTests)) {
+            const fileDir = path.dirname(file).replace(/\//g, '_');
+            const fileName = path.basename(file, '.test.js');
+            const expectedPath = path.join('test-report', 'results', fileDir, fileName, 'results.json');
+            allExpectedFiles.push(expectedPath);
+            
+            if (fs.existsSync(expectedPath)) {
+                broadcast(`✅ Found: ${expectedPath}\n`);
+            } else {
+                broadcast(`❌ Missing: ${expectedPath}\n`);
+            }
+        }
+        
         // Import the writeReport function dynamically
         const { writeReport } = await import('../reporter/htmlReporter.js');
         writeReport();
@@ -458,7 +658,13 @@ app.post('/run', express.json(), async (req, res) => {
     } catch (error) {
         broadcast(`❌ Failed to generate HTML report: ${error.message}\n`);
     }
-});
+    
+    } catch (error) {
+        console.error('❌ Fatal error in executeTests:', error);
+        broadcast(`❌ Test execution failed: ${error.message}\n`);
+        broadcast(`📋 Please try running fewer tests at once or restart the server.\n`);
+    }
+}
 
 // Create HTTP + WebSocket server
 const server = http.createServer(app);
@@ -467,47 +673,115 @@ const wss = new WebSocketServer({ server });
 // Memory leak prevention
 const connectedClients = new Set();
 
-wss.on('connection', (ws) => {
-    connectedClients.add(ws);
-    
-    ws.on('close', () => {
-        connectedClients.delete(ws);
-    });
-    
-    ws.on('error', (error) => {
-        console.error('WebSocket error:', error);
-        connectedClients.delete(ws);
-    });
+wss.on('connection', (ws, req) => {
+    try {
+        connectedClients.add(ws);
+        console.log(`🔌 New WebSocket connection from ${req.socket.remoteAddress}`);
+        
+        ws.on('close', () => {
+            try {
+                connectedClients.delete(ws);
+                console.log(`📤 WebSocket connection closed. Active connections: ${connectedClients.size}`);
+            } catch (error) {
+                console.error('Error handling WebSocket close:', error);
+            }
+        });
+        
+        ws.on('error', (error) => {
+            try {
+                console.error('🚨 WebSocket error:', error);
+                connectedClients.delete(ws);
+            } catch (err) {
+                console.error('Error handling WebSocket error:', err);
+            }
+        });
+        
+        // Send welcome message safely
+        try {
+            ws.send('🔌 Connected to Super Pancake Test Runner');
+        } catch (error) {
+            console.error('Error sending welcome message:', error);
+            connectedClients.delete(ws);
+        }
+    } catch (error) {
+        console.error('Error setting up WebSocket connection:', error);
+    }
+});
+
+// Add error handling for the WebSocket server itself
+wss.on('error', (error) => {
+    console.error('🚨 WebSocket server error:', error);
 });
 
 function broadcast(message) {
-    // Clean up closed connections
+    if (connectedClients.size === 0) {
+        console.log('[No WebSocket clients]:', message.toString().trim());
+        return;
+    }
+    
+    // Clean up closed connections and send to active ones
+    const clientsToRemove = [];
     for (const client of connectedClients) {
-        if (client.readyState !== 1) {
-            connectedClients.delete(client);
+        if (client.readyState !== 1) { // WebSocket.OPEN = 1
+            clientsToRemove.push(client);
         } else {
             try {
-                client.send(message.toString());
+                // Ensure message is a string and limit size to prevent WebSocket overload
+                const messageStr = message.toString();
+                if (messageStr.length > 0 && messageStr.length < 50000) { // 50KB limit
+                    client.send(messageStr);
+                } else if (messageStr.length >= 50000) {
+                    // Split large messages
+                    const chunks = messageStr.match(/.{1,10000}/g) || [];
+                    chunks.forEach((chunk, index) => {
+                        setTimeout(() => {
+                            if (client.readyState === 1) {
+                                client.send(chunk);
+                            }
+                        }, index * 100); // 100ms delay between chunks
+                    });
+                }
             } catch (error) {
                 console.error('Failed to send message to client:', error);
-                connectedClients.delete(client);
+                clientsToRemove.push(client);
             }
         }
     }
+    
+    // Remove dead clients
+    clientsToRemove.forEach(client => connectedClients.delete(client));
 }
+
+// Add process error handlers to prevent crashes
+process.on('uncaughtException', (error) => {
+    console.error('🚨 Uncaught Exception:', error);
+    broadcast(`❌ Server error: ${error.message}\n`);
+    // Don't exit - keep server running
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('🚨 Unhandled Rejection at:', promise, 'reason:', reason);
+    broadcast(`❌ Server error: ${reason}\n`);
+    // Don't exit - keep server running
+});
 
 // Cleanup on process exit
 process.on('SIGINT', () => {
     console.log('\nShutting down gracefully...');
-    connectedClients.forEach(client => {
-        if (client.readyState === 1) {
-            client.close();
-        }
-    });
-    connectedClients.clear();
-    server.close(() => {
-        process.exit(0);
-    });
+    try {
+        connectedClients.forEach(client => {
+            if (client.readyState === 1) {
+                client.close();
+            }
+        });
+        connectedClients.clear();
+        server.close(() => {
+            process.exit(0);
+        });
+    } catch (error) {
+        console.error('Error during shutdown:', error);
+        process.exit(1);
+    }
 });
 
 // Start server with automatic port finding
@@ -517,25 +791,31 @@ async function startServer() {
     server.listen(port, () => {
         const url = `http://localhost:${port}`;
         console.log(`🚀 Test UI running at ${url}`);
+        console.log(`🔌 WebSocket server running on the same port`);
+        console.log(`📱 Opening browser...`);
         
         // Only open browser if not in test environment
         if (!process.env.CI && !process.env.NODE_ENV?.includes('test')) {
             open(url);
         }
     });
+    
+    // Handle port in use errors
+    server.on('error', (error) => {
+        if (error.code === 'EADDRINUSE') {
+            console.log(`⚠️ Port ${port} is busy, trying next available port...`);
+            // Reset server and WebSocket before retry
+            server.removeAllListeners();
+            wss.close();
+            startServer(); // Recursively try next port
+        } else {
+            console.error('❌ Server error:', error);
+            process.exit(1);
+        }
+    });
 }
 
 startServer().catch(error => {
     console.error('❌ Failed to start server:', error);
-    process.exit(1);
-});
-
-// Handle server errors
-server.on('error', (error) => {
-    if (error.code === 'EADDRINUSE') {
-        console.error(`❌ Port ${port} is already in use. Please stop other services or use a different port.`);
-    } else {
-        console.error('❌ Server error:', error);
-    }
     process.exit(1);
 });
