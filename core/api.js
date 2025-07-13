@@ -55,8 +55,14 @@ export function buildUrlWithParams(url, params = {}) {
 export async function timedRequest(fn) {
   const start = Date.now();
   const response = await fn();
-  response.duration = Date.now() - start;
-  console.log(`🕒 ${fn.name} duration: ${response.duration}ms`);
+  const duration = Date.now() - start;
+  
+  // Only add duration if response is an object
+  if (response && typeof response === 'object' && !Array.isArray(response)) {
+    response.duration = duration;
+  }
+  
+  console.log(`🕒 ${fn.name || 'anonymous'} duration: ${duration}ms`);
   return response;
 }
 

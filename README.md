@@ -9,6 +9,14 @@ A **lightweight DOM-based UI automation framework** using Chrome DevTools Protoc
 
 ## 🚀 Quick Start
 
+### Create a New Project
+```bash
+npm init super-pancake@latest my-project
+cd my-project
+npm test
+```
+
+### Add to Existing Project
 ```bash
 npm install super-pancake-automation
 ```
@@ -67,13 +75,22 @@ npx super-pancake-generate
 
 ## 🎯 Available Commands
 
+### Project Setup
+```bash
+npm init super-pancake@latest my-project    # Create new project
+npx super-pancake --version                # Check version
+npx super-pancake --help                   # Show help
+```
+
+### Command Reference
 | Command | Description | Example |
 |---------|-------------|---------|
 | `super-pancake-ui` | Launch interactive test runner | `npx super-pancake-ui` |
 | `super-pancake-server` | Start UI server only | `npx super-pancake-server` |
 | `super-pancake-run` | Run tests with formatted output | `npx super-pancake-run` |
 | `super-pancake-generate` | Generate sample test files | `npx super-pancake-generate` |
-| `domtest` | Basic CLI test runner | `npx domtest --url=https://example.com` |
+| `super-pancake` | Main CLI with help/version | `npx super-pancake --version` |
+| `domtest` | Basic CLI test runner (legacy) | `npx domtest --url=https://example.com` |
 
 ## 💻 Code Examples
 

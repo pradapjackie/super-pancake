@@ -1,117 +1,1807 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>🧪 Test Runner Dashboard</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🥞 Super Pancake Test Runner</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            /* Light Theme */
+            --primary-color: #7c3aed;
+            --primary-light: #8b5cf6;
+            --primary-dark: #6d28d9;
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --success-color: #10b981;
+            --success-light: #34d399;
+            --warning-color: #f59e0b;
+            --warning-light: #fbbf24;
+            --danger-color: #ef4444;
+            --danger-light: #f87171;
+            --info-color: #3b82f6;
+            --info-light: #60a5fa;
+            
+            /* Text Colors */
+            --text-primary: #1f2937;
+            --text-secondary: #6b7280;
+            --text-muted: #9ca3af;
+            --text-inverse: #ffffff;
+            
+            /* Background Colors */
+            --bg-primary: #f8fafc;
+            --bg-secondary: #ffffff;
+            --bg-tertiary: #f1f5f9;
+            --bg-dark: #0f172a;
+            --bg-sidebar: #ffffff;
+            --bg-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --bg-glass: rgba(255, 255, 255, 0.95);
+            
+            /* Border & Effects */
+            --border-color: #e2e8f0;
+            --border-light: #f1f5f9;
+            --border-radius: 12px;
+            --border-radius-lg: 20px;
+            
+            /* Shadows */
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            --shadow-xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            --glow: 0 0 20px rgba(139, 92, 246, 0.3);
+            
+            /* Animations */
+            --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            --transition-slow: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        [data-theme="dark"] {
+            --text-primary: #f8fafc;
+            --text-secondary: #cbd5e1;
+            --text-muted: #64748b;
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-tertiary: #334155;
+            --bg-sidebar: #1e293b;
+            --bg-glass: rgba(30, 41, 59, 0.95);
+            --border-color: #334155;
+            --border-light: #475569;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-gradient);
+            color: var(--text-primary);
+            line-height: 1.6;
+            min-height: 100vh;
+            transition: var(--transition);
+            overflow-x: hidden;
+        }
+
+        .app-container {
+            display: flex;
+            height: 100vh;
+            gap: 24px;
+            padding: 24px;
+            max-width: 1800px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        .app-container::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 25% 25%, rgba(139, 92, 246, 0.1) 0%, transparent 50%),
+                        radial-gradient(circle at 75% 75%, rgba(59, 130, 246, 0.1) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .card {
+            background: var(--bg-glass);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius-lg);
+            box-shadow: var(--shadow-xl);
+            overflow: hidden;
+            transition: var(--transition-slow);
+            position: relative;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.8), transparent);
+            z-index: 1;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-xl), var(--glow);
+        }
+
+        /* Sidebar Styles */
+        .sidebar {
+            width: 20%;
+            min-width: 320px;
+            max-width: 50%;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            position: relative;
+            transition: var(--transition-slow);
+            overflow: hidden;
+        }
+
+        .sidebar-resizer {
+            position: absolute;
+            top: 0;
+            right: -12px;
+            width: 24px;
+            height: 100%;
+            cursor: col-resize;
+            z-index: 10;
+            background: transparent;
+            transition: var(--transition);
+        }
+
+        .sidebar-resizer:hover {
+            background: linear-gradient(90deg, transparent, rgba(124, 58, 237, 0.3), transparent);
+        }
+
+        .sidebar-resizer::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 3px;
+            height: 40px;
+            background: var(--border-color);
+            border-radius: 2px;
+            opacity: 0;
+            transition: var(--transition);
+        }
+
+        .sidebar-resizer:hover::after {
+            opacity: 1;
+        }
+
+        .app-container.resizing {
+            user-select: none;
+        }
+
+        .app-container.resizing .sidebar-resizer {
+            background: linear-gradient(90deg, transparent, rgba(124, 58, 237, 0.5), transparent);
+        }
+
+        .app-container.resizing .sidebar-resizer::after {
+            opacity: 1;
+        }
+
+        .sidebar-header {
+            background: var(--primary-gradient);
+            color: var(--text-inverse);
+            padding: 24px 20px;
+            position: relative;
+            overflow: hidden;
+            z-index: 2;
+        }
+
+        .sidebar-header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%);
+            animation: float 8s ease-in-out infinite;
+        }
+
+        .sidebar-header::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-12px) rotate(2deg); }
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        @keyframes slideInDown {
+            0% { opacity: 0; transform: translateY(-20px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes slideInUp {
+            0% { opacity: 0; transform: translateY(20px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeIn {
+            0% { opacity: 0; }
+            100% { opacity: 1; }
+        }
+
+        .header-content {
+            position: relative;
+            z-index: 1;
+            animation: slideInDown 0.6s ease-out;
+        }
+
+        .header-top {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 16px;
+            flex-wrap: nowrap;
+        }
+
+        .icon {
+            font-size: 2.2rem;
+            text-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            animation: pulse 4s ease-in-out infinite;
+            filter: drop-shadow(0 0 10px rgba(255,255,255,0.5));
+            flex-shrink: 0;
+        }
+
+        /* Pancake running animation */
+        .icon.running {
+            animation: pancakeFlip 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pancakeFlip {
+            0%, 100% { transform: rotateY(0deg) scale(1); }
+            25% { transform: rotateY(90deg) scale(1.1); }
+            50% { transform: rotateY(180deg) scale(1.2); }
+            75% { transform: rotateY(270deg) scale(1.1); }
+        }
+
+        .sidebar-header h1 {
+            font-size: 1.1rem;
+            font-weight: 800;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            letter-spacing: -0.025em;
+            background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            min-width: 0;
+            flex: 1;
+        }
+        
+        /* Responsive title sizing */
+        @media (max-width: 400px) {
+            .sidebar-header h1 {
+                font-size: 0.95rem;
+            }
+            
+            .icon {
+                font-size: 1.8rem;
+            }
+        }
+        
+        /* Sidebar at minimum width */
+        .sidebar[style*="width: 15%"] h1,
+        .sidebar[style*="width: 16%"] h1,
+        .sidebar[style*="width: 17%"] h1,
+        .sidebar[style*="width: 18%"] h1,
+        .sidebar[style*="width: 19%"] h1,
+        .sidebar[style*="width: 20%"] h1 {
+            font-size: 0.95rem;
+        }
+        
+        .sidebar[style*="width: 15%"] .icon,
+        .sidebar[style*="width: 16%"] .icon,
+        .sidebar[style*="width: 17%"] .icon,
+        .sidebar[style*="width: 18%"] .icon,
+        .sidebar[style*="width: 19%"] .icon,
+        .sidebar[style*="width: 20%"] .icon {
+            font-size: 1.8rem;
+        }
+
+        .header-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 6px;
+            animation: slideInUp 0.6s ease-out 0.2s both;
+        }
+
+        .header-stat-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 8px 4px;
+            border-radius: var(--border-radius);
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+            min-width: 0;
+        }
+
+        .header-stat-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .header-stat-item:hover::before {
+            left: 100%;
+        }
+
+        .header-stat-item:hover {
+            transform: translateY(-2px);
+            background: rgba(255, 255, 255, 0.25);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+
+        .header-stat-number {
+            font-size: 0.9rem;
+            font-weight: 700;
+            line-height: 1;
+            margin-bottom: 4px;
+            transition: var(--transition);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .header-stat-label {
+            font-size: 0.6rem;
+            opacity: 0.95;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .header-stat-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--danger-color);
+            margin-bottom: 8px;
+            box-shadow: 0 0 0 3px rgba(255,255,255,0.4), 0 0 20px rgba(239, 68, 68, 0.5);
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        .status.connected .header-stat-dot {
+            background: var(--success-color);
+            box-shadow: 0 0 0 3px rgba(255,255,255,0.4), 0 0 20px rgba(16, 185, 129, 0.6);
+        }
+
+        .controls {
+            padding: 16px 20px;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            gap: 8px;
+            animation: slideInUp 0.6s ease-out 0.4s both;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 10px 14px;
+            border: none;
+            border-radius: var(--border-radius);
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            font-size: 12px;
+            text-decoration: none;
+            font-family: 'Inter', sans-serif;
+            position: relative;
+            overflow: hidden;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+            min-width: 0;
+        }
+
+        .btn i {
+            flex-shrink: 0;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.4s ease;
+        }
+
+        .btn:hover::before {
+            left: 100%;
+        }
+
+        .btn-primary {
+            background: var(--primary-gradient);
+            color: var(--text-inverse);
+            min-width: 100px;
+            box-shadow: var(--shadow-lg), 0 0 20px rgba(124, 58, 237, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: var(--shadow-xl), 0 0 30px rgba(124, 58, 237, 0.4);
+        }
+
+        .btn-primary:active:not(:disabled) {
+            transform: translateY(0) scale(1);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: var(--shadow);
+        }
+
+        .btn-primary.loading {
+            background: linear-gradient(45deg, var(--primary-color), var(--primary-light), var(--primary-color));
+            background-size: 200% 200%;
+            animation: shimmer 1.5s ease-in-out infinite;
+        }
+
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            backdrop-filter: blur(10px);
+        }
+
+        .btn-secondary:hover {
+            background: var(--primary-gradient);
+            color: var(--text-inverse);
+            border-color: transparent;
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .btn i {
+            font-size: 16px;
+            transition: var(--transition);
+        }
+
+        .btn:hover i {
+            transform: scale(1.1);
+        }
+
+        /* Search and Filter Section */
+        .search-section {
+            padding: 20px 28px;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            animation: slideInUp 0.6s ease-out 0.6s both;
+            flex-shrink: 0;
+        }
+
+        .test-files-wrapper {
+            flex: 1;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+
+        .test-files {
+            overflow-y: auto;
+            flex: 1;
+            min-height: 0;
+            max-height: 100%;
+        }
+
+        .search-container {
+            position: relative;
+            margin-bottom: 16px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 12px 16px 12px 44px;
+            border: 2px solid var(--border-color);
+            border-radius: var(--border-radius);
+            font-size: 14px;
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            transition: var(--transition);
+            outline: none;
+        }
+
+        .search-input:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
+            background: var(--bg-secondary);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            font-size: 14px;
+            transition: var(--transition);
+        }
+
+        .search-input:focus + .search-icon {
+            color: var(--primary-color);
+        }
+
+        .search-clear {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 50%;
+            transition: var(--transition);
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        .search-input:not(:placeholder-shown) + .search-icon + .search-clear {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .search-clear:hover {
+            background: var(--danger-color);
+            color: white;
+        }
+
+        .filter-tabs {
+            display: flex;
+            gap: 8px;
+        }
+
+        .filter-tab {
+            padding: 8px 16px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: var(--transition);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .filter-tab:hover {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+            transform: translateY(-1px);
+        }
+
+        .filter-tab.active {
+            background: var(--primary-gradient);
+            color: white;
+            border-color: transparent;
+            box-shadow: var(--shadow);
+        }
+
+        .test-files {
+            flex: 1;
+            overflow-y: auto;
+            background: var(--bg-secondary);
+            position: relative;
+            max-height: 100%;
+        }
+
+        #test-form {
+            height: 100%;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #test-files-container {
+            flex: 1;
+            overflow-y: auto;
+            min-height: 0;
+            max-height: 100%;
+        }
+
+        .test-files::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .test-files::-webkit-scrollbar-track {
+            background: var(--bg-tertiary);
+            border-radius: 4px;
+        }
+
+        .test-files::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 4px;
+            transition: var(--transition);
+        }
+
+        .test-files::-webkit-scrollbar-thumb:hover {
+            background: var(--primary-color);
+        }
+
+        .test-file {
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .test-file:last-child {
+            border-bottom: none;
+        }
+
+        .test-file-header {
+            padding: 16px 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: all 0.2s ease;
+            background: var(--bg-secondary);
+        }
+
+        .test-file-header:hover {
+            background: var(--bg-primary);
+        }
+
+        .test-file.expanded .test-file-header {
+            background: var(--bg-primary);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .test-file-header-left {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .test-file-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+
+        .file-select-all {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-right: auto;
+            padding-right: 16px;
+        }
+
+        .file-select-all-checkbox {
+            width: 18px;
+            height: 18px;
+            border-radius: 4px;
+            border: 2px solid var(--border-color);
+            background: var(--bg-secondary);
+            cursor: pointer;
+            transition: var(--transition);
+            appearance: none;
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .file-select-all-checkbox:checked {
+            background: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+
+        .file-select-all-checkbox:checked::after {
+            content: '✓';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        .file-select-all-checkbox:indeterminate {
+            background: var(--warning-color);
+            border-color: var(--warning-color);
+        }
+
+        .file-select-all-checkbox:indeterminate::after {
+            content: '−';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 13px;
+            font-weight: bold;
+        }
+
+        .file-select-all-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .toggle-icon {
+            color: var(--text-muted);
+            transition: transform 0.2s ease;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .test-file.expanded .toggle-icon {
+            transform: rotate(180deg);
+        }
+
+        .test-cases {
+            display: none;
+            max-height: 300px;
+            overflow-y: auto;
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border-color);
+        }
+
+        .test-file.expanded .test-cases {
+            display: block;
+        }
+
+        .test-case-item {
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: all 0.2s ease;
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .test-case-checkbox {
+            width: 20px;
+            height: 20px;
+            margin-right: 12px;
+            border-radius: 4px;
+            border: 2px solid var(--border-color);
+            background: var(--bg-secondary);
+            cursor: pointer;
+            transition: var(--transition);
+            appearance: none;
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .test-case-checkbox:checked {
+            background: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+
+        .test-case-checkbox:checked::after {
+            content: '✓';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .test-case-item:last-child {
+            border-bottom: none;
+        }
+
+        .test-case-item:hover {
+            background: rgba(22, 163, 74, 0.05);
+        }
+
+        .test-case-item.selected {
+            background: rgba(22, 163, 74, 0.1);
+            border-left: 3px solid var(--primary-color);
+        }
+
+        .test-case-checkbox {
+            margin: 0;
+            width: 16px;
+            height: 16px;
+            accent-color: var(--primary-color);
+        }
+
+        .test-case-label {
+            flex: 1;
+            cursor: pointer;
+            font-size: 14px;
+            color: var(--text-primary);
+            line-height: 1.4;
+        }
+
+        /* Main Content Styles */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            animation: slideInUp 0.6s ease-out 0.8s both;
+        }
+
+        .console-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .console-header {
+            background: var(--primary-gradient);
+            color: var(--text-inverse);
+            padding: 28px 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .console-header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            animation: float 10s ease-in-out infinite;
+        }
+
+        .console-header h3 {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 1.5rem;
+            font-weight: 700;
+            position: relative;
+            z-index: 1;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .console-header h3 i {
+            font-size: 1.75rem;
+            filter: drop-shadow(0 0 8px rgba(255,255,255,0.3));
+        }
+
+        .console-controls {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .console-btn {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 10px 16px;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            font-family: 'Inter', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .console-btn:hover {
+            background: rgba(255, 255, 255, 0.25);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+        }
+        
+        .console-btn.btn-primary {
+            background: var(--primary-gradient);
+            color: var(--text-inverse);
+            border-color: var(--primary-color);
+        }
+        
+        .console-btn.btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: var(--glow), 0 8px 32px rgba(0,0,0,0.2);
+        }
+        
+        .console-btn.btn-danger {
+            background: linear-gradient(135deg, var(--danger-color), var(--danger-light));
+            color: var(--text-inverse);
+            border-color: var(--danger-color);
+        }
+        
+        .console-btn.btn-danger:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(239, 68, 68, 0.3), 0 8px 32px rgba(0,0,0,0.2);
+        }
+        
+        .console-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .console-btn i {
+            font-size: 14px;
+        }
+
+        .status-bar {
+            padding: 16px 32px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            position: relative;
+        }
+
+        .status-bar::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(124, 58, 237, 0.3), transparent);
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--danger-color);
+        }
+
+        .status-indicator.status-connected .status-dot {
+            background: var(--success-color);
+            box-shadow: 0 0 6px rgba(16, 185, 129, 0.4);
+        }
+
+        .log-container {
+            flex: 1;
+            padding: 24px 32px;
+            overflow-y: auto;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: #e2e8f0;
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.8;
+            position: relative;
+        }
+
+        .log-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at 80% 20%, rgba(124, 58, 237, 0.1) 0%, transparent 50%);
+            pointer-events: none;
+        }
+
+        .log-container::-webkit-scrollbar {
+            width: 12px;
+        }
+
+        .log-container::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 6px;
+        }
+
+        .log-container::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, #7c3aed, #8b5cf6);
+            border-radius: 6px;
+            border: 2px solid transparent;
+            background-clip: content-box;
+        }
+
+        .log-container::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(135deg, #8b5cf6, #a78bfa);
+            background-clip: content-box;
+        }
+
+        .log-info {
+            color: #38bdf8;
+            margin-bottom: 6px;
+        }
+
+        .log-success {
+            color: #4ade80;
+            margin-bottom: 6px;
+        }
+
+        .log-warning {
+            color: #facc15;
+            margin-bottom: 6px;
+        }
+
+        .log-fail {
+            color: #f87171;
+            margin-bottom: 6px;
+        }
+
+        .log-error {
+            color: #ef4444;
+            margin-bottom: 6px;
+        }
+
+        /* Loading animation */
+        .loading::after {
+            content: '';
+            display: inline-block;
+            width: 0;
+            animation: loading 1.5s infinite;
+        }
+
+        @keyframes loading {
+            0% { content: ''; }
+            25% { content: '.'; }
+            50% { content: '..'; }
+            75% { content: '...'; }
+            100% { content: ''; }
+        }
+
+        /* Scrollbar styling */
+        .test-files::-webkit-scrollbar,
+        .test-cases::-webkit-scrollbar,
+        .log-container::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .test-files::-webkit-scrollbar-track,
+        .test-cases::-webkit-scrollbar-track {
+            background: var(--bg-primary);
+        }
+
+        .test-files::-webkit-scrollbar-thumb,
+        .test-cases::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 3px;
+        }
+
+        .log-container::-webkit-scrollbar-track {
+            background: #1e293b;
+        }
+
+        .log-container::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 3px;
+        }
+
+        /* Responsive design */
+        @media (max-width: 1200px) {
+            .sidebar {
+                width: 25%;
+                min-width: 300px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .app-container {
+                flex-direction: column;
+                height: auto;
+                padding: 10px;
+                gap: 10px;
+            }
+            
+            .sidebar {
+                width: 100%;
+                max-height: 50vh;
+            }
+            
+            .main-content {
+                height: 50vh;
+            }
+        }
+    </style>
 </head>
 <body>
-
-<div class="app-container">
-    <!-- Left Sidebar - Test Selection -->
-    <div class="sidebar glass-card">
-        <div class="sidebar-header">
-            <div class="header-top">
-                <div class="icon">
-                    🥞
-                </div>
-                <h1>Super Pancake Test Runner</h1>
-            </div>
-            <div class="header-stats">
-                <div class="header-stat-item selected" id="selected-stat">
-                    <span class="header-stat-number" id="selected-count-number">0</span>
-                    <span class="header-stat-label">Selected</span>
-                </div>
-                <div class="header-stat-item files" id="files-stat">
-                    <span class="header-stat-number" id="files-count">0</span>
-                    <span class="header-stat-label">Files</span>
-                </div>
-                <div class="header-stat-item status connected" id="status-stat">
-                    <span class="header-stat-dot"></span>
-                    <span class="header-stat-number" id="status-text-main">Ready</span>
-                </div>
-            </div>
-        </div>
-
-        <div class="controls">
-            <button class="btn btn-secondary" onclick="location.reload()">
-                <i class="fas fa-sync-alt"></i>
-                Refresh
-            </button>
-            <button class="btn btn-secondary" onclick="openTestReport()">
-                <i class="fas fa-file-alt"></i>
-                View Report
-            </button>
-            <button type="submit" class="btn btn-primary" id="run-btn" form="test-form">
-                <i class="fas fa-play"></i>
-                Run Tests
-            </button>
-        </div>
-
-        <form id="test-form">
-            <div class="test-files" id="test-files-container">
-                <!-- Test files will be populated by JavaScript -->
-            </div>
-        </form>
-    </div>
-
-    <!-- Right Side - Full Console -->
-    <div class="main-content">
-        <!-- Console Panel -->
-        <div class="console-panel glass-card">
-            <div class="console-header">
-                <h3>
-                    <i class="fas fa-terminal"></i>
-                    Test Console & Live Reports
-                </h3>
-                <div class="console-controls">
-                    <button class="console-btn" onclick="clearLogs()">
-                        <i class="fas fa-trash-alt"></i>
-                        Clear
-                    </button>
-                    <button class="console-btn" onclick="copyLogs()">
-                        <i class="fas fa-copy"></i>
-                        Copy
-                    </button>
-                    <div class="theme-selector">
-                        <button class="theme-toggle" id="theme-toggle" title="Select Theme">
-                            <i class="fas fa-palette"></i>
-                        </button>
-                        <div class="theme-dropdown" id="theme-dropdown">
-                            <div class="theme-option" data-theme="forest-green">
-                                <div class="theme-preview forest"></div>
-                                <span>Forest Green</span>
-                            </div>
-                            <div class="theme-option" data-theme="sage-green">
-                                <div class="theme-preview sage"></div>
-                                <span>Sage Green</span>
-                            </div>
+    <div class="app-container">
+        <!-- Left Sidebar - Test Selection -->
+        <div class="sidebar card">
+            <div class="sidebar-resizer"></div>
+            <div class="sidebar-header">
+                <div class="header-content">
+                    <div class="header-top">
+                        <div class="icon">🥞</div>
+                        <h1>Super Pancake Test Runner</h1>
+                    </div>
+                    <div class="header-stats">
+                        <div class="header-stat-item selected" id="selected-stat">
+                            <span class="header-stat-number" id="selected-count-number">0</span>
+                            <span class="header-stat-label">Selected</span>
+                        </div>
+                        <div class="header-stat-item files" id="files-stat">
+                            <span class="header-stat-number" id="files-count">0</span>
+                            <span class="header-stat-label">Files</span>
+                        </div>
+                        <div class="header-stat-item status disconnected" id="status-stat">
+                            <span class="header-stat-dot"></span>
+                            <span class="header-stat-number" id="status-text-main">Disconnected</span>
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="status-bar">
-                <div class="status-indicator status-idle" id="status-indicator">
-                    <div class="status-dot"></div>
-                    <span id="status-text">Ready to run tests</span>
+
+            <div class="controls">
+                <button class="btn btn-secondary" onclick="location.reload()" title="Refresh test files">
+                    <i class="fas fa-sync-alt"></i>
+                    <span class="btn-text">Refresh</span>
+                </button>
+                <button class="btn btn-secondary" onclick="openTestReport()" title="Open test report">
+                    <i class="fas fa-file-alt"></i>
+                    <span class="btn-text">Report</span>
+                </button>
+                <button class="btn btn-secondary" onclick="toggleTheme()" title="Toggle dark/light mode">
+                    <i class="fas fa-moon" id="theme-icon"></i>
+                    <span class="btn-text">Theme</span>
+                </button>
+            </div>
+
+            <!-- Search and Filter Section -->
+            <div class="search-section">
+                <div class="search-container">
+                    <i class="fas fa-search search-icon"></i>
+                    <input type="text" class="search-input" placeholder="Search test files..." id="search-input">
+                    <button class="search-clear" onclick="clearSearch()" title="Clear search">
+                        <i class="fas fa-times"></i>
+                    </button>
                 </div>
-                <div class="status-indicator">
-                    <i class="fas fa-clock"></i>
-                    <span id="execution-time">00:00</span>
+                <div class="filter-tabs">
+                    <button class="filter-tab active" data-filter="all">All</button>
+                    <button class="filter-tab" data-filter="unit">Unit</button>
+                    <button class="filter-tab" data-filter="integration">Integration</button>
+                    <button class="filter-tab" data-filter="e2e">E2E</button>
                 </div>
             </div>
-            <div class="log-container" id="log">
-                <div class="log-info">🎯 Welcome to the Test Runner!</div>
-                <div class="log-info">✨ Select tests from the left panel and click "Run Tests" to begin</div>
-                <div class="log-info">📊 Real-time results and reports will appear here</div>
+
+            <div class="test-files-wrapper">
+                <form id="test-form">
+                    <div class="test-files" id="test-files-container">
+                        <div style="padding: 60px 20px; text-align: center; color: var(--text-muted);">
+                            <i class="fas fa-spinner fa-spin" style="font-size: 2rem; margin-bottom: 16px; color: var(--primary-color);"></i>
+                            <div style="font-weight: 600;">Loading test files...</div>
+                            <div style="font-size: 12px; margin-top: 8px;">Please wait while we discover your tests</div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Right Side - Console -->
+        <div class="main-content">
+            <div class="console-panel card">
+                <div class="console-header">
+                    <h3>
+                        <i class="fas fa-terminal"></i>
+                        Test Console & Live Reports
+                    </h3>
+                    <div class="console-controls">
+                        <button class="console-btn" onclick="clearLogs()">
+                            <i class="fas fa-trash-alt"></i>
+                            Clear
+                        </button>
+                        <button class="console-btn" onclick="copyLogs()">
+                            <i class="fas fa-copy"></i>
+                            Copy
+                        </button>
+                        <button type="submit" class="console-btn btn-primary" id="run-btn" disabled>
+                            <i class="fas fa-play"></i>
+                            Run Tests
+                        </button>
+                        <button class="console-btn btn-danger" id="stop-btn" onclick="stopTests()" disabled>
+                            <i class="fas fa-stop"></i>
+                            Stop Tests
+                        </button>
+                    </div>
+                </div>
+                <div class="status-bar">
+                    <div class="status-indicator status-error" id="status-indicator">
+                        <div class="status-dot"></div>
+                        <span id="status-text">Disconnected</span>
+                    </div>
+                    <div class="status-indicator">
+                        <i class="fas fa-clock"></i>
+                        <span id="execution-time">00:00</span>
+                    </div>
+                </div>
+                <div class="log-container" id="log">
+                    <div class="log-info">🎯 Welcome to the Super Pancake Test Runner!</div>
+                    <div class="log-info">✨ Select tests from the left panel and click "Run Tests" to begin</div>
+                    <div class="log-info">📊 Real-time results and reports will appear here</div>
+                    <div class="log-info">🔌 Connecting to test server...</div>
+                </div>
             </div>
         </div>
     </div>
-</div>
 
-<script src="app.js"></script>
+    <script>
+        // WebSocket connection
+        let ws;
+        let isConnected = false;
+        let selectedTests = new Set();
+        let executionStartTime = null;
+        let executionTimer = null;
+        let reconnectAttempts = 0;
+        const maxReconnectAttempts = 5;
+
+        // Initialize connection with better retry logic
+        function connectWebSocket() {
+            if (reconnectAttempts >= maxReconnectAttempts) {
+                logMessage('❌ Max reconnection attempts reached. Please refresh the page.', 'error');
+                return;
+            }
+
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}`;
+            
+            try {
+                // Close existing connection if any
+                if (ws && ws.readyState !== WebSocket.CLOSED) {
+                    ws.close();
+                }
+                
+                ws = new WebSocket(wsUrl);
+                
+                // Set a connection timeout
+                const connectionTimeout = setTimeout(() => {
+                    if (ws.readyState === WebSocket.CONNECTING) {
+                        ws.close();
+                        logMessage('⚠️ Connection timeout, retrying...', 'warning');
+                        reconnectAttempts++;
+                        setTimeout(connectWebSocket, 2000);
+                    }
+                }, 10000); // 10 second timeout
+                
+                ws.onopen = function() {
+                    clearTimeout(connectionTimeout);
+                    isConnected = true;
+                    reconnectAttempts = 0;
+                    updateConnectionStatus();
+                    logMessage('🔌 Connected to test runner successfully', 'success');
+                };
+                
+                ws.onmessage = function(event) {
+                    try {
+                        const message = event.data.toString();
+                        logMessage(message, 'info');
+                        
+                        // Check for test completion
+                        if (message.includes('All tests finished') || 
+                            message.includes('HTML report generated') ||
+                            message.includes('🎉 All tests completed successfully')) {
+                            
+                            stopTestExecution();
+                            logMessage('✅ Test execution completed', 'success');
+                        }
+                    } catch (error) {
+                        console.error('Error processing WebSocket message:', error);
+                    }
+                };
+                
+                ws.onclose = function(event) {
+                    clearTimeout(connectionTimeout);
+                    isConnected = false;
+                    updateConnectionStatus();
+                    
+                    // Only reconnect if it wasn't a clean close and we haven't exceeded attempts
+                    if (event.code !== 1000 && reconnectAttempts < maxReconnectAttempts) {
+                        reconnectAttempts++;
+                        const delay = Math.min(2000 * reconnectAttempts, 10000); // Max 10s delay
+                        logMessage(`❌ Connection lost. Attempting to reconnect... (${reconnectAttempts}/${maxReconnectAttempts})`, 'warning');
+                        setTimeout(connectWebSocket, delay);
+                    } else if (reconnectAttempts >= maxReconnectAttempts) {
+                        logMessage('❌ Max reconnection attempts reached. Please refresh the page.', 'error');
+                    }
+                };
+                
+                ws.onerror = function(error) {
+                    clearTimeout(connectionTimeout);
+                    logMessage('⚠️ WebSocket connection error', 'warning');
+                    console.error('WebSocket error:', error);
+                };
+                
+            } catch (error) {
+                logMessage('❌ Failed to create WebSocket connection', 'error');
+                console.error('WebSocket creation error:', error);
+                reconnectAttempts++;
+                if (reconnectAttempts < maxReconnectAttempts) {
+                    setTimeout(connectWebSocket, 3000);
+                }
+            }
+        }
+
+        function updateConnectionStatus() {
+            const statusEl = document.getElementById('status-indicator');
+            const statusTextEl = document.getElementById('status-text');
+            const statusStatEl = document.getElementById('status-stat');
+            const statusTextMainEl = document.getElementById('status-text-main');
+            
+            if (isConnected) {
+                statusEl.className = 'status-indicator status-connected';
+                statusTextEl.textContent = 'Connected';
+                statusStatEl.className = 'header-stat-item status connected';
+                statusTextMainEl.textContent = 'Connected';
+            } else {
+                statusEl.className = 'status-indicator status-error';
+                statusTextEl.textContent = 'Disconnected';
+                statusStatEl.className = 'header-stat-item status disconnected';
+                statusTextMainEl.textContent = 'Disconnected';
+            }
+        }
+
+        function logMessage(message, type = 'info') {
+            const logContainer = document.getElementById('log');
+            const logDiv = document.createElement('div');
+            logDiv.className = `log-${type}`;
+            logDiv.textContent = message;
+            logContainer.appendChild(logDiv);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+
+        function clearLogs() {
+            const logContainer = document.getElementById('log');
+            logContainer.innerHTML = `
+                <div class="log-info">🎯 Welcome to the Super Pancake Test Runner!</div>
+                <div class="log-info">✨ Select tests from the left panel and click "Run Tests" to begin</div>
+                <div class="log-info">📊 Real-time results and reports will appear here</div>
+            `;
+        }
+
+        function copyLogs() {
+            const logContainer = document.getElementById('log');
+            const logs = Array.from(logContainer.children).map(div => div.textContent).join('\n');
+            navigator.clipboard.writeText(logs).then(() => {
+                logMessage('📋 Logs copied to clipboard!', 'success');
+            });
+        }
+
+        function openTestReport() {
+            window.open('/automationTestReport.html', '_blank');
+        }
+
+        // Test file management
+        async function loadTestFiles() {
+            try {
+                const response = await fetch('/api/test-files');
+                const testFiles = await response.json();
+                
+                const container = document.getElementById('test-files-container');
+                container.innerHTML = '';
+                
+                document.getElementById('files-count').textContent = testFiles.length;
+                
+                for (const file of testFiles) {
+                    await createTestFileElement(file, container);
+                }
+                
+                logMessage(`📁 Loaded ${testFiles.length} test files successfully`, 'success');
+            } catch (error) {
+                logMessage(`❌ Failed to load test files: ${error.message}`, 'error');
+                const container = document.getElementById('test-files-container');
+                container.innerHTML = `
+                    <div style="padding: 40px 20px; text-align: center; color: var(--danger-color);">
+                        <i class="fas fa-exclamation-triangle" style="font-size: 2rem; margin-bottom: 16px;"></i>
+                        <div style="font-weight: 600;">Failed to load test files</div>
+                        <div style="font-size: 12px; margin-top: 8px;">${error.message}</div>
+                    </div>
+                `;
+            }
+        }
+
+        async function createTestFileElement(file, container) {
+            const groupId = file.replace(/[\/\.]/g, '_');
+            
+            const fileDiv = document.createElement('div');
+            fileDiv.className = 'test-file';
+            fileDiv.id = `group-${groupId}`;
+            
+            // Load test cases
+            let testCases = [];
+            try {
+                const casesResponse = await fetch('/api/test-cases', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ filePath: file })
+                });
+                testCases = await casesResponse.json();
+            } catch (error) {
+                console.error(`Failed to load test cases for ${file}:`, error);
+            }
+            
+            fileDiv.innerHTML = `
+                <div class="test-file-header">
+                    <div class="file-select-all">
+                        <input type="checkbox" class="file-select-all-checkbox" onchange="toggleGroup('${groupId}', this.checked)" id="select-all-${groupId}">
+                        <label for="select-all-${groupId}" class="file-select-all-label">All</label>
+                    </div>
+                    <div class="test-file-header-left">
+                        <div class="test-file-title">
+                            ${file}
+                        </div>
+                    </div>
+                    <i class="fas fa-chevron-down toggle-icon" onclick="toggleFile('${groupId}')" id="toggle-${groupId}"></i>
+                </div>
+                <div class="test-cases" id="cases-${groupId}">
+                    ${testCases.map(testCase => `
+                        <div class="test-case-item" data-test-id="${file}::${testCase}">
+                            <input type="checkbox" name="tests" value="${file}::${testCase}" class="test-case-checkbox" id="${file}::${testCase}" onchange="updateSelectedCount()">
+                            <label for="${file}::${testCase}" class="test-case-label">${testCase}</label>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            
+            container.appendChild(fileDiv);
+        }
+
+        function toggleFile(groupId) {
+            const fileElement = document.getElementById(`group-${groupId}`);
+            fileElement.classList.toggle('expanded');
+        }
+
+        function toggleGroup(groupId, checked) {
+            const checkboxes = document.querySelectorAll(`#cases-${groupId} input[type="checkbox"]`);
+            checkboxes.forEach(cb => {
+                cb.checked = checked;
+                const item = cb.closest('.test-case-item');
+                if (checked) {
+                    item.classList.add('selected');
+                } else {
+                    item.classList.remove('selected');
+                }
+            });
+            updateSelectedCount();
+        }
+
+        function updateSelectedCount() {
+            const checkboxes = document.querySelectorAll('.test-case-checkbox:checked');
+            const count = checkboxes.length;
+            
+            document.getElementById('selected-count-number').textContent = count;
+            document.getElementById('run-btn').disabled = count === 0;
+            
+            // Update visual selection
+            document.querySelectorAll('.test-case-checkbox').forEach(cb => {
+                const item = cb.closest('.test-case-item');
+                if (cb.checked) {
+                    item.classList.add('selected');
+                } else {
+                    item.classList.remove('selected');
+                }
+            });
+            
+            // Update group checkboxes
+            document.querySelectorAll('.test-file').forEach(file => {
+                const groupCheckbox = file.querySelector('.file-select-all-checkbox');
+                const testCheckboxes = file.querySelectorAll('.test-case-checkbox');
+                const checkedTestBoxes = file.querySelectorAll('.test-case-checkbox:checked');
+                
+                if (checkedTestBoxes.length === 0) {
+                    groupCheckbox.checked = false;
+                    groupCheckbox.indeterminate = false;
+                } else if (checkedTestBoxes.length === testCheckboxes.length) {
+                    groupCheckbox.checked = true;
+                    groupCheckbox.indeterminate = false;
+                } else {
+                    groupCheckbox.checked = false;
+                    groupCheckbox.indeterminate = true;
+                }
+            });
+        }
+
+        async function runTests() {
+            if (!isConnected) {
+                logMessage('⚠️ Not connected to test runner. Please wait for connection.', 'warning');
+                return;
+            }
+            
+            const checkboxes = document.querySelectorAll('.test-case-checkbox:checked');
+            const tests = Array.from(checkboxes).map(cb => cb.value);
+            
+            if (tests.length === 0) {
+                logMessage('⚠️ Please select at least one test to run.', 'warning');
+                return;
+            }
+            
+            // Update button states
+            document.getElementById('run-btn').disabled = true;
+            document.getElementById('run-btn').classList.add('loading');
+            document.getElementById('stop-btn').disabled = false;
+            
+            // Start pancake animation
+            const icon = document.querySelector('.icon');
+            icon.classList.add('running');
+            
+            // Start execution timer
+            executionStartTime = Date.now();
+            executionTimer = setInterval(updateExecutionTime, 1000);
+            
+            clearLogs();
+            logMessage(`🚀 Starting execution of ${tests.length} selected tests...`, 'info');
+            
+            try {
+                const response = await fetch('/run', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ tests })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Server responded with ${response.status}: ${response.statusText}`);
+                }
+                
+                logMessage('📤 Test execution request sent successfully', 'success');
+            } catch (error) {
+                logMessage(`❌ Failed to start test execution: ${error.message}`, 'error');
+                stopTestExecution();
+            }
+        }
+        
+        async function stopTests() {
+            try {
+                const response = await fetch('/stop', {
+                    method: 'POST'
+                });
+                
+                if (response.ok) {
+                    logMessage('🛑 Test execution stop requested', 'warning');
+                } else {
+                    logMessage('⚠️ Failed to stop tests - they may complete naturally', 'warning');
+                }
+            } catch (error) {
+                logMessage(`❌ Error stopping tests: ${error.message}`, 'error');
+            }
+            
+            stopTestExecution();
+        }
+        
+        function stopTestExecution() {
+            // Update button states
+            document.getElementById('run-btn').disabled = false;
+            document.getElementById('run-btn').classList.remove('loading');
+            document.getElementById('stop-btn').disabled = true;
+            
+            // Stop pancake animation
+            const icon = document.querySelector('.icon');
+            icon.classList.remove('running');
+            
+            // Stop execution timer
+            if (executionTimer) {
+                clearInterval(executionTimer);
+                executionTimer = null;
+            }
+        }
+
+        function updateExecutionTime() {
+            if (!executionStartTime) return;
+            
+            const elapsed = Math.floor((Date.now() - executionStartTime) / 1000);
+            const minutes = Math.floor(elapsed / 60);
+            const seconds = elapsed % 60;
+            
+            document.getElementById('execution-time').textContent = 
+                `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        // Event listeners
+        document.getElementById('run-btn').addEventListener('click', runTests);
+
+        // Initialize everything
+        document.addEventListener('DOMContentLoaded', () => {
+            // Load saved theme first
+            loadSavedTheme();
+            
+            // Setup search and filter functionality
+            setupSearchAndFilter();
+            
+            // Setup sidebar resizer
+            setupSidebarResizer();
+            
+            // Start connecting immediately
+            connectWebSocket();
+            
+            // Load test files after a short delay
+            setTimeout(() => {
+                loadTestFiles();
+            }, 500);
+        });
+
+        // Search and filter functionality
+        function setupSearchAndFilter() {
+            const searchInput = document.getElementById('search-input');
+            const filterTabs = document.querySelectorAll('.filter-tab');
+            
+            searchInput.addEventListener('input', filterTestFiles);
+            
+            filterTabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    // Update active tab
+                    filterTabs.forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    
+                    // Apply filter
+                    filterTestFiles();
+                });
+            });
+        }
+        
+        function filterTestFiles() {
+            const searchTerm = document.getElementById('search-input').value.toLowerCase();
+            const activeFilter = document.querySelector('.filter-tab.active').dataset.filter;
+            const testFiles = document.querySelectorAll('.test-file');
+            
+            testFiles.forEach(file => {
+                const fileName = file.querySelector('.test-file-title').textContent.toLowerCase();
+                
+                // Check search match
+                const searchMatch = searchTerm === '' || fileName.includes(searchTerm);
+                
+                // Check filter match
+                let filterMatch = true;
+                if (activeFilter !== 'all') {
+                    filterMatch = fileName.includes(activeFilter);
+                }
+                
+                // Show/hide file
+                file.style.display = (searchMatch && filterMatch) ? 'block' : 'none';
+            });
+        }
+        
+        function clearSearch() {
+            document.getElementById('search-input').value = '';
+            filterTestFiles();
+        }
+        
+        // Theme toggle functionality
+        function toggleTheme() {
+            const body = document.body;
+            const themeIcon = document.getElementById('theme-icon');
+            
+            if (body.hasAttribute('data-theme')) {
+                // Switch to light mode
+                body.removeAttribute('data-theme');
+                themeIcon.className = 'fas fa-moon';
+                localStorage.setItem('theme', 'light');
+            } else {
+                // Switch to dark mode
+                body.setAttribute('data-theme', 'dark');
+                themeIcon.className = 'fas fa-sun';
+                localStorage.setItem('theme', 'dark');
+            }
+        }
+        
+        // Load saved theme
+        function loadSavedTheme() {
+            const savedTheme = localStorage.getItem('theme');
+            const themeIcon = document.getElementById('theme-icon');
+            
+            if (savedTheme === 'dark') {
+                document.body.setAttribute('data-theme', 'dark');
+                themeIcon.className = 'fas fa-sun';
+            } else {
+                themeIcon.className = 'fas fa-moon';
+            }
+        }
+        
+        
+        // Sidebar resizer functionality
+        function setupSidebarResizer() {
+            const resizer = document.querySelector('.sidebar-resizer');
+            const sidebar = document.querySelector('.sidebar');
+            const container = document.querySelector('.app-container');
+            let isResizing = false;
+            
+            resizer.addEventListener('mousedown', (e) => {
+                isResizing = true;
+                container.classList.add('resizing');
+                document.addEventListener('mousemove', handleResize);
+                document.addEventListener('mouseup', stopResize);
+                e.preventDefault();
+            });
+            
+            function handleResize(e) {
+                if (!isResizing) return;
+                
+                const containerRect = container.getBoundingClientRect();
+                const newWidth = ((e.clientX - containerRect.left) / containerRect.width) * 100;
+                
+                // Constrain between 15% and 60%
+                const constrainedWidth = Math.max(15, Math.min(60, newWidth));
+                sidebar.style.width = constrainedWidth + '%';
+            }
+            
+            function stopResize() {
+                isResizing = false;
+                container.classList.remove('resizing');
+                document.removeEventListener('mousemove', handleResize);
+                document.removeEventListener('mouseup', stopResize);
+            }
+        }
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.close(1000, 'Page unloading');
+            }
+        });
+    </script>
 </body>
 </html>

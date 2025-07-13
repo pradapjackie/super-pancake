@@ -130,9 +130,27 @@ export function writeReport() {
                         if (testSuite.assertionResults && Array.isArray(testSuite.assertionResults)) {
                             for (const assertion of testSuite.assertionResults) {
                                 const keyId = `${testSuite.name}|${assertion.fullName}|${result.startTime}`;
+                                // Map Vitest status to our internal format
+                                let status = 'fail'; // default
+                                switch (assertion.status) {
+                                    case 'passed':
+                                        status = 'pass';
+                                        break;
+                                    case 'failed':
+                                        status = 'fail';
+                                        break;
+                                    case 'skipped':
+                                    case 'pending':
+                                    case 'todo':
+                                        status = 'skipped';
+                                        break;
+                                    default:
+                                        status = 'fail';
+                                }
+                                
                                 const enhancedResult = {
                                     name: assertion.title || assertion.fullName,
-                                    status: assertion.status === 'passed' ? 'pass' : 'fail',
+                                    status: status,
                                     file: testSuite.name,
                                     timestamp: result.startTime ? new Date(result.startTime).toISOString() : new Date().toISOString(),
                                     duration: assertion.duration ? `${assertion.duration.toFixed(2)}ms` : '-',
@@ -371,7 +389,8 @@ export function writeReport() {
         .summary-card.total { border-left-color: var(--info); }
         .summary-card.passed { border-left-color: var(--success); }
         .summary-card.failed { border-left-color: var(--danger); }
-        .summary-card.duration { border-left-color: var(--warning); }
+        .summary-card.skipped { border-left-color: var(--warning); }
+        .summary-card.duration { border-left-color: var(--info); }
 
         .summary-card .icon {
             font-size: 1.5rem;
@@ -1097,6 +1116,14 @@ export function writeReport() {
                     <div class="value">${failed}</div>
                     <div class="label">Failed</div>
                     <div class="percentage">${(100 - parseFloat(passRate)).toFixed(1)}%</div>
+                </div>
+                <div class="summary-card skipped">
+                    <div class="icon">
+                        <i class="fas fa-minus-circle"></i>
+                    </div>
+                    <div class="value">${skipped}</div>
+                    <div class="label">Skipped</div>
+                    <div class="percentage">${total > 0 ? ((skipped / total) * 100).toFixed(1) : '0.0'}%</div>
                 </div>
                 <div class="summary-card duration">
                     <div class="icon">

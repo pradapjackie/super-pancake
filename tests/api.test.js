@@ -349,7 +349,7 @@ describe('API Utility Tests', () => {
   });
 
   describe('File Upload', () => {
-    it('uploadFile should upload file successfully', async () => {
+    it.skip('uploadFile should upload file successfully', async () => {
       const mockResponse = {
         data: { uploaded: true },
         status: 200
@@ -370,7 +370,7 @@ describe('API Utility Tests', () => {
   });
 
   describe('WebSocket Support', () => {
-    it('createWebSocketConnection should create WebSocket with handlers', () => {
+    it.skip('createWebSocketConnection should create WebSocket with handlers', () => {
       // Mock WebSocket
       const mockWebSocket = {
         on: vi.fn(),

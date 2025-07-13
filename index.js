@@ -14,7 +14,7 @@ export * from './reporter/htmlReporter.js';
 export * from './helpers/testWrapper.js';
 
 export * from './config.js';
-export * from './scripts/test-ui.js';
+// Note: test-ui.js is not exported to prevent circular dependencies
 
 // Export API utilities
 export * from './core/api.js';

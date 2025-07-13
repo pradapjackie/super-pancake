@@ -51,11 +51,33 @@ vitest.stderr.on('data', (data) => {
 vitest.on('close', (code) => {
   console.log('\n📄 --- Test Summary ---');
 
-  const passed = (stdoutData.match(/✓/g) || []).length;
-  const failed = (stdoutData.match(/×/g) || []).length;
-  const skipped = (stdoutData.match(/↓/g) || []).length;
-  const broken = (stdoutData.match(/❗/g) || []).length;
-  const total = passed + failed + skipped + broken;
+  // Parse results for summary - extract actual test counts from Vitest output
+  const testLinePassedSkipped = stdoutData.match(/Tests\s+(\d+)\s+passed\s+\|\s+(\d+)\s+skipped/);
+  const testLinePassedOnly = stdoutData.match(/Tests\s+(\d+)\s+passed\s+\((\d+)\)/);
+  const testLineMatch = testLinePassedSkipped || testLinePassedOnly;
+  
+  let passed, failed, skipped, broken, total;
+  
+  if (testLineMatch) {
+    passed = parseInt(testLineMatch[1]) || 0;
+    if (testLinePassedSkipped) {
+      skipped = parseInt(testLineMatch[2]) || 0;
+    } else {
+      skipped = 0;
+    }
+    failed = 0; // From exit code 0, we know no tests failed
+    broken = 0;
+    total = passed + failed + skipped + broken;
+    console.log(`📊 Parsed test counts: ${passed} passed, ${skipped} skipped, ${total} total`);
+  } else {
+    // Fallback to old symbol counting method
+    passed = (stdoutData.match(/✓/g) || []).length;
+    failed = (stdoutData.match(/×/g) || []).length;
+    skipped = (stdoutData.match(/↓/g) || []).length;
+    broken = (stdoutData.match(/❗/g) || []).length;
+    total = passed + failed + skipped + broken;
+    console.log(`📊 Using fallback symbol counting: ${passed} passed, ${skipped} skipped, ${total} total`);
+  }
 
   const summaryTable = `
 ┌──────────────┬────────┐

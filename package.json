@@ -4,6 +4,7 @@
   "description": "A lightweight DOM-based UI automation framework using Chrome DevTools Protocol",
   "main": "index.js",
   "type": "module",
+  "types": "./types/index.d.ts",
   "keywords": [
     "automation",
     "dom",
@@ -28,6 +29,7 @@
   "license": "MIT",
   "bin": {
     "domtest": "./bin/cli.js",
+    "super-pancake": "./bin/cli.js",
     "super-pancake-ui": "./bin/ui-runner.js",
     "super-pancake-run": "./bin/super-pancake-run.js",
     "super-pancake-test": "./bin/super-pancake-run-alt.js",
@@ -45,6 +47,7 @@
   },
   "homepage": "https://github.com/pradapjackie/super-pancake#readme",
   "scripts": {
+    "postinstall": "node scripts/postinstall.js",
     "test": "vitest",
     "test:ui": "node scripts/test-ui.js",
     "test:run": "vitest run",
@@ -89,14 +92,12 @@
   "exports": {
     ".": "./index.js",
     "./utils/launcher.js": "./utils/launcher.js",
-    "./utils/env.js": "./utils/env.js",
+    "./core/api.js": "./core/api.js",
     "./core/browser.js": "./core/browser.js",
     "./core/session.js": "./core/session.js",
     "./core/dom.js": "./core/dom.js",
     "./core/assert.js": "./core/assert.js",
     "./reporter/htmlReporter.js": "./reporter/htmlReporter.js",
-    "./reporter/chartUtils.js": "./reporter/chartUtils.js",
-    "./reporter/reportFormatter.js": "./reporter/reportFormatter.js",
     "./helpers/testWrapper.js": "./helpers/testWrapper.js",
     "./config.js": "./config.js"
   },
@@ -109,6 +110,7 @@
     "reporter/",
     "helpers/",
     "public/",
+    "types/",
     "config.js",
     "index.js",
     "index.d.ts",
