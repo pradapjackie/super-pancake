@@ -518,8 +518,7 @@ async function main() {
   }
 }
 
+// Run main function when executed directly
 if (import.meta.url === `file://${process.argv[1]}`) {
   main().catch(console.error);
 }
-
-export { main };

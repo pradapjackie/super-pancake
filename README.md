@@ -9,7 +9,20 @@ A **lightweight DOM-based UI automation framework** using Chrome DevTools Protoc
 
 ## 🚀 Quick Start
 
+### Create New Project
+```bash
+npm init super-pancake@latest my-project
+cd my-project
+npm install
+npm test
+```
 
+This creates a complete project with:
+- Interactive configuration setup
+- Sample test files
+- Package.json with all scripts
+- Super Pancake config file
+- Video recording options (always/retain-on-failure/off)
 
 ### Add to Existing Project
 ```bash
