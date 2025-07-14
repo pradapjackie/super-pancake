@@ -9,12 +9,7 @@ A **lightweight DOM-based UI automation framework** using Chrome DevTools Protoc
 
 ## 🚀 Quick Start
 
-### Create a New Project
-```bash
-npm init super-pancake@latest my-project
-cd my-project
-npm test
-```
+
 
 ### Add to Existing Project
 ```bash
@@ -96,6 +91,7 @@ npx super-pancake --help                   # Show help
 
 ### Basic Test Structure
 ```javascript
+
 import { describe, it, beforeAll, afterAll } from 'vitest';
 import { launchChrome } from 'super-pancake-automation/utils/launcher.js';
 import { connectToChrome } from 'super-pancake-automation/core/browser.js';
@@ -103,36 +99,115 @@ import { createSession } from 'super-pancake-automation/core/session.js';
 import {
   enableDOM,
   navigateTo,
-  click,
   fillInput,
+  check,
+  selectOption,
+  click,
+  getAttribute,
   getText,
+  waitForSelector,
   takeElementScreenshot
 } from 'super-pancake-automation/core/dom.js';
+import {
+  assertEqual,
+  assertContainsText,
+} from 'super-pancake-automation/core/assert.js';
+import { addTestResult, writeReport } from 'super-pancake-automation/reporter/htmlReporter.js';
+import { testWithReport } from 'super-pancake-automation/helpers/testWrapper.js';
+import { config } from 'super-pancake-automation/config.js';
 
 let chrome, ws, session;
 
-describe('My App Tests', () => {
+describe('Playground UI Form Test', () => {
   beforeAll(async () => {
+    console.log('\n🔷 Playground UI Test Started');
     chrome = await launchChrome({ headed: true });
     ws = await connectToChrome();
     session = createSession(ws);
     await enableDOM(session);
-  });
+  }, 30000); // 30 second timeout for Chrome startup
 
   afterAll(async () => {
-    ws.close();
-    await chrome.kill();
+    if (ws) ws.close();
+    if (chrome) await chrome.kill();
+    writeReport();
+    console.log('\n🧹 Test complete. Chrome closed.');
   });
 
-  it('should login successfully', async () => {
-    await navigateTo(session, 'https://myapp.com/login');
-    await fillInput(session, '#username', 'testuser');
-    await fillInput(session, '#password', 'password123');
-    await click(session, '#login-button');
-    
-    const welcomeText = await getText(session, '.welcome-message');
-    expect(welcomeText).toContain('Welcome');
+  it('should navigate to form page', { timeout: config.timeouts.testTimeout }, async () => {
+    await testWithReport('should navigate to form page', async () => {
+      await navigateTo(session, 'http://localhost:8080/form.html');
+    }, session, import.meta.url);
   });
+
+  it('should fill in the name input', { timeout: config.timeouts.testTimeout }, async () => {
+    await testWithReport('should fill in the name input', async () => {
+      await fillInput(session, 'input[name="name"]', 'Pradap');
+    }, session, import.meta.url);
+  });
+
+  it('should fill in the email input', { timeout: config.timeouts.testTimeout }, async () => {
+    await testWithReport('should fill in the email input', async () => {
+      await fillInput(session, 'input[name="email"]', 'pradap@example.com');
+    }, session, import.meta.url);
+  });
+
+  it('should fill in the password input', { timeout: config.timeouts.testTimeout }, async () => {
+    await testWithReport('should fill in the password input', async () => {
+      await fillInput(session, 'input[name="password"]', 'supersecret');
+    }, session, import.meta.url);
+  });
+
+  it('should fill in the date and time inputs', { timeout: config.timeouts.testTimeout }, async () => {
+    await testWithReport('should fill in the date and time inputs', async () => {
+      await fillInput(session, 'input[name="date"]', '2025-06-23');
+      await fillInput(session, 'input[name="time"]', '12:34');
+    }, session, import.meta.url);
+  });
+
+  it('should fill in the message textarea', { timeout: config.timeouts.testTimeout }, async () => {
+    await testWithReport('should fill in the message textarea', async () => {
+      await fillInput(session, 'textarea[name="message"]', 'Test message');
+    }, session, import.meta.url);
+  });
+
+  it('should select dropdown and check options', { timeout: config.timeouts.testTimeout }, async () => {
+    await testWithReport('should select dropdown and check options', async () => {
+      await selectOption(session, 'select[name="dropdown"]', 'two');
+      await check(session, 'input[name="subscribe"]', true);
+      await check(session, 'input[value="male"]', true);
+    }, session, import.meta.url);
+  });
+
+  it('should submit the form', { timeout: config.timeouts.testTimeout }, async () => {
+    await testWithReport('should submit the form', async () => {
+      await click(session, 'button[type="submit"]');
+    }, session, import.meta.url);
+  });
+
+  it('should submit the form', { timeout: config.timeouts.testTimeout }, async () => {
+    await testWithReport('should submit the form', async () => {
+      await click(session, 'button[type="submit"]');
+    }, session, import.meta.url);
+  });
+
+
+
+
+  it('should verify table and list contents', { timeout: config.timeouts.testTimeout }, async () => {
+    await testWithReport('should verify table and list contents', async () => {
+      const status = await getAttribute(session, 'form', 'data-status');
+      assertEqual(status, 'submitted', 'Form should be marked as submitted');
+
+      const tableText = await getText(session, await waitForSelector(session, 'table'));
+      assertContainsText(tableText, 'Alice', 'Table should include "Alice"');
+      assertContainsText(tableText, 'Bob', 'Table should include "Bob"');
+
+      const listText = await getText(session, await waitForSelector(session, 'ul'));
+      assertContainsText(listText, 'Unordered Item 2');
+    }, session, import.meta.url);
+  });
+
 });
 ```
 
@@ -478,16 +553,7 @@ jobs:
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-## 📝 Changelog
 
-### v1.0.25
-- ✅ Added 35+ new UI testing methods
-- ✅ Enhanced wait strategies
-- ✅ Advanced form handling
-- ✅ Table data extraction
-- ✅ Visual testing capabilities
-- ✅ Multiple file upload support
-- ✅ UI server command
 
 ## 🐛 Issues & Support
 
