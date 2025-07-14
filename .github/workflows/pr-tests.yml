@@ -27,13 +27,24 @@ jobs:
         node-version: ${{ matrix.node-version }}
         
     - name: Install dependencies
-      run: npm install
+      run: |
+        echo "Installing dependencies..."
+        npm i --verbose
+      timeout-minutes: 10
       
+    - name: Verify test script exists
+      run: |
+        echo "Checking package.json scripts..."
+        npm run --silent
+        
     - name: Run tests
-      run: npm run test:all-no-server
+      run: |
+        echo "Starting test suite..."
+        npm run test:all-no-server
       env:
         NODE_ENV: test
         CI: true
+      timeout-minutes: 15
         
     - name: Security audit
       run: npm audit --audit-level moderate
