@@ -28,6 +28,18 @@ jobs:
         fetch-depth: 0
         token: ${{ secrets.GITHUB_TOKEN }}
         
+    - name: Check if main branch
+      run: |
+        CURRENT_BRANCH=$(git branch --show-current)
+        echo "Current branch: $CURRENT_BRANCH"
+        if [ "$CURRENT_BRANCH" != "main" ]; then
+          echo "❌ This workflow only runs on main branch for production releases"
+          echo "Current branch: $CURRENT_BRANCH"
+          echo "Please merge to main first or checkout main branch"
+          exit 1
+        fi
+        echo "✅ On main branch - proceeding with publish"
+        
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
