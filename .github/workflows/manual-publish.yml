@@ -52,11 +52,21 @@ jobs:
       id: version
       run: |
         OLD_VERSION=$(node -p "require('./package.json').version")
-        NEW_VERSION=$(npm version ${{ github.event.inputs.version_type }} --no-git-tag-version)
+        echo "Current version: $OLD_VERSION"
+        
+        # Try to bump version, handle if already at target
+        if NEW_VERSION=$(npm version ${{ github.event.inputs.version_type }} --no-git-tag-version 2>/dev/null); then
+          echo "Version bumped to: $NEW_VERSION"
+        else
+          echo "Version bump failed, using current version"
+          NEW_VERSION="v$OLD_VERSION"
+        fi
         
         # Update create-super-pancake version
         cd create-super-pancake
-        npm version $NEW_VERSION --no-git-tag-version
+        if ! npm version $NEW_VERSION --no-git-tag-version 2>/dev/null; then
+          echo "Create package version update failed, using current"
+        fi
         cd ..
         
         echo "old-version=$OLD_VERSION" >> $GITHUB_OUTPUT
