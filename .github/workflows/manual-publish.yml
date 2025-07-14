@@ -56,13 +56,6 @@ jobs:
       id: version
       run: |
         OLD_VERSION=$(node -p "require('./package.json').version")
-<<<<<<< Updated upstream
-        NEW_VERSION=$(npm version ${{ github.event.inputs.version_type }} --no-git-tag-version)
-        
-        # Update create-super-pancake version
-        cd create-super-pancake
-        npm version $NEW_VERSION --no-git-tag-version
-=======
         echo "Current version: $OLD_VERSION"
         
         # Try to bump version, handle if already at target
@@ -84,7 +77,6 @@ jobs:
           echo "Create package version update failed, using current"
           echo "create-version-changed=false" >> $GITHUB_OUTPUT
         fi
->>>>>>> Stashed changes
         cd ..
         
         echo "old-version=$OLD_VERSION" >> $GITHUB_OUTPUT

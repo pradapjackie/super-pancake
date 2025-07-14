@@ -27,21 +27,14 @@ jobs:
         node-version: ${{ matrix.node-version }}
         
     - name: Install dependencies
-<<<<<<< Updated upstream
-      run: npm install
-      
-=======
       run: npm i
       timeout-minutes: 5
         
->>>>>>> Stashed changes
     - name: Run tests
       run: npm run test:all-no-server
       env:
         NODE_ENV: test
         CI: true
-<<<<<<< Updated upstream
-=======
       timeout-minutes: 10
       
     - name: Generate test report
@@ -80,7 +73,6 @@ jobs:
           } catch (error) {
             console.log('Could not post test results:', error.message);
           }
->>>>>>> Stashed changes
         
     - name: Security audit
       run: npm audit --audit-level moderate
