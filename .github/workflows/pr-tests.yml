@@ -27,13 +27,60 @@ jobs:
         node-version: ${{ matrix.node-version }}
         
     - name: Install dependencies
+<<<<<<< Updated upstream
       run: npm install
       
+=======
+      run: npm i
+      timeout-minutes: 5
+        
+>>>>>>> Stashed changes
     - name: Run tests
       run: npm run test:all-no-server
       env:
         NODE_ENV: test
         CI: true
+<<<<<<< Updated upstream
+=======
+      timeout-minutes: 10
+      
+    - name: Generate test report
+      run: npm run test:report
+      if: always()
+        
+    - name: Comment test results on PR
+      uses: actions/github-script@v7
+      if: matrix.node-version == '20.x' && always()
+      continue-on-error: true
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          const fs = require('fs');
+          
+          try {
+            let commentBody = "## 🧪 Test Results for PR\n\n";
+            
+            // Add test report if available
+            if (fs.existsSync('TEST_REPORT.md')) {
+              const report = fs.readFileSync('TEST_REPORT.md', 'utf8');
+              commentBody += "### 📊 Test Summary\n\n";
+              commentBody += "```\n" + report + "\n```\n\n";
+            }
+            
+            commentBody += "### 🔗 Details\n";
+            commentBody += "- [📈 View Full Logs](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})\n\n";
+            commentBody += "---\n*Automated by 🥞 Super Pancake Framework CI*";
+
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: commentBody
+            });
+          } catch (error) {
+            console.log('Could not post test results:', error.message);
+          }
+>>>>>>> Stashed changes
         
     - name: Security audit
       run: npm audit --audit-level moderate

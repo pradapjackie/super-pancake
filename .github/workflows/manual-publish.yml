@@ -48,15 +48,43 @@ jobs:
         NODE_ENV: production
         CI: true
         
+    - name: Generate test report
+      run: npm run test:report
+      if: always()
+        
     - name: Bump version and create tag
       id: version
       run: |
         OLD_VERSION=$(node -p "require('./package.json').version")
+<<<<<<< Updated upstream
         NEW_VERSION=$(npm version ${{ github.event.inputs.version_type }} --no-git-tag-version)
         
         # Update create-super-pancake version
         cd create-super-pancake
         npm version $NEW_VERSION --no-git-tag-version
+=======
+        echo "Current version: $OLD_VERSION"
+        
+        # Try to bump version, handle if already at target
+        if NEW_VERSION=$(npm version ${{ github.event.inputs.version_type }} --no-git-tag-version 2>/dev/null); then
+          echo "Version bumped to: $NEW_VERSION"
+          echo "main-version-changed=true" >> $GITHUB_OUTPUT
+        else
+          echo "Version bump failed, using current version"
+          NEW_VERSION="v$OLD_VERSION"
+          echo "main-version-changed=false" >> $GITHUB_OUTPUT
+        fi
+        
+        # Update create-super-pancake version
+        cd create-super-pancake
+        if npm version $NEW_VERSION --no-git-tag-version 2>/dev/null; then
+          echo "Create package version updated"
+          echo "create-version-changed=true" >> $GITHUB_OUTPUT
+        else
+          echo "Create package version update failed, using current"
+          echo "create-version-changed=false" >> $GITHUB_OUTPUT
+        fi
+>>>>>>> Stashed changes
         cd ..
         
         echo "old-version=$OLD_VERSION" >> $GITHUB_OUTPUT
@@ -64,10 +92,25 @@ jobs:
         
     - name: Commit and push version
       run: |
-        git add package.json create-super-pancake/package.json
-        git commit -m "chore: bump version to ${{ steps.version.outputs.new-version }}"
-        git tag ${{ steps.version.outputs.new-version }}
-        git push origin main --tags
+        # Only add files that were actually changed
+        CHANGED_FILES=""
+        if [ "${{ steps.version.outputs.main-version-changed }}" = "true" ]; then
+          CHANGED_FILES="$CHANGED_FILES package.json"
+        fi
+        if [ "${{ steps.version.outputs.create-version-changed }}" = "true" ]; then
+          CHANGED_FILES="$CHANGED_FILES create-super-pancake/package.json"
+        fi
+        
+        if [ -n "$CHANGED_FILES" ]; then
+          git add $CHANGED_FILES
+          git commit -m "chore: bump version to ${{ steps.version.outputs.new-version }}"
+          git tag ${{ steps.version.outputs.new-version }}
+          git push origin main --tags
+        else
+          echo "No version changes to commit"
+          git tag ${{ steps.version.outputs.new-version }}
+          git push origin --tags
+        fi
         
     - name: Publish create-super-pancake
       run: |
@@ -95,12 +138,25 @@ jobs:
           **Previous version:** ${{ steps.version.outputs.old-version }}
           **Version type:** ${{ github.event.inputs.version_type }}
           
-          ### Installation
+          ### ✅ Test Results
+          
+          All tests passed before publishing! View detailed test execution logs in the workflow run.
+          
+          ### 📦 Installation
           ```bash
+          # Create new project
           npm init super-pancake@latest my-project
-          # or
+          
+          # Add to existing project  
           npm install super-pancake-automation
           ```
+          
+          ### 🔗 Links
+          - [📈 Test Execution Details](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+          - [📚 Documentation](https://github.com/${{ github.repository }}#readme)
+          
+          ---
+          *Published after comprehensive testing with full test suite validation.*
         draft: false
         prerelease: false
       
