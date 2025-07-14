@@ -94,14 +94,20 @@ jobs:
         OLD_VERSION=$(node -p "require('./package.json').version")
         NEW_VERSION=$(npm version ${{ github.event.inputs.version_type }} --no-git-tag-version)
         
+        # Update create-super-pancake version to match
+        cd create-super-pancake
+        npm version $NEW_VERSION --no-git-tag-version
+        cd ..
+        
         echo "old-version=$OLD_VERSION" >> $GITHUB_OUTPUT
         echo "new-version=$NEW_VERSION" >> $GITHUB_OUTPUT
         
         echo "📋 Bumped version from $OLD_VERSION to $NEW_VERSION"
+        echo "📋 Updated create-super-pancake to $NEW_VERSION"
         
     - name: 💾 Commit version bump
       run: |
-        git add package.json
+        git add package.json create-super-pancake/package.json
         git commit -m "chore: bump version to ${{ steps.bump.outputs.new-version }} [skip ci]"
         git tag ${{ steps.bump.outputs.new-version }}
         git push origin HEAD --tags
@@ -143,12 +149,23 @@ jobs:
         
     - name: 🔍 Verify package contents
       run: |
-        echo "📋 Package contents:"
+        echo "📋 Main package contents:"
         npm pack --dry-run
+        echo "📋 Create package contents:"
+        cd create-super-pancake && npm pack --dry-run && cd ..
         
-    - name: 🚀 Publish to NPM
+    - name: 🚀 Publish create-super-pancake
       run: |
-        echo "🚀 Publishing ${{ needs.bump-version.outputs.new-version }}..."
+        cd create-super-pancake
+        echo "🚀 Publishing create-super-pancake@${{ needs.bump-version.outputs.new-version }}..."
+        npm publish --access public
+        cd ..
+      env:
+        NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        
+    - name: 🚀 Publish main package
+      run: |
+        echo "🚀 Publishing super-pancake-automation@${{ needs.bump-version.outputs.new-version }}..."
         npm publish --access public
       env:
         NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
