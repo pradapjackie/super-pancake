@@ -1,0 +1,144 @@
+name: 🚀 Manual NPM Publish
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_type:
+        description: 'Version increment type'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    name: Publish to NPM
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        token: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20.x
+        registry-url: 'https://registry.npmjs.org'
+        
+    - name: Configure Git
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        
+    - name: Install dependencies
+      run: npm install
+      
+    - name: Run tests
+      run: npm run test:all-no-server
+      env:
+        NODE_ENV: production
+        CI: true
+        
+    - name: Bump version and create tag
+      id: version
+      run: |
+        OLD_VERSION=$(node -p "require('./package.json').version")
+        NEW_VERSION=$(npm version ${{ github.event.inputs.version_type }} --no-git-tag-version)
+        
+        # Update create-super-pancake version
+        cd create-super-pancake
+        npm version $NEW_VERSION --no-git-tag-version
+        cd ..
+        
+        echo "old-version=$OLD_VERSION" >> $GITHUB_OUTPUT
+        echo "new-version=$NEW_VERSION" >> $GITHUB_OUTPUT
+        
+    - name: Commit and push version
+      run: |
+        git add package.json create-super-pancake/package.json
+        git commit -m "chore: bump version to ${{ steps.version.outputs.new-version }}"
+        git tag ${{ steps.version.outputs.new-version }}
+        git push origin main --tags
+        
+    - name: Publish create-super-pancake
+      run: |
+        cd create-super-pancake
+        npm publish --access public
+        cd ..
+      env:
+        NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        
+    - name: Publish main package
+      run: npm publish --access public
+      env:
+        NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ steps.version.outputs.new-version }}
+        name: "🥞 ${{ steps.version.outputs.new-version }}"
+        body: |
+          ## 🚀 Super Pancake Framework ${{ steps.version.outputs.new-version }}
+          
+          **Previous version:** ${{ steps.version.outputs.old-version }}
+          **Version type:** ${{ github.event.inputs.version_type }}
+          
+          ### Installation
+          ```bash
+          npm init super-pancake@latest my-project
+          # or
+          npm install super-pancake-automation
+          ```
+        draft: false
+        prerelease: false
+      
+  cleanup-on-failure:
+    name: Cleanup on Failure
+    runs-on: ubuntu-latest
+    needs: publish
+    if: failure()
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        token: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: Configure Git
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        
+    - name: Delete failed release tag
+      run: |
+        # Get the version that was supposed to be published
+        if [ -f package.json ]; then
+          VERSION=$(node -p "require('./package.json').version")
+          echo "Attempting to clean up version: $VERSION"
+          
+          # Delete local tag if it exists
+          if git tag -l | grep -q "^$VERSION$"; then
+            git tag -d $VERSION
+            echo "Deleted local tag: $VERSION"
+          fi
+          
+          # Delete remote tag if it exists
+          if git ls-remote --tags origin | grep -q "refs/tags/$VERSION$"; then
+            git push --delete origin $VERSION
+            echo "Deleted remote tag: $VERSION"
+          fi
+        fi
+      continue-on-error: true
