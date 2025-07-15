@@ -95,7 +95,7 @@ jobs:
           NEW_VERSION=$(npm version ${{ github.event.inputs.version_type }} --no-git-tag-version)
           
           # Update create package version to match
-          cd create-super-pancake
+          cd create-super-pancake-automation
           npm version $NEW_VERSION --no-git-tag-version
           cd ..
           
@@ -106,7 +106,7 @@ jobs:
 
       - name: 💾 Commit version bump
         run: |
-          git add package.json create-super-pancake/package.json
+          git add package.json create-super-pancake-automation/package.json
           git commit -m "chore: bump version to ${{ steps.bump.outputs.new-version }} [skip ci]"
           git tag ${{ steps.bump.outputs.new-version }}
           git push origin HEAD --tags
@@ -151,11 +151,11 @@ jobs:
           echo "📋 Main package contents:"
           npm pack --dry-run
           echo "📋 Create package contents:"
-          cd create-super-pancake && npm pack --dry-run && cd ..
+          cd create-super-pancake-automation && npm pack --dry-run && cd ..
 
       - name: 🚀 Publish create package
         run: |
-          cd create-super-pancake
+          cd create-super-pancake-automation
           echo "🚀 Publishing create-super-pancake-automation@${{ needs.bump-version.outputs.new-version }}..."
           npm publish --access public
           cd ..

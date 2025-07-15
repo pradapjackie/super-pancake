@@ -35,7 +35,8 @@
     "super-pancake-test": "./bin/super-pancake-run-alt.js",
     "super-pancake-generate": "./bin/generate-test.js",
     "super-pancake-server": "./bin/ui-server.js",
-    "super-pancake-check": "./bin/check-install.js"
+    "super-pancake-check": "./bin/check-install.js",
+    "create-super-pancake-automation": "./bin/create-project.js"
   },
   "repository": {
     "type": "git",
