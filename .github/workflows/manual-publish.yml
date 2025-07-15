@@ -94,11 +94,6 @@ jobs:
           OLD_VERSION=$(node -p "require('./package.json').version")
           NEW_VERSION=$(npm version ${{ github.event.inputs.version_type }} --no-git-tag-version)
           
-          # Update create package version to match
-          cd create-super-pancake-automation
-          npm version $NEW_VERSION --no-git-tag-version
-          cd ..
-          
           echo "old-version=$OLD_VERSION" >> $GITHUB_OUTPUT
           echo "new-version=$NEW_VERSION" >> $GITHUB_OUTPUT
           
@@ -106,7 +101,7 @@ jobs:
 
       - name: 💾 Commit version bump
         run: |
-          git add package.json create-super-pancake-automation/package.json
+          git add package.json
           git commit -m "chore: bump version to ${{ steps.bump.outputs.new-version }} [skip ci]"
           git tag ${{ steps.bump.outputs.new-version }}
           git push origin HEAD --tags
@@ -150,17 +145,6 @@ jobs:
         run: |
           echo "📋 Main package contents:"
           npm pack --dry-run
-          echo "📋 Create package contents:"
-          cd create-super-pancake-automation && npm pack --dry-run && cd ..
-
-      - name: 🚀 Publish create package
-        run: |
-          cd create-super-pancake-automation
-          echo "🚀 Publishing create-super-pancake-automation@${{ needs.bump-version.outputs.new-version }}..."
-          npm publish --access public
-          cd ..
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: 🚀 Publish main package
         run: |
@@ -212,11 +196,11 @@ jobs:
             
             ### 📦 Installation
             ```bash
-            # Create new project
-            npm init super-pancake-automation@latest my-project
-            cd my-project
-            npm install
-            npm test
+            # Install globally
+            npm install -g super-pancake-automation
+            
+            # Generate sample tests
+            super-pancake-generate
             
             # Or add to existing project  
             npm install super-pancake-automation
