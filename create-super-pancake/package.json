@@ -1,6 +1,6 @@
 {
   "name": "create-super-pancake",
-  "version": "2.2.2",
+  "version": "2.2.3",
   "description": "Create a new Super Pancake automation testing project",
   "main": "index.js",
   "type": "module",
