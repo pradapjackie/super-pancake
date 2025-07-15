@@ -1,0 +1,284 @@
+name: 🚀 Manual Publish Package
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_type:
+        description: 'Version increment type'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+      release_notes:
+        description: 'Release notes (optional)'
+        required: false
+        type: string
+
+permissions:
+  contents: write
+  packages: write
+  pull-requests: write
+
+jobs:
+  verify-tests:
+    name: 🧪 Verify Tests Before Publish
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: 🔧 Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20.x
+        
+    - name: 📦 Install dependencies
+      run: npm install
+      
+    - name: 🧪 Run comprehensive test suite
+      run: npm run test:all-no-server
+      env:
+        NODE_ENV: production
+        CI: true
+
+  validate-version:
+    name: 🔍 Validate Version & Tags
+    runs-on: ubuntu-latest
+    needs: verify-tests
+    outputs:
+      should-proceed: ${{ steps.validate.outputs.should-proceed }}
+      
+    steps:
+    - name: 📥 Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        token: ${{ secrets.GITHUB_TOKEN }}
+        persist-credentials: true
+      
+    - name: 🔧 Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20.x
+        
+    - name: 🔧 Configure Git
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        
+    - name: 🔍 Validate version and tags
+      id: validate
+      run: |
+        # Get current package version
+        CURRENT_VERSION=$(node -p "require('./package.json').version")
+        echo "Current package.json version: $CURRENT_VERSION"
+        
+        # Get latest git tag
+        LATEST_TAG=$(git tag --list | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -1)
+        echo "Latest git tag: $LATEST_TAG"
+        
+        # Remove 'v' prefix if present
+        LATEST_TAG_VERSION=${LATEST_TAG#v}
+        
+        # Check if package version matches latest tag
+        if [ "$CURRENT_VERSION" = "$LATEST_TAG_VERSION" ]; then
+          echo "✅ Package version matches latest tag"
+          echo "should-proceed=true" >> $GITHUB_OUTPUT
+        else
+          echo "⚠️ Version mismatch detected!"
+          echo "Package version: $CURRENT_VERSION"
+          echo "Latest tag version: $LATEST_TAG_VERSION"
+          
+          # Compare versions using semantic versioning
+          if [[ "$(printf '%s\n' "$CURRENT_VERSION" "$LATEST_TAG_VERSION" | sort -V | head -n1)" == "$CURRENT_VERSION" ]]; then
+            echo "🗑️ Package version is behind tag - deleting incompatible tags"
+            
+            # Find and delete tags higher than current package version
+            for tag in $(git tag --list | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | sort -V); do
+              tag_version=${tag#v}
+              if [[ "$(printf '%s\n' "$CURRENT_VERSION" "$tag_version" | sort -V | head -n1)" == "$CURRENT_VERSION" ]] && [ "$tag_version" != "$CURRENT_VERSION" ]; then
+                echo "Deleting incompatible tag: $tag"
+                git tag -d $tag
+                git push --delete origin $tag || echo "Remote tag $tag already deleted or doesn't exist"
+              fi
+            done
+          fi
+          
+          echo "should-proceed=true" >> $GITHUB_OUTPUT
+        fi
+
+  bump-version:
+    name: 🏷️ Bump Version
+    runs-on: ubuntu-latest
+    needs: validate-version
+    if: needs.validate-version.outputs.should-proceed == 'true'
+    outputs:
+      new-version: ${{ steps.bump.outputs.new-version }}
+      old-version: ${{ steps.bump.outputs.old-version }}
+      
+    steps:
+    - name: 📥 Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        token: ${{ secrets.GITHUB_TOKEN }}
+        persist-credentials: true
+      
+    - name: 🔧 Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20.x
+        
+    - name: 🔧 Configure Git
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        
+    - name: 🏷️ Bump version
+      id: bump
+      run: |
+        OLD_VERSION=$(node -p "require('./package.json').version")
+        NEW_VERSION=$(npm version ${{ github.event.inputs.version_type }} --no-git-tag-version)
+        
+        echo "old-version=$OLD_VERSION" >> $GITHUB_OUTPUT
+        echo "new-version=$NEW_VERSION" >> $GITHUB_OUTPUT
+        
+        echo "📋 Bumped version from $OLD_VERSION to $NEW_VERSION"
+        
+    - name: 💾 Commit version bump
+      run: |
+        git add package.json
+        git commit -m "chore: bump version to ${{ steps.bump.outputs.new-version }} [skip ci]"
+        git tag ${{ steps.bump.outputs.new-version }}
+        git push origin HEAD --tags
+        git push origin HEAD
+
+  publish:
+    name: 🚀 Publish to NPM
+    runs-on: ubuntu-latest
+    needs: [verify-tests, validate-version, bump-version]
+    environment: 
+      name: production
+      
+    steps:
+    - name: 📥 Checkout repository with latest changes
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        token: ${{ secrets.GITHUB_TOKEN }}
+        persist-credentials: true
+        ref: main
+        
+    - name: 🔄 Pull latest changes
+      run: git pull origin main
+      
+    - name: 🔧 Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20.x
+        registry-url: 'https://registry.npmjs.org'
+        
+    - name: 📦 Install dependencies
+      run: npm install
+      
+    - name: 🧪 Final test run
+      run: npm run test:all-no-server
+      env:
+        NODE_ENV: production
+        CI: true
+        
+    - name: 🔍 Verify package contents
+      run: |
+        echo "📋 Package contents:"
+        npm pack --dry-run
+        
+    - name: 🚀 Publish to NPM
+      run: |
+        echo "🚀 Publishing super-pancake-automation@${{ needs.bump-version.outputs.new-version }}..."
+        npm publish --access public
+      env:
+        NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  create-release:
+    name: 🏷️ Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: [verify-tests, validate-version, bump-version, publish]
+    if: needs.publish.result == 'success'
+    
+    steps:
+    - name: 📥 Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: 🏷️ Create release
+      uses: softprops/action-gh-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ needs.bump-version.outputs.new-version }}
+        name: "🥞 ${{ needs.bump-version.outputs.new-version }}"
+        body: |
+          ## 🚀 Super Pancake Framework ${{ needs.bump-version.outputs.new-version }}
+
+          **Previous version:** ${{ needs.bump-version.outputs.old-version }}
+          **Version type:** ${{ github.event.inputs.version_type }}
+
+          ### Release Notes
+          ${{ github.event.inputs.release_notes }}
+
+          This release has been manually published after comprehensive testing.
+
+          ### 📦 Installation
+          ```bash
+          npm install super-pancake-automation
+          ```
+
+          ### 🔗 Links
+          - [📚 Documentation](https://github.com/${{ github.repository }}#readme)
+          - [🐛 Report Issues](https://github.com/${{ github.repository }}/issues)
+
+          ---
+          *This release was automatically created by GitHub Actions after all tests passed.*
+        draft: false
+        prerelease: false
+
+  cleanup-on-failure:
+    name: 🧹 Cleanup on Failure
+    runs-on: ubuntu-latest
+    needs: [validate-version, bump-version, publish]
+    if: failure()
+    
+    steps:
+    - name: 📥 Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        token: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: 🔧 Configure Git
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        
+    - name: 🗑️ Delete failed release tag
+      run: |
+        if [ -f package.json ]; then
+          VERSION=${{ needs.bump-version.outputs.new-version }}
+          echo "Attempting to clean up version: $VERSION"
+          
+          # Delete local tag if it exists
+          if git tag -l | grep -q "^$VERSION$"; then
+            git tag -d $VERSION
+            echo "Deleted local tag: $VERSION"
+          fi
+          
+          # Delete remote tag if it exists
+          if git ls-remote --tags origin | grep -q "refs/tags/$VERSION$"; then
+            git push --delete origin $VERSION
+            echo "Deleted remote tag: $VERSION"
+          fi
+        fi
+      continue-on-error: true

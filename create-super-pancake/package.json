@@ -1,12 +1,10 @@
 {
-  "name": "create-super-pancake",
+  "name": "@pradapjackie/create-super-pancake",
   "version": "2.2.0",
   "description": "Create a new Super Pancake automation testing project",
   "main": "index.js",
   "type": "module",
-  "bin": {
-    "create-super-pancake": "./index.js"
-  },
+  "bin": "./index.js",
   "scripts": {
     "test": "node index.js"
   },
