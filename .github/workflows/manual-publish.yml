@@ -214,8 +214,11 @@ jobs:
             ```bash
             # Create new project
             npm init super-pancake-automation@latest my-project
+            cd my-project
+            npm install
+            npm test
             
-            # Add to existing project  
+            # Or add to existing project  
             npm install super-pancake-automation
             ```
             

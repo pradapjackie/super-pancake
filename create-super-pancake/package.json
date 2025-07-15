@@ -5,7 +5,8 @@
   "main": "index.js",
   "type": "module",
   "bin": {
-    "create-super-pancake": "index.js"
+    "create-super-pancake": "index.js",
+    "super-pancake": "index.js"
   },
   "scripts": {
     "test": "node index.js"
