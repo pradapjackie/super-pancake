@@ -29,7 +29,6 @@ jobs:
     - name: Install dependencies
       run: npm i
       timeout-minutes: 5
-        
     - name: Run tests
       run: npm run test:all-no-server
       env:
