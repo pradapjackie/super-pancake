@@ -1,5 +1,5 @@
 {
-  "name": "@pradapjackie/create-super-pancake",
+  "name": "create-super-pancake-automation",
   "version": "2.3.0",
   "description": "Create a new Super Pancake automation testing project",
   "main": "index.js",
