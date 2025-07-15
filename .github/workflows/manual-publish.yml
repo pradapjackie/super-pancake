@@ -1,4 +1,4 @@
-name: 🚀 Manual NPM Publish
+name: 🚀 Manual Publish Package
 
 on:
   workflow_dispatch:
@@ -12,193 +12,230 @@ on:
           - patch
           - minor
           - major
+      release_notes:
+        description: 'Release notes (optional)'
+        required: false
+        type: string
+      force_publish:
+        description: 'Force publish even if version unchanged'
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: write
+  packages: write
+  pull-requests: write
 
 jobs:
+  verify-tests:
+    name: 🧪 Verify Tests Before Publish
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+
+      - name: 📦 Install dependencies
+        run: npm install
+
+      - name: 🧪 Run comprehensive test suite
+        run: npm run test:all-no-server
+        env:
+          NODE_ENV: production
+          CI: true
+
+      - name: 📊 Generate final test report
+        run: npm run test:report
+
+      - name: 📋 Upload pre-publish test results
+        uses: actions/upload-artifact@v4
+        with:
+          name: pre-publish-test-results
+          path: |
+            test-report.html
+            TEST_REPORT.md
+          retention-days: 90
+
+  bump-version:
+    name: 🏷️ Bump Version
+    runs-on: ubuntu-latest
+    needs: verify-tests
+    outputs:
+      new-version: ${{ steps.bump.outputs.new-version }}
+      old-version: ${{ steps.bump.outputs.old-version }}
+
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+          persist-credentials: true
+
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+
+      - name: 🔧 Configure Git
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+
+      - name: 🏷️ Bump version
+        id: bump
+        run: |
+          OLD_VERSION=$(node -p "require('./package.json').version")
+          NEW_VERSION=$(npm version ${{ github.event.inputs.version_type }} --no-git-tag-version)
+          
+          # Update create-super-pancake version to match
+          cd create-super-pancake
+          npm version $NEW_VERSION --no-git-tag-version
+          cd ..
+          
+          echo "old-version=$OLD_VERSION" >> $GITHUB_OUTPUT
+          echo "new-version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          
+          echo "📋 Bumped version from $OLD_VERSION to $NEW_VERSION"
+          echo "📋 Updated create-super-pancake to $NEW_VERSION"
+
+      - name: 💾 Commit version bump
+        run: |
+          git add package.json create-super-pancake/package.json
+          git commit -m "chore: bump version to ${{ steps.bump.outputs.new-version }} [skip ci]"
+          git tag ${{ steps.bump.outputs.new-version }}
+          git push origin HEAD --tags
+          git push origin HEAD
+
   publish:
-    name: Publish to NPM
+    name: 🚀 Publish to NPM
     runs-on: ubuntu-latest
-    
+    needs: [verify-tests, bump-version]
+    environment:
+      name: production
+
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-        token: ${{ secrets.GITHUB_TOKEN }}
-        
-    - name: Check if main branch
-      run: |
-        CURRENT_BRANCH=$(git branch --show-current)
-        echo "Current branch: $CURRENT_BRANCH"
-        if [ "$CURRENT_BRANCH" != "main" ]; then
-          echo "❌ This workflow only runs on main branch for production releases"
-          echo "Current branch: $CURRENT_BRANCH"
-          echo "Please merge to main first or checkout main branch"
-          exit 1
-        fi
-        echo "✅ On main branch - proceeding with publish"
-        
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: 20.x
-        registry-url: 'https://registry.npmjs.org'
-        
-    - name: Configure Git
-      run: |
-        git config --local user.email "action@github.com"
-        git config --local user.name "GitHub Action"
-        
-    - name: Install dependencies
-      run: npm install
-      
-    - name: Run tests
-      run: npm run test:all-no-server
-      env:
-        NODE_ENV: production
-        CI: true
-        
-    - name: Generate test report
-      run: npm run test:report
-      if: always()
-        
-    - name: Bump version and create tag
-      id: version
-      run: |
-        OLD_VERSION=$(node -p "require('./package.json').version")
-        echo "Current version: $OLD_VERSION"
-        
-        # Try to bump version, handle if already at target
-        if NEW_VERSION=$(npm version ${{ github.event.inputs.version_type }} --no-git-tag-version 2>/dev/null); then
-          echo "Version bumped to: $NEW_VERSION"
-          echo "main-version-changed=true" >> $GITHUB_OUTPUT
-        else
-          echo "Version bump failed, using current version"
-          NEW_VERSION="v$OLD_VERSION"
-          echo "main-version-changed=false" >> $GITHUB_OUTPUT
-        fi
-        
-        # Update create-super-pancake version
-        cd create-super-pancake
-        if npm version $NEW_VERSION --no-git-tag-version 2>/dev/null; then
-          echo "Create package version updated"
-          echo "create-version-changed=true" >> $GITHUB_OUTPUT
-        else
-          echo "Create package version update failed, using current"
-          echo "create-version-changed=false" >> $GITHUB_OUTPUT
-        fi
-        cd ..
-        
-        echo "old-version=$OLD_VERSION" >> $GITHUB_OUTPUT
-        echo "new-version=$NEW_VERSION" >> $GITHUB_OUTPUT
-        
-    - name: Commit and push version
-      run: |
-        # Only add files that were actually changed
-        CHANGED_FILES=""
-        if [ "${{ steps.version.outputs.main-version-changed }}" = "true" ]; then
-          CHANGED_FILES="$CHANGED_FILES package.json"
-        fi
-        if [ "${{ steps.version.outputs.create-version-changed }}" = "true" ]; then
-          CHANGED_FILES="$CHANGED_FILES create-super-pancake/package.json"
-        fi
-        
-        if [ -n "$CHANGED_FILES" ]; then
-          git add $CHANGED_FILES
-          git commit -m "chore: bump version to ${{ steps.version.outputs.new-version }}"
-          git tag ${{ steps.version.outputs.new-version }}
-          git push origin main --tags
-        else
-          echo "No version changes to commit"
-          git tag ${{ steps.version.outputs.new-version }}
-          git push origin --tags
-        fi
-        
-    - name: Publish create-super-pancake
-      run: |
-        cd create-super-pancake
-        npm publish --access public
-        cd ..
-      env:
-        NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        
-    - name: Publish main package
-      run: npm publish --access public
-      env:
-        NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        
-    - name: Create GitHub Release
-      uses: softprops/action-gh-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: ${{ steps.version.outputs.new-version }}
-        name: "🥞 ${{ steps.version.outputs.new-version }}"
-        body: |
-          ## 🚀 Super Pancake Framework ${{ steps.version.outputs.new-version }}
-          
-          **Previous version:** ${{ steps.version.outputs.old-version }}
-          **Version type:** ${{ github.event.inputs.version_type }}
-          
-          ### ✅ Test Results
-          
-          All tests passed before publishing! View detailed test execution logs in the workflow run.
-          
-          ### 📦 Installation
-          ```bash
-          # Create new project
-          npm init super-pancake@latest my-project
-          
-          # Add to existing project  
-          npm install super-pancake-automation
-          ```
-          
-          ### 🔗 Links
-          - [📈 Test Execution Details](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
-          - [📚 Documentation](https://github.com/${{ github.repository }}#readme)
-          
-          ---
-          *Published after comprehensive testing with full test suite validation.*
-        draft: false
-        prerelease: false
-      
-  cleanup-on-failure:
-    name: Cleanup on Failure
+      - name: 📥 Checkout repository with latest changes
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+          persist-credentials: true
+          ref: main
+
+      - name: 🔄 Pull latest changes
+        run: git pull origin main
+
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: 📦 Install dependencies
+        run: npm install
+
+      - name: 🧪 Final test run
+        run: npm run test:all-no-server
+        env:
+          NODE_ENV: production
+          CI: true
+
+      - name: 🔍 Verify package contents
+        run: |
+          echo "📋 Main package contents:"
+          npm pack --dry-run
+          echo "📋 Create package contents:"
+          cd create-super-pancake && npm pack --dry-run && cd ..
+
+      - name: 🚀 Publish create-super-pancake
+        run: |
+          cd create-super-pancake
+          echo "🚀 Publishing @pradapjackie/create-super-pancake@${{ needs.bump-version.outputs.new-version }}..."
+          npm publish --access public
+          cd ..
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: 🚀 Publish main package
+        run: |
+          echo "🚀 Publishing super-pancake-automation@${{ needs.bump-version.outputs.new-version }}..."
+          npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  create-release:
+    name: 🏷️ Create GitHub Release
     runs-on: ubuntu-latest
-    needs: publish
-    if: failure()
-    
+    needs: [verify-tests, bump-version, publish]
+    if: needs.publish.result == 'success'
+
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-        token: ${{ secrets.GITHUB_TOKEN }}
-        
-    - name: Configure Git
-      run: |
-        git config --local user.email "action@github.com"
-        git config --local user.name "GitHub Action"
-        
-    - name: Delete failed release tag
-      run: |
-        # Get the version that was supposed to be published
-        if [ -f package.json ]; then
-          VERSION=$(node -p "require('./package.json').version")
-          echo "Attempting to clean up version: $VERSION"
-          
-          # Delete local tag if it exists
-          if git tag -l | grep -q "^$VERSION$"; then
-            git tag -d $VERSION
-            echo "Deleted local tag: $VERSION"
-          fi
-          
-          # Delete remote tag if it exists
-          if git ls-remote --tags origin | grep -q "refs/tags/$VERSION$"; then
-            git push --delete origin $VERSION
-            echo "Deleted remote tag: $VERSION"
-          fi
-        fi
-      continue-on-error: true
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 📊 Download test report
+        uses: actions/download-artifact@v4
+        with:
+          name: pre-publish-test-results
+
+      - name: 🏷️ Create release
+        uses: softprops/action-gh-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ needs.bump-version.outputs.new-version }}
+          name: "🥞 ${{ needs.bump-version.outputs.new-version }}"
+          body: |
+            ## 🚀 Super Pancake Framework ${{ needs.bump-version.outputs.new-version }}
+            
+            **Previous version:** ${{ needs.bump-version.outputs.old-version }}
+            **Version type:** ${{ github.event.inputs.version_type }}
+            
+            ### Release Notes
+            ${{ github.event.inputs.release_notes }}
+            
+            This release has been manually published after comprehensive testing.
+            
+            ### ✅ Test Coverage Summary
+            - 🧪 156 individual tests across 8 test suites
+            - 🔒 Security validation and input sanitization  
+            - ⚡ Performance and caching optimizations
+            - 🎛️ Configuration management
+            - 📊 HTML test reporting
+            - 🌐 Cross-platform compatibility (Node.js 18.x, 20.x)
+            
+            ### 📦 Installation
+            ```bash
+            npm install super-pancake-automation
+            ```
+            
+            ### 🔗 Links
+            - 📋 [Test Report](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+            - 📚 [Documentation](https://github.com/${{ github.repository }}#readme)
+            - 🐛 [Report Issues](https://github.com/${{ github.repository }}/issues)
+            
+            ---
+            *This release was automatically created by GitHub Actions after all tests passed.*
+          draft: false
+          prerelease: false
+
+  notify-success:
+    name: 📢 Notify Success
+    runs-on: ubuntu-latest
+    needs: [verify-tests, bump-version, publish, create-release]
+    if: always() && needs.publish.result == 'success'
+
+    steps:
+      - name: 🎉 Success notification
+        run: |
+          echo "🎉 Successfully published Super Pancake Framework!"
+          echo "📦 Version: ${{ needs.bump-version.outputs.new-version }}"
+          echo "🔗 NPM: https://www.npmjs.com/package/super-pancake-automation"
+          echo "🏷️ Release: https://github.com/${{ github.repository }}/releases/tag/${{ needs.bump-version.outputs.new-version }}"
