@@ -9,24 +9,43 @@ A **lightweight DOM-based UI automation framework** using Chrome DevTools Protoc
 
 ## 🚀 Quick Start
 
-### Create New Project
+### Install Globally
 ```bash
-npm init super-pancake@latest my-project
-cd my-project
-npm install
-npm test
+npm install -g super-pancake-automation
 ```
 
-This creates a complete project with:
-- Interactive configuration setup
-- Sample test files
-- Package.json with all scripts
-- Super Pancake config file
-- Video recording options (always/retain-on-failure/off)
+### Generate Sample Tests
+```bash
+super-pancake-generate
+```
+
+This creates sample test files in your `tests/` directory.
 
 ### Add to Existing Project
 ```bash
 npm install super-pancake-automation
+```
+
+### Create a new Project
+```bash
+npm init
+```
+
+```bash
+npm install super-pancake-automation
+```
+
+### Basic Usage
+```bash
+# Run tests with Vitest
+npm test
+
+# Launch interactive UI
+super-pancake-ui
+
+# Run specific test commands
+super-pancake-run
+super-pancake-test
 ```
 
 ## 📱 Interactive Test Runner UI
