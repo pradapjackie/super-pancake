@@ -166,10 +166,10 @@ async function renderTestFiles(testFiles) {
                     </div>
                   </div>
                   <div class="file-select-all">
-                    <input type="checkbox" class="file-select-all-checkbox" onchange="toggleGroup('${escapedId}', this.checked)" id="select-all-${escapedId}">
+                    <input type="checkbox" class="file-select-all-checkbox" id="select-all-${escapedId}">
                     <label for="select-all-${escapedId}" class="file-select-all-label">All</label>
                   </div>
-                  <i class="fas fa-chevron-down toggle-icon" onclick="toggleFile('${escapedId}')" id="toggle-${escapedId}"></i>
+                  <i class="fas fa-chevron-down toggle-icon" id="toggle-${escapedId}" tabindex="0" role="button" aria-label="Expand/collapse test file"></i>
                 </div>
                 <div class="test-cases" id="cases-${escapedId}">
                   ${caseHTML}
@@ -190,10 +190,10 @@ async function renderTestFiles(testFiles) {
                     </div>
                   </div>
                   <div class="file-select-all">
-                    <input type="checkbox" class="file-select-all-checkbox" onchange="toggleGroup('${escapedId}', this.checked)" id="select-all-${escapedId}">
+                    <input type="checkbox" class="file-select-all-checkbox" id="select-all-${escapedId}">
                     <label for="select-all-${escapedId}" class="file-select-all-label">All</label>
                   </div>
-                  <i class="fas fa-chevron-down toggle-icon" onclick="toggleFile('${escapedId}')" id="toggle-${escapedId}"></i>
+                  <i class="fas fa-chevron-down toggle-icon" id="toggle-${escapedId}" tabindex="0" role="button" aria-label="Expand/collapse test file"></i>
                 </div>
                 <div class="test-cases" id="cases-${escapedId}">
                   <div class="test-case-item">
@@ -217,6 +217,38 @@ function setupEventListeners() {
     document.addEventListener('change', (e) => {
         if (e.target.matches('input[name="tests"]')) {
             handleTestSelection(e);
+        }
+        // Handle file-select-all checkboxes
+        if (e.target.matches('.file-select-all-checkbox')) {
+            const groupId = e.target.id.replace('select-all-', '');
+            toggleGroup(groupId, e.target.checked);
+        }
+    });
+
+    // Click handlers for expand/collapse
+    document.addEventListener('click', (e) => {
+        // Handle toggle icons
+        if (e.target.matches('.toggle-icon')) {
+            const toggleId = e.target.id.replace('toggle-', '');
+            toggleFile(toggleId);
+        }
+        // Handle test case labels for better UX
+        if (e.target.matches('.test-case-label')) {
+            const checkbox = e.target.previousElementSibling;
+            if (checkbox && checkbox.type === 'checkbox') {
+                checkbox.click();
+            }
+        }
+    });
+
+    // Keyboard support for expand/collapse
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+            if (e.target.matches('.toggle-icon')) {
+                e.preventDefault();
+                const toggleId = e.target.id.replace('toggle-', '');
+                toggleFile(toggleId);
+            }
         }
     });
 }
@@ -383,38 +415,61 @@ function copyLogs() {
 }
 
 function toggleFile(fileId) {
-    const file = document.getElementById('group-' + fileId);
-    const cases = document.getElementById('cases-' + fileId);
-    const isExpanded = file.classList.contains('expanded');
+    try {
+        const file = document.getElementById('group-' + fileId);
+        const cases = document.getElementById('cases-' + fileId);
+        
+        if (!file || !cases) {
+            console.error('Could not find elements for file:', fileId);
+            return;
+        }
+        
+        const isExpanded = file.classList.contains('expanded');
 
-    file.classList.toggle('expanded');
+        file.classList.toggle('expanded');
 
-    if (!isExpanded) {
-        cases.style.maxHeight = cases.scrollHeight + 'px';
-    } else {
-        cases.style.maxHeight = '0';
+        if (!isExpanded) {
+            cases.style.maxHeight = cases.scrollHeight + 'px';
+        } else {
+            cases.style.maxHeight = '0';
+        }
+        
+        console.log('Toggled file:', fileId, 'expanded:', !isExpanded);
+    } catch (error) {
+        console.error('Error toggling file:', error);
     }
 }
 
 function toggleGroup(groupId, checked) {
-    const group = document.getElementById('group-' + groupId);
-    const checkboxes = group.querySelectorAll('input[type="checkbox"][name="tests"]');
-
-    checkboxes.forEach(cb => {
-        cb.checked = checked;
-        const testId = cb.value;
-        const item = cb.closest('.test-case-item');
-
-        if (checked) {
-            selectedTests.add(testId);
-            item.classList.add('selected');
-        } else {
-            selectedTests.delete(testId);
-            item.classList.remove('selected');
+    try {
+        const group = document.getElementById('group-' + groupId);
+        
+        if (!group) {
+            console.error('Could not find group element:', groupId);
+            return;
         }
-    });
+        
+        const checkboxes = group.querySelectorAll('input[type="checkbox"][name="tests"]');
 
-    updateSelectedCount();
+        checkboxes.forEach(cb => {
+            cb.checked = checked;
+            const testId = cb.value;
+            const item = cb.closest('.test-case-item');
+
+            if (checked) {
+                selectedTests.add(testId);
+                item.classList.add('selected');
+            } else {
+                selectedTests.delete(testId);
+                item.classList.remove('selected');
+            }
+        });
+
+        updateSelectedCount();
+        console.log('Toggled group:', groupId, 'checked:', checked, 'affected:', checkboxes.length, 'tests');
+    } catch (error) {
+        console.error('Error toggling group:', error);
+    }
 }
 
 // WebSocket setup

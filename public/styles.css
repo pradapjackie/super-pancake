@@ -319,6 +319,11 @@ body::before {
     height: 16px;
     accent-color: var(--secondary);
     cursor: pointer;
+    margin: 0;
+    vertical-align: middle;
+    -webkit-appearance: checkbox;
+    -moz-appearance: checkbox;
+    appearance: checkbox;
 }
 
 .file-select-all-label {
@@ -330,10 +335,26 @@ body::before {
 }
 
 .toggle-icon {
-    transition: transform 0.3s ease;
+    transition: transform 0.3s ease, background-color 0.2s ease;
     color: var(--text-inverse);
     font-size: 12px;
     cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+}
+
+.toggle-icon:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.toggle-icon:focus {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+    background-color: rgba(255, 255, 255, 0.15);
 }
 
 .test-file.expanded .toggle-icon {
@@ -388,6 +409,11 @@ body::before {
     height: 16px;
     accent-color: var(--primary);
     cursor: pointer;
+    margin: 0;
+    vertical-align: middle;
+    -webkit-appearance: checkbox;
+    -moz-appearance: checkbox;
+    appearance: checkbox;
 }
 
 .test-case-label {
