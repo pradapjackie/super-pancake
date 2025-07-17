@@ -222,17 +222,18 @@ app.get('/automationTestReport.html', (req, res) => {
 app.post('/run', express.json(), async (req, res) => {
     try {
         const selected = req.body.tests || [];
+        const headless = req.body.headless || false;
         if (selected.length === 0) {
             res.status(400).json({ error: 'No tests selected' });
             return;
         }
 
-        res.status(200).json({ message: 'Test execution started', count: selected.length });
+        res.status(200).json({ message: 'Test execution started', count: selected.length, headless });
 
         // Execute tests in background to prevent blocking
         setImmediate(async () => {
             try {
-                await executeTests(selected);
+                await executeTests(selected, headless);
             } catch (error) {
                 console.error('❌ Test execution error:', error);
                 broadcast(`❌ Test execution failed: ${error.message}\n`);
@@ -244,9 +245,29 @@ app.post('/run', express.json(), async (req, res) => {
     }
 });
 
-async function executeTests(selected) {
+// Stop test execution route
+app.post('/stop', express.json(), async (req, res) => {
     try {
-        broadcast(`🚀 Starting test execution of ${selected.length} tests...\n`);
+        // Send response immediately
+        res.status(200).json({ message: 'Stop request received' });
+        
+        broadcast('🛑 Test execution stop requested by user\n');
+        
+        // Kill all running test processes
+        exec('pkill -f "vitest" 2>/dev/null || true');
+        exec('pkill -f "node.*test" 2>/dev/null || true');
+        
+        broadcast('🛑 All test processes have been terminated\n');
+    } catch (error) {
+        console.error('❌ Stop route error:', error);
+        res.status(500).json({ error: 'Server error', details: error.message });
+    }
+});
+
+async function executeTests(selected, headless = false) {
+    try {
+        const modeText = headless ? 'headless' : 'headed';
+        broadcast(`🚀 Starting test execution of ${selected.length} tests in ${modeText} mode...\n`);
         
         // Limit concurrent tests to prevent system overload
         if (selected.length > 20) {
@@ -341,7 +362,8 @@ async function executeTests(selected) {
                     killSignal: 'SIGTERM',
                     env: {
                         ...process.env,
-                        NODE_OPTIONS: '--max-old-space-size=512' // Limit memory to 512MB
+                        NODE_OPTIONS: '--max-old-space-size=512', // Limit memory to 512MB
+                        SUPER_PANCAKE_HEADLESS: headless.toString() // Pass headless mode to tests
                     }
                 });
                 

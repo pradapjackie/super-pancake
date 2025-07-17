@@ -18,12 +18,26 @@ A **lightweight DOM-based UI automation framework** using Chrome DevTools Protoc
 
 [//]: # (```)
 
-### Quick Setup (Interactive)
+### Quick Init (Recommended)
+```bash
+npx super-pancake-automation@latest init my-project
+# or
+super-pancake-init my-project
+```
+
+This creates a complete project with:
+- ✅ Screenshot capture (including on failure)
+- ✅ HTML test reporting  
+- ✅ Sample test files
+- ✅ Sensible default configuration
+- ✅ Ready to run immediately
+
+### Advanced Setup (Interactive)
 ```bash
 super-pancake-setup
 ```
 
-This runs an interactive setup wizard that creates a complete project with:
+This runs an interactive setup wizard with advanced options:
 - ✅ Custom configuration (headless/headed, screenshots, reports)
 - 📸 Failure screenshot capture
 - 📊 HTML test reporting

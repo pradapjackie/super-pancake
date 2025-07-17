@@ -24,6 +24,8 @@ Usage:
   npx super-pancake [command] [options]
 
 Commands:
+  init <project>    Create new project
+  setup             Interactive project setup
   --version, -v     Show version number
   --help, -h        Show help
   --url=<url>       Run test with specific URL (legacy)
@@ -35,13 +37,14 @@ Main Commands:
   npx super-pancake-generate  Generate test templates
 
 Project Setup:
-  npm init super-pancake@latest  Create new project
+  npx super-pancake init my-project    Create new project (recommended)
+  npx super-pancake setup              Interactive setup wizard
 
 Examples:
+  npx super-pancake init my-project
+  npx super-pancake setup
   npx super-pancake --version
-  npx super-pancake --help
   npx super-pancake-ui
-  npm init super-pancake@latest my-project
 
 For more information, visit:
 https://github.com/pradapjackie/super-pancake
@@ -62,6 +65,49 @@ https://github.com/pradapjackie/super-pancake
     if (args.includes('--help') || args.includes('-h') || args.length === 0) {
         showHelp();
         process.exit(0);
+    }
+    
+    // Handle init command
+    if (args[0] === 'init') {
+        const projectName = args[1];
+        if (!projectName) {
+            console.error('❌ Please provide a project name');
+            console.log('Usage: npx super-pancake init <project-name>');
+            process.exit(1);
+        }
+        
+        try {
+            const { spawn } = await import('child_process');
+            const child = spawn('node', [path.join(__dirname, 'init.js'), projectName], {
+                stdio: 'inherit'
+            });
+            
+            child.on('exit', (code) => {
+                process.exit(code);
+            });
+            return;
+        } catch (error) {
+            console.error('❌ Error running init command:', error.message);
+            process.exit(1);
+        }
+    }
+    
+    // Handle setup command
+    if (args[0] === 'setup') {
+        try {
+            const { spawn } = await import('child_process');
+            const child = spawn('node', [path.join(__dirname, 'setup.js')], {
+                stdio: 'inherit'
+            });
+            
+            child.on('exit', (code) => {
+                process.exit(code);
+            });
+            return;
+        } catch (error) {
+            console.error('❌ Error running setup command:', error.message);
+            process.exit(1);
+        }
     }
     
     // Legacy URL handling for backward compatibility

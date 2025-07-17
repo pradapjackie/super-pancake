@@ -1,8 +1,0 @@
-node_modules/
-./test-report.html
-./screenshots
-videos/
-*.log
-.DS_Store
-.env
-.env.local
