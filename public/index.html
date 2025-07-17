@@ -196,7 +196,7 @@
         .sidebar-header {
             background: var(--primary-gradient);
             color: var(--text-inverse);
-            padding: 24px 20px;
+            padding: 20px 16px;
             position: relative;
             overflow: hidden;
             z-index: 2;
@@ -331,7 +331,7 @@
         .header-stats {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 6px;
+            gap: 4px;
             animation: slideInUp 0.6s ease-out 0.2s both;
         }
 
@@ -339,7 +339,7 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 8px 4px;
+            padding: 6px 4px;
             border-radius: var(--border-radius);
             background: rgba(255, 255, 255, 0.2);
             backdrop-filter: blur(10px);
@@ -409,14 +409,16 @@
         }
 
         .controls {
-            padding: 16px 20px;
+            padding: 12px 20px;
             background: rgba(255, 255, 255, 0.05);
             backdrop-filter: blur(10px);
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
             display: flex;
-            gap: 8px;
+            gap: 12px;
             animation: slideInUp 0.6s ease-out 0.4s both;
-            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            flex-shrink: 0;
         }
 
         .btn {
@@ -519,9 +521,46 @@
             transform: scale(1.1);
         }
 
+        .btn-icon {
+            min-width: 60px;
+            width: 60px;
+            height: 50px;
+            padding: 6px 4px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border-radius: var(--border-radius);
+            gap: 4px;
+        }
+
+        .btn-icon i {
+            font-size: 16px;
+            margin: 0;
+            flex-shrink: 0;
+        }
+
+        .btn-text-small {
+            font-size: 9px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            line-height: 1;
+            white-space: nowrap;
+            opacity: 0.9;
+        }
+
+        .btn-icon:hover {
+            transform: translateY(-2px) scale(1.05);
+        }
+
+        .btn-icon:hover .btn-text-small {
+            opacity: 1;
+        }
+
         /* Search and Filter Section */
         .search-section {
-            padding: 20px 28px;
+            padding: 16px 20px;
             background: var(--bg-secondary);
             border-bottom: 1px solid var(--border-color);
             animation: slideInUp 0.6s ease-out 0.6s both;
@@ -541,6 +580,7 @@
             flex: 1;
             min-height: 0;
             max-height: 100%;
+            padding: 0; /* Remove any default padding */
         }
 
         .search-container {
@@ -653,6 +693,8 @@
             overflow-y: auto;
             display: flex;
             flex-direction: column;
+            margin: 0;
+            padding: 0;
         }
 
         #test-files-container {
@@ -660,6 +702,8 @@
             overflow-y: auto;
             min-height: 0;
             max-height: 100%;
+            padding: 0;
+            margin: 0;
         }
 
         .test-files::-webkit-scrollbar {
@@ -690,7 +734,7 @@
         }
 
         .test-file-header {
-            padding: 16px 20px;
+            padding: 12px 16px;
             cursor: pointer;
             display: flex;
             align-items: center;
@@ -806,7 +850,7 @@
         }
 
         .test-case-item {
-            padding: 12px 20px;
+            padding: 10px 16px;
             display: flex;
             align-items: center;
             gap: 12px;
@@ -1201,17 +1245,21 @@
             </div>
 
             <div class="controls">
-                <button class="btn btn-secondary" onclick="location.reload()" title="Refresh test files">
+                <button class="btn btn-icon" onclick="location.reload()" title="Refresh test files">
                     <i class="fas fa-sync-alt"></i>
-                    <span class="btn-text">Refresh</span>
+                    <span class="btn-text-small">Refresh</span>
                 </button>
-                <button class="btn btn-secondary" onclick="openTestReport()" title="Open test report">
+                <button class="btn btn-icon" onclick="openTestReport()" title="Open test report">
                     <i class="fas fa-file-alt"></i>
-                    <span class="btn-text">Report</span>
+                    <span class="btn-text-small">Report</span>
                 </button>
-                <button class="btn btn-secondary" onclick="toggleTheme()" title="Toggle dark/light mode">
+                <button class="btn btn-icon" onclick="toggleHeadlessMode()" title="Toggle headless/headed mode" id="headless-btn">
+                    <i class="fas fa-eye" id="headless-icon"></i>
+                    <span class="btn-text-small" id="headless-text">Headed</span>
+                </button>
+                <button class="btn btn-icon" onclick="toggleTheme()" title="Toggle dark/light mode">
                     <i class="fas fa-moon" id="theme-icon"></i>
-                    <span class="btn-text">Theme</span>
+                    <span class="btn-text-small">Theme</span>
                 </button>
             </div>
 
@@ -1601,14 +1649,18 @@
                 const response = await fetch('/run', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ tests })
+                    body: JSON.stringify({ 
+                        tests,
+                        headless: isHeadlessMode 
+                    })
                 });
                 
                 if (!response.ok) {
                     throw new Error(`Server responded with ${response.status}: ${response.statusText}`);
                 }
                 
-                logMessage('📤 Test execution request sent successfully', 'success');
+                const modeText = isHeadlessMode ? 'headless' : 'headed';
+                logMessage(`📤 Test execution request sent successfully (${modeText} mode)`, 'success');
             } catch (error) {
                 logMessage(`❌ Failed to start test execution: ${error.message}`, 'error');
                 stopTestExecution();
@@ -1669,6 +1721,9 @@
             // Load saved theme first
             loadSavedTheme();
             
+            // Load saved headless mode
+            loadSavedHeadlessMode();
+            
             // Setup search and filter functionality
             setupSearchAndFilter();
             
@@ -1728,6 +1783,62 @@
         function clearSearch() {
             document.getElementById('search-input').value = '';
             filterTestFiles();
+        }
+        
+        // Headless mode toggle functionality
+        let isHeadlessMode = false;
+        
+        function toggleHeadlessMode() {
+            const headlessIcon = document.getElementById('headless-icon');
+            const headlessText = document.getElementById('headless-text');
+            const headlessBtn = document.getElementById('headless-btn');
+            
+            isHeadlessMode = !isHeadlessMode;
+            
+            if (isHeadlessMode) {
+                // Switch to headless mode
+                headlessIcon.className = 'fas fa-eye-slash';
+                headlessText.textContent = 'Headless';
+                headlessBtn.style.background = 'linear-gradient(135deg, #f59e0b, #fbbf24)';
+                headlessBtn.style.color = 'white';
+                headlessBtn.style.borderColor = '#f59e0b';
+                headlessBtn.title = 'Toggle headless/headed mode (Currently: Headless)';
+                localStorage.setItem('headlessMode', 'true');
+                logMessage('⚡ Switched to headless mode - tests will run faster without GUI', 'info');
+            } else {
+                // Switch to headed mode
+                headlessIcon.className = 'fas fa-eye';
+                headlessText.textContent = 'Headed';
+                headlessBtn.style.background = '';
+                headlessBtn.style.color = '';
+                headlessBtn.style.borderColor = '';
+                headlessBtn.title = 'Toggle headless/headed mode (Currently: Headed)';
+                localStorage.setItem('headlessMode', 'false');
+                logMessage('👀 Switched to headed mode - browser windows will be visible', 'info');
+            }
+        }
+        
+        // Load saved headless mode
+        function loadSavedHeadlessMode() {
+            const savedHeadlessMode = localStorage.getItem('headlessMode');
+            const headlessIcon = document.getElementById('headless-icon');
+            const headlessText = document.getElementById('headless-text');
+            const headlessBtn = document.getElementById('headless-btn');
+            
+            if (savedHeadlessMode === 'true') {
+                isHeadlessMode = true;
+                headlessIcon.className = 'fas fa-eye-slash';
+                headlessText.textContent = 'Headless';
+                headlessBtn.style.background = 'linear-gradient(135deg, #f59e0b, #fbbf24)';
+                headlessBtn.style.color = 'white';
+                headlessBtn.style.borderColor = '#f59e0b';
+                headlessBtn.title = 'Toggle headless/headed mode (Currently: Headless)';
+            } else {
+                isHeadlessMode = false;
+                headlessIcon.className = 'fas fa-eye';
+                headlessText.textContent = 'Headed';
+                headlessBtn.title = 'Toggle headless/headed mode (Currently: Headed)';
+            }
         }
         
         // Theme toggle functionality

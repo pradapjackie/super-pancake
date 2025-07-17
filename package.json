@@ -1,10 +1,23 @@
 {
   "name": "super-pancake-automation",
-  "version": "2.3.6",
+  "version": "2.6.3",
   "description": "A lightweight DOM-based UI automation framework using Chrome DevTools Protocol",
   "main": "index.js",
   "type": "module",
   "types": "./index.d.ts",
+  "bin": {
+    "super-pancake-automation": "./bin/cli.js",
+    "domtest": "./bin/cli.js",
+    "super-pancake": "./bin/cli.js",
+    "super-pancake-ui": "./bin/ui-runner.js",
+    "super-pancake-run": "./bin/super-pancake-run.js",
+    "super-pancake-test": "./bin/super-pancake-run-alt.js",
+    "super-pancake-generate": "./bin/generate-test.js",
+    "super-pancake-server": "./bin/ui-server.js",
+    "super-pancake-check": "./bin/check-install.js",
+    "super-pancake-setup": "./bin/setup.js",
+    "super-pancake-init": "./bin/init.js"
+  },
   "keywords": [
     "automation",
     "dom",
@@ -27,17 +40,6 @@
   ],
   "author": "Pradap Pandiyan",
   "license": "MIT",
-  "bin": {
-    "domtest": "./bin/cli.js",
-    "super-pancake": "./bin/cli.js",
-    "super-pancake-ui": "./bin/ui-runner.js",
-    "super-pancake-run": "./bin/super-pancake-run.js",
-    "super-pancake-test": "./bin/super-pancake-run-alt.js",
-    "super-pancake-generate": "./bin/generate-test.js",
-    "super-pancake-server": "./bin/ui-server.js",
-    "super-pancake-check": "./bin/check-install.js",
-    "super-pancake-setup": "./bin/setup.js"
-  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/pradapjackie/super-pancake.git"

@@ -7,6 +7,14 @@ import { exec } from 'child_process';
  * @param {boolean} options.headed - If true, launch with visible window
  */
 export async function launchChrome({ headed = false } = {}) {
+    // Check for environment variable override from UI
+    if (process.env.SUPER_PANCAKE_HEADLESS === 'true') {
+        headed = false;
+        console.log('🔧 Overriding headed mode: Running in headless mode per UI setting');
+    } else if (process.env.SUPER_PANCAKE_HEADLESS === 'false') {
+        headed = true;
+        console.log('🔧 Overriding headless mode: Running in headed mode per UI setting');
+    }
     // Try to kill any existing Chrome processes on port 9222
     try {
         exec('lsof -ti:9222 | xargs kill -9 2>/dev/null || true');
