@@ -500,7 +500,7 @@ if (preferences.reports === 0) {
 }
 
 if (preferences.ui) {
-  console.log('🎯 Run "npm run test:ui" for interactive testing');
+  console.log('🎯 Run "npx super-pancake-ui" for interactive testing');
 }
 
 if (preferences.headless) {
