@@ -1,6 +1,6 @@
 {
   "name": "super-pancake-automation",
-  "version": "2.6.4",
+  "version": "2.6.6",
   "description": "A lightweight DOM-based UI automation framework using Chrome DevTools Protocol",
   "main": "index.js",
   "type": "module",
@@ -13,7 +13,6 @@
     "super-pancake-run": "./bin/super-pancake-run.js",
     "super-pancake-test": "./bin/super-pancake-run-alt.js",
     "super-pancake-generate": "./bin/generate-test.js",
-    "super-pancake-server": "./bin/ui-server.js",
     "super-pancake-check": "./bin/check-install.js",
     "super-pancake-setup": "./bin/setup.js",
     "super-pancake-init": "./bin/init.js"
@@ -73,7 +72,6 @@
     "test:errors": "vitest run tests/error-handling/",
     "start": "node scripts/test-ui.js",
     "ui": "node scripts/test-ui.js",
-    "server": "node bin/ui-server.js",
     "generate": "node bin/generate-test.js",
     "lint": "echo 'No linting configured'",
     "build": "echo 'No build step required'",
