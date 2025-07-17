@@ -485,7 +485,7 @@ console.log('');
 console.log('🚀 Next steps:');
 console.log(`  cd ${projectName}`);
 console.log('  npm install');
-console.log('  npm test');
+// console.log('  npm test');
 console.log('');
 
 // Dynamic success message based on preferences
