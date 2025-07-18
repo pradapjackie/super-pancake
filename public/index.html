@@ -154,9 +154,10 @@
             width: 24px;
             height: 100%;
             cursor: col-resize;
-            z-index: 10;
+            z-index: 5;
             background: transparent;
             transition: var(--transition);
+            pointer-events: auto;
         }
 
         .sidebar-resizer:hover {
@@ -772,6 +773,8 @@
             gap: 10px;
             margin-right: auto;
             padding-right: 16px;
+            pointer-events: auto;
+            z-index: 1000;
         }
 
         .file-select-all-checkbox {
@@ -785,11 +788,21 @@
             appearance: none;
             position: relative;
             flex-shrink: 0;
+            z-index: 999;
+            pointer-events: auto;
+            outline: none;
         }
 
         .file-select-all-checkbox:checked {
             background: var(--primary-color);
             border-color: var(--primary-color);
+            box-shadow: 0 0 10px rgba(124, 58, 237, 0.5);
+        }
+        
+        .file-select-all-checkbox:hover {
+            background: var(--primary-light);
+            border-color: var(--primary-light);
+            transform: scale(1.1);
         }
 
         .file-select-all-checkbox:checked::after {
@@ -870,6 +883,9 @@
             appearance: none;
             position: relative;
             flex-shrink: 0;
+            z-index: 999;
+            pointer-events: auto;
+            outline: none;
         }
 
         .test-case-checkbox:checked {
@@ -1524,10 +1540,12 @@
             // Load test cases
             let testCases = [];
             try {
+                // Normalize file path for Windows compatibility
+                const normalizedFile = file.replace(/\\/g, '/');
                 const casesResponse = await fetch('/api/test-cases', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ filePath: file })
+                    body: JSON.stringify({ filePath: normalizedFile })
                 });
                 testCases = await casesResponse.json();
             } catch (error) {
@@ -1537,7 +1555,7 @@
             fileDiv.innerHTML = `
                 <div class="test-file-header">
                     <div class="file-select-all">
-                        <input type="checkbox" class="file-select-all-checkbox" onchange="toggleGroup('${groupId}', this.checked)" id="select-all-${groupId}">
+                        <input type="checkbox" class="file-select-all-checkbox" data-group="${groupId}" id="select-all-${groupId}">
                         <label for="select-all-${groupId}" class="file-select-all-label">All</label>
                     </div>
                     <div class="test-file-header-left">
@@ -1545,12 +1563,12 @@
                             ${file}
                         </div>
                     </div>
-                    <i class="fas fa-chevron-down toggle-icon" onclick="toggleFile('${groupId}')" id="toggle-${groupId}"></i>
+                    <i class="fas fa-chevron-down toggle-icon" data-group="${groupId}" id="toggle-${groupId}"></i>
                 </div>
                 <div class="test-cases" id="cases-${groupId}">
                     ${testCases.map(testCase => `
                         <div class="test-case-item" data-test-id="${file}::${testCase}">
-                            <input type="checkbox" name="tests" value="${file}::${testCase}" class="test-case-checkbox" id="${file}::${testCase}" onchange="updateSelectedCount()">
+                            <input type="checkbox" name="tests" value="${file}::${testCase}" class="test-case-checkbox" id="${file}::${testCase}">
                             <label for="${file}::${testCase}" class="test-case-label">${testCase}</label>
                         </div>
                     `).join('')}
@@ -1561,12 +1579,35 @@
         }
 
         function toggleFile(groupId) {
-            const fileElement = document.getElementById(`group-${groupId}`);
-            fileElement.classList.toggle('expanded');
+            console.log('toggleFile called with groupId:', groupId);
+            
+            // Escape backslashes in the group ID for CSS selector
+            const escapedGroupId = groupId.replace(/\\/g, '\\\\');
+            console.log('Escaped groupId for toggleFile:', escapedGroupId);
+            
+            const fileElement = document.getElementById(`group-${escapedGroupId}`);
+            console.log('Found file element:', fileElement);
+            
+            if (fileElement) {
+                fileElement.classList.toggle('expanded');
+            } else {
+                console.error('File element not found for groupId:', groupId);
+            }
         }
 
         function toggleGroup(groupId, checked) {
-            const checkboxes = document.querySelectorAll(`#cases-${groupId} input[type="checkbox"]`);
+            console.log('toggleGroup called with groupId:', groupId, 'checked:', checked);
+            
+            // Escape backslashes in the group ID for CSS selector
+            const escapedGroupId = groupId.replace(/\\/g, '\\\\');
+            console.log('Escaped groupId:', escapedGroupId);
+            
+            const selector = `#cases-${escapedGroupId} input[type="checkbox"]`;
+            console.log('Using selector:', selector);
+            
+            const checkboxes = document.querySelectorAll(selector);
+            console.log('Found checkboxes:', checkboxes.length);
+            
             checkboxes.forEach(cb => {
                 cb.checked = checked;
                 const item = cb.closest('.test-case-item');
@@ -1601,6 +1642,8 @@
                 const groupCheckbox = file.querySelector('.file-select-all-checkbox');
                 const testCheckboxes = file.querySelectorAll('.test-case-checkbox');
                 const checkedTestBoxes = file.querySelectorAll('.test-case-checkbox:checked');
+                
+                console.log('Updating group checkbox for file:', file.id, 'checked:', checkedTestBoxes.length, 'total:', testCheckboxes.length);
                 
                 if (checkedTestBoxes.length === 0) {
                     groupCheckbox.checked = false;
@@ -1715,6 +1758,68 @@
 
         // Event listeners
         document.getElementById('run-btn').addEventListener('click', runTests);
+
+        // Event delegation for dynamically created checkboxes
+        document.addEventListener('change', function(e) {
+            console.log('Change event triggered on:', e.target);
+            if (e.target.classList.contains('file-select-all-checkbox')) {
+                console.log('File select all checkbox changed to:', e.target.checked);
+                const groupId = e.target.dataset.group;
+                if (groupId) {
+                    toggleGroup(groupId, e.target.checked);
+                } else {
+                    console.error('No group ID found for checkbox:', e.target);
+                }
+            } else if (e.target.classList.contains('test-case-checkbox')) {
+                console.log('Test case checkbox changed to:', e.target.checked);
+                updateSelectedCount();
+            }
+        });
+
+        // Event delegation for toggle icons and non-checkbox elements
+        document.addEventListener('click', function(e) {
+            console.log('Click event triggered on:', e.target);
+            
+            // Handle toggle icons
+            if (e.target.classList.contains('toggle-icon')) {
+                const groupId = e.target.dataset.group;
+                toggleFile(groupId);
+                return;
+            }
+            
+            // Handle checkbox labels
+            if (e.target.classList.contains('file-select-all-label')) {
+                console.log('Checkbox label clicked');
+                // Let the browser handle the label click naturally
+                return;
+            }
+            
+            // Handle test case labels
+            if (e.target.classList.contains('test-case-label')) {
+                console.log('Test case label clicked');
+                // Let the browser handle the label click naturally
+                return;
+            }
+            
+            // Handle header clicks (but not if clicking on checkbox area)
+            if (e.target.classList.contains('test-file-header')) {
+                if (!e.target.closest('.file-select-all')) {
+                    const toggleIcon = e.target.querySelector('.toggle-icon');
+                    if (toggleIcon) {
+                        const groupId = toggleIcon.dataset.group;
+                        toggleFile(groupId);
+                    }
+                }
+                return;
+            }
+            
+            // Stop propagation for checkbox area to prevent header clicks
+            if (e.target.closest('.file-select-all')) {
+                e.stopPropagation();
+                console.log('Stopped propagation for checkbox area');
+                return;
+            }
+        });
 
         // Initialize everything
         document.addEventListener('DOMContentLoaded', () => {

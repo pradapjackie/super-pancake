@@ -161,14 +161,17 @@ app.post('/api/test-cases', express.json(), (req, res) => {
         const { filePath } = req.body;
         console.log('Loading test cases for:', filePath);
 
+        // Normalize file path for cross-platform compatibility
+        const normalizedPath = path.normalize(filePath);
+        
         // Check if file exists
-        if (!fs.existsSync(filePath)) {
-            console.log('File does not exist:', filePath);
+        if (!fs.existsSync(normalizedPath)) {
+            console.log('File does not exist:', normalizedPath);
             return res.status(404).json({ error: 'Test file not found' });
         }
 
-        const testCases = extractTestCases(filePath);
-        console.log('Found test cases:', testCases.length, 'in', filePath);
+        const testCases = extractTestCases(normalizedPath);
+        console.log('Found test cases:', testCases.length, 'in', normalizedPath);
         res.json(testCases);
     } catch (error) {
         console.error('Error loading test cases:', error);
@@ -254,8 +257,15 @@ app.post('/stop', express.json(), async (req, res) => {
         broadcast('🛑 Test execution stop requested by user\n');
         
         // Kill all running test processes
-        exec('pkill -f "vitest" 2>/dev/null || true');
-        exec('pkill -f "node.*test" 2>/dev/null || true');
+        if (process.platform === 'win32') {
+            // Windows: Kill vitest and node test processes
+            exec('taskkill /f /im node.exe /fi "COMMANDLINE eq *vitest*" 2>nul || exit 0', { shell: true });
+            exec('taskkill /f /im node.exe /fi "COMMANDLINE eq *test*" 2>nul || exit 0', { shell: true });
+        } else {
+            // Unix-like systems (macOS, Linux)
+            exec('pkill -f "vitest" 2>/dev/null || true');
+            exec('pkill -f "node.*test" 2>/dev/null || true');
+        }
         
         broadcast('🛑 All test processes have been terminated\n');
     } catch (error) {
