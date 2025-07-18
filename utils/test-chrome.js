@@ -9,14 +9,26 @@ export async function startTestChrome() {
   // Kill any existing Chrome processes
   try {
     const { execSync } = await import('child_process');
-    execSync('pkill -f "Chrome.*--remote-debugging-port" 2>/dev/null || true', { stdio: 'ignore' });
+    if (process.platform === 'win32') {
+      // Windows: Kill Chrome processes with remote debugging
+      execSync('taskkill /f /im chrome.exe /fi "COMMANDLINE eq *remote-debugging-port*" 2>nul', { stdio: 'ignore', shell: true });
+    } else {
+      // Unix-like systems (macOS, Linux)
+      execSync('pkill -f "Chrome.*--remote-debugging-port" 2>/dev/null || true', { stdio: 'ignore' });
+    }
     await new Promise(resolve => setTimeout(resolve, 2000));
   } catch (error) {
     // Ignore cleanup errors
   }
 
   // Start Chrome with debugging enabled
-  chromeProcess = spawn('/opt/homebrew/bin/google-chrome', [
+  const chromePath = process.platform === 'win32' 
+    ? 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'
+    : process.platform === 'darwin'
+    ? '/opt/homebrew/bin/google-chrome'
+    : 'google-chrome';
+  
+  chromeProcess = spawn(chromePath, [
     '--headless=new',
     '--disable-gpu',
     '--no-sandbox',
@@ -28,7 +40,9 @@ export async function startTestChrome() {
     '--disable-background-timer-throttling',
     '--disable-backgrounding-occluded-windows',
     '--disable-renderer-backgrounding',
-    '--user-data-dir=/tmp/chrome-test-' + Date.now()
+    process.platform === 'win32' 
+      ? '--user-data-dir=' + require('os').tmpdir() + '\\chrome-test-' + Date.now()
+      : '--user-data-dir=/tmp/chrome-test-' + Date.now()
   ], {
     stdio: 'pipe'
   });
@@ -67,7 +81,13 @@ export async function stopTestChrome() {
   // Additional cleanup
   try {
     const { execSync } = await import('child_process');
-    execSync('pkill -f "Chrome.*--remote-debugging-port" 2>/dev/null || true', { stdio: 'ignore' });
+    if (process.platform === 'win32') {
+      // Windows: Kill Chrome processes with remote debugging
+      execSync('taskkill /f /im chrome.exe /fi "COMMANDLINE eq *remote-debugging-port*" 2>nul', { stdio: 'ignore', shell: true });
+    } else {
+      // Unix-like systems (macOS, Linux)
+      execSync('pkill -f "Chrome.*--remote-debugging-port" 2>/dev/null || true', { stdio: 'ignore' });
+    }
   } catch (error) {
     // Ignore cleanup errors
   }
