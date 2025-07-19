@@ -3,6 +3,7 @@
 import { writeFileSync, mkdirSync, existsSync } from 'fs';
 import { join, resolve } from 'path';
 import { createInterface } from 'readline';
+import { spawn } from 'child_process';
 
 const projectName = process.argv[2] || 'my-super-pancake-project';
 const projectPath = resolve(projectName);
@@ -96,6 +97,53 @@ async function collectUserPreferences() {
     ui: uiChoice === 0,
     reports: reportChoice
   };
+}
+
+// Function to install npm dependencies
+function installDependencies(projectPath) {
+  return new Promise((resolve, reject) => {
+    console.log('   Running npm install...');
+    
+    const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+    const install = spawn(npmCommand, ['install'], {
+      cwd: projectPath,
+      stdio: ['pipe', 'pipe', 'pipe']
+    });
+
+    let output = '';
+    let errorOutput = '';
+
+    install.stdout.on('data', (data) => {
+      output += data.toString();
+      // Show progress dots
+      process.stdout.write('.');
+    });
+
+    install.stderr.on('data', (data) => {
+      errorOutput += data.toString();
+    });
+
+    install.on('close', (code) => {
+      console.log(''); // New line after progress dots
+      
+      if (code === 0) {
+        console.log('✅ Dependencies installed successfully!');
+        resolve();
+      } else {
+        console.log('⚠️ Dependencies installation completed with warnings');
+        console.log('   You can run "npm install" manually if needed');
+        resolve(); // Don't fail the whole process
+      }
+    });
+
+    install.on('error', (error) => {
+      console.log(''); // New line after progress dots
+      console.log('⚠️ Failed to auto-install dependencies');
+      console.log('   Please run "npm install" manually in the project directory');
+      console.log(`   Error: ${error.message}`);
+      resolve(); // Don't fail the whole process
+    });
+  });
 }
 
 const preferences = await collectUserPreferences();
@@ -431,11 +479,9 @@ const readmeContent = `# ${projectName}
 
 Super Pancake automation testing project
 
-## Installation
+## Quick Start
 
-\`\`\`bash
-npm install
-\`\`\`
+Dependencies are automatically installed during project creation.
 
 ## Usage
 
@@ -482,9 +528,14 @@ writeFileSync(join(projectPath, '.gitignore'), gitignoreContent);
 
 console.log(`✅ Successfully created ${projectName}!`);
 console.log('');
+console.log('📦 Installing dependencies...');
+
+// Auto-install dependencies
+await installDependencies(projectPath);
+
+console.log('');
 console.log('🚀 Next steps:');
 console.log(`  cd ${projectName}`);
-console.log('  npm install');
 console.log('  npm test');
 console.log('');
 
