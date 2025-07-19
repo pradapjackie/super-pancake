@@ -1115,7 +1115,7 @@ export function writeReport() {
                     </div>
                     <div class="value">${failed}</div>
                     <div class="label">Failed</div>
-                    <div class="percentage">${(100 - parseFloat(passRate)).toFixed(1)}%</div>
+                    <div class="percentage">${failRate}%</div>
                 </div>
                 <div class="summary-card skipped">
                     <div class="icon">

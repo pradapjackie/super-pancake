@@ -18,16 +18,15 @@ export async function launchChrome({ headed = false } = {}) {
     // Try to kill any existing Chrome processes on port 9222
     try {
         if (process.platform === 'win32') {
-            // Windows: Find and kill Chrome processes using port 9222
-            exec('for /f "tokens=5" %a in (\'netstat -aon ^| findstr :9222\') do taskkill /f /pid %a 2>nul', { shell: true });
-            exec('taskkill /f /im chrome.exe /fi "WINDOWTITLE eq Chrome*remote-debugging-port=9222*" 2>nul', { shell: true });
+            // Windows: Simple Chrome process cleanup
+            exec('taskkill /f /im chrome.exe 2>nul || echo No chrome processes', { shell: true });
         } else {
             // Unix-like systems (macOS, Linux)
             exec('lsof -ti:9222 | xargs kill -9 2>/dev/null || true');
             exec('pkill -f "Chrome.*--remote-debugging-port=9222" 2>/dev/null || true');
         }
         // Small delay to let processes cleanup
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, 500));
     } catch (error) {
         // Ignore cleanup errors
     }
