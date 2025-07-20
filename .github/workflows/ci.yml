@@ -23,7 +23,7 @@ jobs:
         cache: 'npm'
         
     - name: Install dependencies
-      run: npm ci
+      run: npm i
       
     - name: Run quick unit tests
       run: npm run test:unit-stable
@@ -51,7 +51,7 @@ jobs:
         cache: 'npm'
         
     - name: Install dependencies
-      run: npm ci
+      run: npm 1
       
     - name: Setup Chrome for testing
       uses: browser-actions/setup-chrome@v1
@@ -109,7 +109,7 @@ jobs:
         cache: 'npm'
         
     - name: Install dependencies
-      run: npm ci
+      run: npm i
       
     - name: Setup Chrome for testing
       uses: browser-actions/setup-chrome@v1
@@ -180,7 +180,7 @@ jobs:
         cache: 'npm'
         
     - name: Install dependencies
-      run: npm ci
+      run: npm i
       
     - name: Run security tests
       run: npm run test:security
