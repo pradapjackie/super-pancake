@@ -20,8 +20,7 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '18'
-        cache: 'npm'
-        
+
     - name: Install dependencies
       run: npm i
       
@@ -106,8 +105,7 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '18'
-        cache: 'npm'
-        
+
     - name: Install dependencies
       run: npm i
       
@@ -177,8 +175,7 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '18'
-        cache: 'npm'
-        
+
     - name: Install dependencies
       run: npm i
       
