@@ -51,6 +51,29 @@ export default {
     video: "retain-on-failure" // "always" | "retain-on-failure" | "off"
   },
   
+  // Sequential test execution settings
+  execution: {
+    // Run tests sequentially to avoid Chrome port conflicts
+    sequential: true,
+    
+    // Vitest-specific settings for sequential execution
+    vitest: {
+      pool: 'forks',
+      poolOptions: {
+        forks: {
+          singleFork: true,
+        },
+      },
+      fileParallelism: false,
+      sequence: {
+        concurrent: false,
+        shuffle: false,
+      },
+      bail: 1, // Stop on first failure
+      retry: 1, // Retry failed tests once
+    }
+  },
+  
   // Screenshots settings
   screenshots: {
     enabled: true,

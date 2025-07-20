@@ -1,12 +1,13 @@
 import chromeLauncher from 'chrome-launcher';
 import { exec } from 'child_process';
+import fetch from 'node-fetch';
 
 /**
  * Launch Chrome in headed or headless mode
  * @param {Object} options
  * @param {boolean} options.headed - If true, launch with visible window
  */
-export async function launchChrome({ headed = false } = {}) {
+export async function launchChrome({ headed = false, port = 9222, maxRetries = 3 } = {}) {
     // Check for environment variable override from UI
     if (process.env.SUPER_PANCAKE_HEADLESS === 'true') {
         headed = false;
@@ -15,46 +16,274 @@ export async function launchChrome({ headed = false } = {}) {
         headed = true;
         console.log('🔧 Overriding headless mode: Running in headed mode per UI setting');
     }
-    // Try to kill any existing Chrome processes on port 9222
+
+    let lastError = null;
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+            console.log(`🚀 Launching Chrome... [Attempt ${attempt}/${maxRetries}]`);
+            
+            // Clean up any existing Chrome processes more thoroughly
+            await cleanupChromeProcesses(port);
+            
+            // Verify port is available
+            const isPortFree = await checkPortAvailability(port);
+            if (!isPortFree) {
+                console.log(`⚠️ Port ${port} is still in use after cleanup, trying force cleanup...`);
+                await forceCleanupPort(port);
+                
+                // Wait a bit more and check again
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                const isPortFreeNow = await checkPortAvailability(port);
+                if (!isPortFreeNow) {
+                    throw new Error(`Port ${port} is still occupied after force cleanup`);
+                }
+            }
+
+            const chrome = await chromeLauncher.launch({
+                chromeFlags: [
+                    ...(!headed ? ['--headless=new'] : []),
+                    '--disable-gpu',
+                    '--window-size=1280,800',
+                    '--disable-infobars',
+                    '--no-first-run',
+                    '--no-default-browser-check',
+                    '--start-maximized',
+                    '--no-sandbox',
+                    '--disable-dev-shm-usage',
+                    '--enable-automation',
+                    '--disable-web-security',
+                    '--disable-features=VizDisplayCompositor',
+                    '--disable-background-timer-throttling',
+                    '--disable-backgrounding-occluded-windows',
+                    '--disable-renderer-backgrounding',
+                    '--disable-extensions',
+                    '--disable-plugins',
+                    '--disable-default-apps'
+                ],
+                port: port,
+                ignoreDefaultFlags: false,
+                handleSIGINT: true
+            });
+
+            // Verify Chrome actually launched and is accessible
+            await verifyChromeLaunched(chrome, port);
+            
+            console.log(`✅ Chrome successfully launched at port ${chrome.port} in ${headed ? 'headed' : 'headless'} mode`);
+
+            // macOS: bring Chrome window to front
+            if (headed && process.platform === 'darwin') {
+                try {
+                    exec('osascript -e \'tell application "Google Chrome" to activate\'');
+                } catch (osError) {
+                    console.log('⚠️ Could not bring Chrome to front:', osError.message);
+                }
+            }
+
+            return chrome;
+            
+        } catch (error) {
+            lastError = error;
+            console.log(`❌ Chrome launch attempt ${attempt} failed: ${error.message}`);
+            
+            if (attempt < maxRetries) {
+                const delay = Math.min(2000 * attempt, 5000); // Progressive delay: 2s, 4s, 5s
+                console.log(`⏳ Retrying Chrome launch in ${delay}ms...`);
+                await new Promise(resolve => setTimeout(resolve, delay));
+            }
+        }
+    }
+    
+    // All attempts failed
+    const finalError = new Error(
+        `Failed to launch Chrome after ${maxRetries} attempts. ` +
+        `Last error: ${lastError?.message || 'Unknown error'}. ` +
+        `Troubleshooting: Ensure Chrome is installed and no other processes are using port ${port}.`
+    );
+    finalError.originalError = lastError;
+    finalError.port = port;
+    finalError.attempts = maxRetries;
+    throw finalError;
+}
+
+async function cleanupChromeProcesses(port) {
+    console.log('🧹 Enhanced Chrome process cleanup starting...');
+    
+    const startTime = Date.now();
+    let cleanupAttempts = 0;
+    const maxCleanupAttempts = 3;
+    
+    for (let attempt = 1; attempt <= maxCleanupAttempts; attempt++) {
+        cleanupAttempts++;
+        console.log(`🔧 Cleanup attempt ${attempt}/${maxCleanupAttempts}`);
+        
+        try {
+            if (process.platform === 'win32') {
+                // Enhanced Windows cleanup
+                console.log('🪟 Windows Chrome cleanup...');
+                
+                // Kill Chrome processes more thoroughly
+                await execAsync('taskkill /f /im chrome.exe 2>nul || echo No chrome.exe processes');
+                await execAsync('taskkill /f /im GoogleChromeHelper 2>nul || echo No GoogleChromeHelper processes');
+                await execAsync('taskkill /f /im "Google Chrome" 2>nul || echo No Google Chrome processes');
+                
+                // Kill specific debugging port processes
+                const netstatResult = await execAsync(`netstat -ano | findstr :${port}`, { ignoreErrors: true });
+                if (netstatResult && netstatResult.trim()) {
+                    console.log(`🔍 Found processes on port ${port}, cleaning up...`);
+                    // Extract PIDs and kill them
+                    const lines = netstatResult.split('\n').filter(line => line.includes(':' + port));
+                    for (const line of lines) {
+                        const parts = line.trim().split(/\s+/);
+                        const pid = parts[parts.length - 1];
+                        if (pid && !isNaN(pid)) {
+                            await execAsync(`taskkill /f /pid ${pid} 2>nul || echo PID ${pid} not found`);
+                        }
+                    }
+                }
+                
+            } else if (process.platform === 'darwin') {
+                // Enhanced macOS cleanup
+                console.log('🍎 macOS Chrome cleanup...');
+                
+                // Kill processes by port first
+                await execAsync(`lsof -ti:${port} | xargs kill -9 2>/dev/null || true`);
+                
+                // Kill Chrome processes by name and pattern
+                await execAsync('pkill -f "Google Chrome.*--remote-debugging-port" 2>/dev/null || true');
+                await execAsync('pkill -f "Chromium.*--remote-debugging-port" 2>/dev/null || true');
+                await execAsync('pkill -f "chrome.*--remote-debugging-port" 2>/dev/null || true');
+                
+                // macOS specific: Kill Chrome Helper processes
+                await execAsync('pkill -f "Google Chrome Helper" 2>/dev/null || true');
+                await execAsync('pkill -f "Chromium Helper" 2>/dev/null || true');
+                
+                // Force quit Chrome application
+                await execAsync('osascript -e \'quit app "Google Chrome"\' 2>/dev/null || true');
+                
+            } else {
+                // Enhanced Linux cleanup
+                console.log('🐧 Linux Chrome cleanup...');
+                
+                // Kill processes by port
+                await execAsync(`fuser -k ${port}/tcp 2>/dev/null || true`);
+                await execAsync(`lsof -ti:${port} | xargs kill -9 2>/dev/null || true`);
+                
+                // Kill Chrome processes by pattern
+                await execAsync('pkill -f "chrome.*--remote-debugging-port" 2>/dev/null || true');
+                await execAsync('pkill -f "chromium.*--remote-debugging-port" 2>/dev/null || true');
+                await execAsync('pkill -f "google-chrome.*--remote-debugging-port" 2>/dev/null || true');
+                
+                // Kill Chrome sandbox and helper processes
+                await execAsync('pkill -f "chrome.*sandbox" 2>/dev/null || true');
+                await execAsync('pkill -f "chrome.*zygote" 2>/dev/null || true');
+            }
+            
+            // Verify cleanup by checking port availability
+            await new Promise(resolve => setTimeout(resolve, 2000)); // Wait for processes to die
+            const isPortFree = await checkPortAvailability(port);
+            
+            if (isPortFree) {
+                const elapsed = Date.now() - startTime;
+                console.log(`✅ Chrome cleanup successful in ${elapsed}ms (${cleanupAttempts} attempts)`);
+                return;
+            } else {
+                console.log(`⚠️ Port ${port} still occupied after cleanup attempt ${attempt}`);
+                if (attempt < maxCleanupAttempts) {
+                    console.log(`⏳ Waiting before next cleanup attempt...`);
+                    await new Promise(resolve => setTimeout(resolve, 1000 * attempt)); // Progressive delay
+                }
+            }
+            
+        } catch (error) {
+            console.log(`❌ Cleanup attempt ${attempt} encountered error: ${error.message}`);
+            if (attempt < maxCleanupAttempts) {
+                await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+            }
+        }
+    }
+    
+    // Final verification
+    const finalPortCheck = await checkPortAvailability(port);
+    const totalElapsed = Date.now() - startTime;
+    
+    if (!finalPortCheck) {
+        console.log(`⚠️ Warning: Port ${port} may still be in use after ${totalElapsed}ms cleanup`);
+        console.log(`🔧 Will attempt force cleanup in launch process...`);
+    } else {
+        console.log(`✅ Final verification: Port ${port} is now available after ${totalElapsed}ms`);
+    }
+}
+
+async function checkPortAvailability(port) {
+    return new Promise((resolve) => {
+        const net = require('net');
+        const server = net.createServer();
+        
+        server.listen(port, () => {
+            server.once('close', () => {
+                resolve(true); // Port is available
+            });
+            server.close();
+        });
+        
+        server.on('error', () => {
+            resolve(false); // Port is in use
+        });
+    });
+}
+
+async function forceCleanupPort(port) {
+    console.log(`🔧 Force cleaning up port ${port}...`);
+    
     try {
         if (process.platform === 'win32') {
-            // Windows: Simple Chrome process cleanup
-            exec('taskkill /f /im chrome.exe 2>nul || echo No chrome processes', { shell: true });
+            await execAsync(`for /f "tokens=5" %a in ('netstat -ano ^| findstr :${port}') do taskkill /f /pid %a 2>nul`);
         } else {
-            // Unix-like systems (macOS, Linux)
-            exec('lsof -ti:9222 | xargs kill -9 2>/dev/null || true');
-            exec('pkill -f "Chrome.*--remote-debugging-port=9222" 2>/dev/null || true');
+            await execAsync(`lsof -ti:${port} | xargs kill -9 2>/dev/null || true`);
         }
-        // Small delay to let processes cleanup
-        await new Promise(resolve => setTimeout(resolve, 500));
     } catch (error) {
-        // Ignore cleanup errors
+        console.log(`⚠️ Force cleanup failed: ${error.message}`);
     }
+}
 
-    const chrome = await chromeLauncher.launch({
-        chromeFlags: [
-            ...(!headed ? ['--headless=new'] : []),
-            '--disable-gpu',
-            '--window-size=1280,800',
-            '--disable-infobars',
-            '--no-first-run',
-            '--no-default-browser-check',
-            '--start-maximized',
-            '--no-sandbox',
-            '--disable-dev-shm-usage',
-            '--enable-automation',
-            '--disable-web-security',
-            '--disable-features=VizDisplayCompositor'
-        ],
-        port: 9222,
+async function verifyChromeLaunched(chrome, port) {
+    console.log('🔍 Verifying Chrome launch...');
+    
+    // Give Chrome a moment to start up
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    try {
+        const response = await fetch(`http://localhost:${port}/json/version`, {
+            timeout: 3000
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Chrome health check failed: ${response.status}`);
+        }
+        
+        const version = await response.json();
+        console.log(`🎯 Chrome verification successful: ${version.Browser || 'Unknown version'}`);
+        
+    } catch (error) {
+        throw new Error(`Chrome launch verification failed: ${error.message}`);
+    }
+}
+
+function execAsync(command, options = {}) {
+    return new Promise((resolve, reject) => {
+        const execOptions = { 
+            timeout: options.timeout || 5000,
+            encoding: 'utf8'
+        };
+        
+        exec(command, execOptions, (error, stdout, stderr) => {
+            if (error && error.code !== 1 && !options.ignoreErrors) { 
+                // Ignore exit code 1 (no matches found) or if ignoreErrors is true
+                reject(error);
+            } else {
+                resolve(stdout);
+            }
+        });
     });
-
-    console.log(`🚀 Chrome launched at port ${chrome.port} in ${headed ? 'headed' : 'headless'} mode`);
-
-    // macOS: bring Chrome window to front
-    if (headed && process.platform === 'darwin') {
-        exec('osascript -e \'tell application "Google Chrome" to activate\'');
-    }
-
-    return chrome;
 }

@@ -59,8 +59,11 @@ npm install super-pancake-automation
 
 ### Basic Usage
 ```bash
-# Run tests with Vitest
+# Run tests with Super Pancake (Sequential execution)
 npm test
+
+# Run specific test patterns
+npm test tests/tier1-*.test.js --run
 
 # Launch interactive UI
 super-pancake-ui
@@ -68,6 +71,9 @@ super-pancake-ui
 # Run specific test commands
 super-pancake-run
 super-pancake-test
+
+# Run tests with headed mode for debugging
+HEADED=true npm test
 ```
 
 ## 📱 Interactive Test Runner UI
@@ -143,13 +149,10 @@ npx super-pancake --help                   # Show help
 
 ## 💻 Code Examples
 
-### Basic Test Structure
+### Basic Test Structure (Sessionless API)
 ```javascript
-
 import { describe, it, beforeAll, afterAll } from 'vitest';
-import { launchChrome } from 'super-pancake-automation/utils/launcher.js';
-import { connectToChrome } from 'super-pancake-automation/core/browser.js';
-import { createSession } from 'super-pancake-automation/core/session.js';
+import { createTestEnvironment, cleanupTestEnvironment } from './utils/test-setup.js';
 import {
   enableDOM,
   navigateTo,
@@ -160,172 +163,148 @@ import {
   getAttribute,
   getText,
   waitForSelector,
-  takeElementScreenshot
-} from 'super-pancake-automation/core/dom.js';
+  takeScreenshot,
+  getByRole,
+  getByText,
+  getByLabel,
+  getByPlaceholder,
+  getByTestId
+} from 'super-pancake-automation/core/simple-dom-v2.js';
 import {
   assertEqual,
   assertContainsText,
 } from 'super-pancake-automation/core/assert.js';
-import { addTestResult, writeReport } from 'super-pancake-automation/reporter/htmlReporter.js';
-import { testWithReport } from 'super-pancake-automation/helpers/testWrapper.js';
-import { config } from 'super-pancake-automation/config.js';
 
-let chrome, ws, session;
+let testEnv;
 
-describe('Playground UI Form Test', () => {
+describe('Modern Super Pancake Test', () => {
   beforeAll(async () => {
-    console.log('\n🔷 Playground UI Test Started');
-    chrome = await launchChrome({ headed: true });
-    ws = await connectToChrome();
-    session = createSession(ws);
-    await enableDOM(session);
-  }, 30000); // 30 second timeout for Chrome startup
+    console.log('\n🔷 Super Pancake Test Started');
+    testEnv = await createTestEnvironment({ 
+      headed: false, 
+      testName: 'Form Test' 
+    });
+    await enableDOM();
+  }, 30000);
 
   afterAll(async () => {
-    if (ws) ws.close();
-    if (chrome) await chrome.kill();
-    writeReport();
-    console.log('\n🧹 Test complete. Chrome closed.');
+    await cleanupTestEnvironment(testEnv, 'Form Test');
   });
 
-  it('should navigate to form page', { timeout: config.timeouts.testTimeout }, async () => {
-    await testWithReport('should navigate to form page', async () => {
-      await navigateTo(session, 'http://localhost:8080/form.html');
-    }, session, import.meta.url);
+  it('should navigate and interact with form', async () => {
+    // Navigate to page
+    await navigateTo('http://localhost:8080/form.html');
+    
+    // Use smart locators - no session needed!
+    await fillInput(getByLabel('Full Name'), 'John Doe');
+    await fillInput(getByPlaceholder('Enter your email'), 'john@example.com');
+    await fillInput(getByTestId('message-input'), 'Hello World');
+    
+    // Check boxes and select options
+    await check(getByLabel('Subscribe to newsletter'));
+    await selectOption(getByLabel('Country'), 'US');
+    
+    // Click submit button
+    await click(getByRole('button', { name: 'Submit' }));
+    
+    // Verify results
+    const status = await getAttribute('form', 'data-status');
+    assertEqual(status, 'submitted');
+    
+    // Take screenshot
+    await takeScreenshot('./screenshots/form-completed.png');
   });
 
-  it('should fill in the name input', { timeout: config.timeouts.testTimeout }, async () => {
-    await testWithReport('should fill in the name input', async () => {
-      await fillInput(session, 'input[name="name"]', 'Pradap');
-    }, session, import.meta.url);
+  it('should verify dynamic content', async () => {
+    // Wait for and verify text content
+    const heading = await getByText('Success Message');
+    const text = await getText(heading);
+    assertContainsText(text, 'Success');
+    
+    // Verify table data
+    const tableCell = await getText('table tr:first-child td:first-child');
+    assertEqual(tableCell, 'John Doe');
   });
-
-  it('should fill in the email input', { timeout: config.timeouts.testTimeout }, async () => {
-    await testWithReport('should fill in the email input', async () => {
-      await fillInput(session, 'input[name="email"]', 'pradap@example.com');
-    }, session, import.meta.url);
-  });
-
-  it('should fill in the password input', { timeout: config.timeouts.testTimeout }, async () => {
-    await testWithReport('should fill in the password input', async () => {
-      await fillInput(session, 'input[name="password"]', 'supersecret');
-    }, session, import.meta.url);
-  });
-
-  it('should fill in the date and time inputs', { timeout: config.timeouts.testTimeout }, async () => {
-    await testWithReport('should fill in the date and time inputs', async () => {
-      await fillInput(session, 'input[name="date"]', '2025-06-23');
-      await fillInput(session, 'input[name="time"]', '12:34');
-    }, session, import.meta.url);
-  });
-
-  it('should fill in the message textarea', { timeout: config.timeouts.testTimeout }, async () => {
-    await testWithReport('should fill in the message textarea', async () => {
-      await fillInput(session, 'textarea[name="message"]', 'Test message');
-    }, session, import.meta.url);
-  });
-
-  it('should select dropdown and check options', { timeout: config.timeouts.testTimeout }, async () => {
-    await testWithReport('should select dropdown and check options', async () => {
-      await selectOption(session, 'select[name="dropdown"]', 'two');
-      await check(session, 'input[name="subscribe"]', true);
-      await check(session, 'input[value="male"]', true);
-    }, session, import.meta.url);
-  });
-
-  it('should submit the form', { timeout: config.timeouts.testTimeout }, async () => {
-    await testWithReport('should submit the form', async () => {
-      await click(session, 'button[type="submit"]');
-    }, session, import.meta.url);
-  });
-
-  it('should submit the form', { timeout: config.timeouts.testTimeout }, async () => {
-    await testWithReport('should submit the form', async () => {
-      await click(session, 'button[type="submit"]');
-    }, session, import.meta.url);
-  });
-
-
-
-
-  it('should verify table and list contents', { timeout: config.timeouts.testTimeout }, async () => {
-    await testWithReport('should verify table and list contents', async () => {
-      const status = await getAttribute(session, 'form', 'data-status');
-      assertEqual(status, 'submitted', 'Form should be marked as submitted');
-
-      const tableText = await getText(session, await waitForSelector(session, 'table'));
-      assertContainsText(tableText, 'Alice', 'Table should include "Alice"');
-      assertContainsText(tableText, 'Bob', 'Table should include "Bob"');
-
-      const listText = await getText(session, await waitForSelector(session, 'ul'));
-      assertContainsText(listText, 'Unordered Item 2');
-    }, session, import.meta.url);
-  });
-
 });
 ```
 
-### Advanced Form Testing
+### Advanced Form Testing (Sessionless API)
 ```javascript
 import { 
   fillInput, 
   selectOption, 
   check, 
-  submitForm,
-  getFormData,
   isChecked,
-  getSelectedOptions
-} from 'super-pancake-automation/core/dom.js';
+  getByLabel,
+  getByRole,
+  getByTestId,
+  getAttribute,
+  click,
+  waitForText
+} from 'super-pancake-automation/core/simple-dom-v2.js';
 
-it('should handle complex form', async () => {
-  await navigateTo(session, 'https://myapp.com/form');
+it('should handle complex form interactions', async () => {
+  await navigateTo('https://myapp.com/form');
   
-  // Fill form fields
-  await fillInput(session, '#name', 'John Doe');
-  await fillInput(session, '#email', 'john@example.com');
-  await selectOption(session, '#country', 'US');
-  await check(session, '#newsletter', true);
+  // Fill form fields using smart locators
+  await fillInput(getByLabel('Full Name'), 'John Doe');
+  await fillInput(getByLabel('Email Address'), 'john@example.com');
+  await selectOption(getByLabel('Country'), 'US');
+  await check(getByLabel('Subscribe to newsletter'));
   
   // Verify form state
-  const isNewsletterChecked = await isChecked(session, '#newsletter');
+  const isNewsletterChecked = await isChecked(getByLabel('Subscribe to newsletter'));
   expect(isNewsletterChecked).toBe(true);
   
-  // Get all form data
-  const formData = await getFormData(session, '#contact-form');
-  expect(formData.name).toBe('John Doe');
+  // Get form values
+  const nameValue = await getValue(getByLabel('Full Name'));
+  expect(nameValue).toBe('John Doe');
   
-  // Submit form
-  await submitForm(session, '#contact-form');
+  // Submit form using role-based locator
+  await click(getByRole('button', { name: 'Submit' }));
+  
+  // Wait for success message
+  await waitForText('Form submitted successfully');
 });
 ```
 
-### Table Data Extraction
+### Table Data Extraction (Sessionless API)
 ```javascript
 import { 
-  getTableData,
-  getTableHeaders,
-  getTableRow,
-  getTableCell
-} from 'super-pancake-automation/core/dom.js';
+  navigateTo,
+  getText,
+  getAttribute,
+  querySelector,
+  waitForSelector
+} from 'super-pancake-automation/core/simple-dom-v2.js';
 
 it('should extract table data', async () => {
-  await navigateTo(session, 'https://myapp.com/users');
+  await navigateTo('https://myapp.com/users');
   
-  // Get complete table data
-  const tableData = await getTableData(session, '#users-table');
-  console.log('Table data:', tableData);
+  // Wait for table to load
+  await waitForSelector('#users-table');
   
-  // Get headers
-  const headers = await getTableHeaders(session, '#users-table');
+  // Get table headers
+  const headerCells = await querySelectorAll('#users-table thead th');
+  const headers = await Promise.all(
+    headerCells.map(cell => getText(cell))
+  );
   expect(headers).toContain('Name');
   
-  // Get specific row
-  const firstRow = await getTableRow(session, '#users-table', 0);
-  expect(firstRow[0]).toBe('John Doe');
+  // Get first row data
+  const firstRowCells = await querySelectorAll('#users-table tbody tr:first-child td');
+  const firstRowData = await Promise.all(
+    firstRowCells.map(cell => getText(cell))
+  );
+  expect(firstRowData[0]).toBe('John Doe');
   
-  // Get specific cell
-  const cell = await getTableCell(session, '#users-table', 0, 1);
-  expect(cell).toBe('john@example.com');
+  // Get specific cell value
+  const specificCell = await getText('#users-table tbody tr:first-child td:nth-child(2)');
+  expect(specificCell).toBe('john@example.com');
+  
+  // Count total rows
+  const rows = await querySelectorAll('#users-table tbody tr');
+  console.log(`Table has ${rows.length} data rows`);
 });
 ```
 
@@ -346,7 +325,84 @@ Comprehensive guides and resources:
 
 The framework provides a comprehensive, environment-aware configuration system. See the **[Configuration Guide](docs/CONFIGURATION.md)** for complete details.
 
-### Quick Configuration Example
+### Super Pancake Configuration (super-pancake.config.js)
+```javascript
+export default {
+  // Browser configuration
+  browser: {
+    headless: process.env.HEADED !== 'true',
+    devtools: process.env.DEBUG === 'true',
+    slowMo: 0
+  },
+  
+  // Sequential test execution settings
+  execution: {
+    // Run tests sequentially to avoid Chrome port conflicts
+    sequential: true,
+    
+    // Vitest-specific settings for sequential execution
+    vitest: {
+      pool: 'forks',
+      poolOptions: {
+        forks: {
+          singleFork: true,
+        },
+      },
+      fileParallelism: false,
+      sequence: {
+        concurrent: false,
+        shuffle: false,
+      },
+      bail: 1, // Stop on first failure
+      retry: 1, // Retry failed tests once
+    }
+  },
+  
+  // Test configuration
+  test: {
+    timeout: 30000,
+    retries: 1
+  },
+  
+  // Screenshot configuration
+  screenshot: {
+    enabled: true,
+    path: './screenshots',
+    onFailure: true,
+    onSuccess: false
+  }
+};
+```
+
+### Environment Variables
+```bash
+# Run in headed mode (visible browser)
+HEADED=true npm test
+
+# Enable debug mode
+DEBUG=true npm test
+
+# Run specific test pattern
+npm test tests/tier1-smart-locators.test.js --run
+```
+
+### API Import Guide
+
+**Sessionless API (Recommended):**
+```javascript
+import { 
+  enableDOM, navigateTo, fillInput, click, getByRole, getByText 
+} from 'super-pancake-automation/core/simple-dom-v2.js';
+```
+
+**Legacy Session-Based API:**
+```javascript
+import { 
+  enableDOM, navigateTo, fillInput, click 
+} from 'super-pancake-automation/core/dom.js';
+```
+
+### Legacy Configuration
 ```javascript
 import { config, getConfig, isDevelopment } from './config.js';
 
@@ -385,27 +441,62 @@ const timeout = getConfig('timeouts.testTimeout');
 - **Visual Testing**: Screenshots, element positioning, viewport checks
 - **Wait Strategies**: Visibility, clickability, text content, attributes
 
-### 📱 Advanced Methods
+### 🚀 Sessionless API Advantages
+
+Super Pancake now features a modern **sessionless API** that eliminates the need to pass session objects to every method call:
+
 ```javascript
-// Enhanced wait strategies
-await waitForElementToBeVisible(session, '#popup');
-await waitForElementToBeClickable(session, '#submit-btn');
-await waitForElementToContainText(session, '#status', 'Success');
+// ❌ Old Session-Based API
+await fillInput(session, '#name', 'John');
+await click(session, '#submit');
+await getText(session, '#result');
 
-// Advanced interactions
-await doubleClick(session, '#file-icon');
-await selectText(session, '#text-area', 0, 10);
-await uploadMultipleFiles(session, '#file-input', ['file1.pdf', 'file2.jpg']);
+// ✅ New Sessionless API  
+await fillInput('#name', 'John');
+await click('#submit');
+await getText('#result');
+```
 
-// Element analysis
-const classes = await getElementClasses(session, '#my-div');
-const children = await getElementChildren(session, '#container');
-const hasClass = await hasClass(session, '#button', 'active');
+### 🎯 Smart Locators (Playwright-Style)
 
-// Visual testing
-const position = await getElementPosition(session, '#element');
-const size = await getElementSize(session, '#element');
-const inViewport = await isElementInViewport(session, '#element');
+The new API includes **smart locators** that make tests more readable and maintainable:
+
+```javascript
+// ❌ CSS Selectors (brittle)
+await click('button[data-cy="submit-btn"]');
+await fillInput('input[placeholder="Enter email"]', 'test@example.com');
+
+// ✅ Smart Locators (semantic)
+await click(getByRole('button', { name: 'Submit' }));
+await fillInput(getByPlaceholder('Enter email'), 'test@example.com');
+```
+
+### 📦 Test Environment Management
+
+Simplified test setup with automatic Chrome management:
+
+```javascript
+import { createTestEnvironment, cleanupTestEnvironment } from './utils/test-setup.js';
+import { enableDOM, navigateTo, getByRole, click } from 'super-pancake-automation/core/simple-dom-v2.js';
+
+let testEnv;
+
+beforeAll(async () => {
+  // Automatic Chrome launch, WebSocket connection, and session setup
+  testEnv = await createTestEnvironment({ headed: false });
+  await enableDOM(); // No session parameter needed!
+});
+
+afterAll(async () => {
+  // Automatic cleanup of Chrome, WebSocket, and session
+  await cleanupTestEnvironment(testEnv);
+});
+
+it('should work seamlessly', async () => {
+  await navigateTo('https://example.com');
+  await click(getByRole('button', { name: 'Get Started' }));
+  // No session management needed!
+});
 ```
 
 ## 🏗️ Architecture
@@ -436,11 +527,16 @@ Add these scripts to your `package.json`:
 ```json
 {
   "scripts": {
-    "test": "vitest",
+    "test": "node scripts/super-pancake-test.js",
     "test:ui": "super-pancake-ui",
     "test:run": "super-pancake-run",
     "test:watch": "vitest --watch",
-    "test:generate": "super-pancake-generate"
+    "test:generate": "super-pancake-generate",
+    "test:tier1": "npm test tests/tier1-*.test.js --run",
+    "test:headed": "HEADED=true npm test",
+    "test:sequential": "npm test --sequential",
+    "test:quick": "npm run test:unit-stable && npm run test:config",
+    "test:stability": "vitest run tests/stability-test-suite.test.js"
   }
 }
 ```
@@ -465,126 +561,201 @@ Add these scripts to your `package.json`:
 }
 ```
 
-## 🔍 All Available Methods
+## 🛠️ Test Utilities & Setup
 
-### Navigation & Setup
-- `enableDOM(session)` - Enable required CDP domains
-- `navigateTo(session, url)` - Navigate to URL
-- `reload(session)` - Reload page
-- `goBack(session)` / `goForward(session)` - Browser navigation
+### Test Environment Setup (utils/test-setup.js)
+```javascript
+// Quick test environment creation
+const env = await createTestEnvironment({
+  headed: false,          // Browser visibility
+  port: 9222,            // Chrome debugging port
+  testName: 'My Test'    // For logging
+});
+
+// Specialized environments
+const formEnv = await createFormTestEnvironment('Form Test');
+const headedEnv = await createHeadedTestEnvironment('Debug Test');
+const comprehensiveEnv = await createComprehensiveTestEnvironment('Full Test');
+
+// Environment cleanup
+await cleanupTestEnvironment(env, 'My Test');
+
+// Higher-order wrapper
+const testWithCleanup = withTestEnvironment({ headed: true });
+await testWithCleanup(async ({ chrome, ws, session }) => {
+  // Your test code here
+});
+```
+
+### Custom Test Runner (scripts/super-pancake-test.js)
+- Reads configuration from `super-pancake.config.js`
+- Implements sequential test execution
+- Eliminates Chrome port conflicts
+- Provides framework-native test runner
+
+## 🔍 All Available Methods (Sessionless API)
+
+### Test Environment Setup
+- `createTestEnvironment(options)` - Quick test setup with Chrome launch
+- `cleanupTestEnvironment(env, testName)` - Environment cleanup
+- `createFormTestEnvironment(testName)` - Specialized form testing setup
+- `createHeadedTestEnvironment(testName)` - Headed mode for debugging
+
+### Navigation & DOM Setup
+- `enableDOM()` - Enable required CDP domains (no session needed)
+- `navigateTo(url, options)` - Navigate to URL
+- `waitForLoadState(state, options)` - Wait for page load states
+- `waitForURL(urlPattern, options)` - Wait for URL changes
+
+### Smart Locators (Playwright-style)
+- `getByRole(role, options)` - Find by ARIA role: `button`, `textbox`, `link`, etc.
+- `getByText(text, options)` - Find by visible text content
+- `getByLabel(labelText, options)` - Find by associated label
+- `getByPlaceholder(placeholderText, options)` - Find by placeholder attribute
+- `getByTestId(testId, options)` - Find by data-testid attribute
+- `getByTitle(titleText, options)` - Find by title attribute
+- `getByAltText(altText, options)` - Find images by alt text
 
 ### Element Queries
-- `querySelector(session, selector)` - Find single element
-- `querySelectorAll(session, selector)` - Find multiple elements
-- `waitForSelector(session, selector, timeout)` - Wait for element
-- `getElementsCount(session, selector)` - Count matching elements
+- `querySelector(selector, options)` - Find single element
+- `waitForSelector(selector, timeout)` - Wait for element to appear
+- `first(selector, options)` - Get first matching element
+- `last(selector, options)` - Get last matching element
+- `nth(selector, index, options)` - Get nth matching element
 
 ### Basic Interactions
-- `click(session, selector)` - Click element
-- `doubleClick(session, selector)` - Double click
-- `rightClick(session, selector)` - Right click
-- `type(session, selector, text)` - Type text
-- `clearInput(session, selector)` - Clear input
-- `fillInput(session, selector, value)` - Fill input with events
-
-### Advanced Interactions
-- `dragDrop(session, sourceSelector, targetSelector)` - Drag and drop
-- `uploadFileBuffer(session, selector, filename, content)` - File upload
-- `uploadMultipleFiles(session, selector, filePaths)` - Multiple file upload
-- `selectText(session, selector, startOffset, endOffset)` - Text selection
-- `mouseDown(session, selector)` / `mouseUp(session, selector)` - Mouse events
+- `click(selectorOrNodeId, options)` - Click element
+- `doubleClick(selectorOrNodeId, options)` - Double click
+- `rightClick(selectorOrNodeId, options)` - Right click
+- `hover(selectorOrNodeId, options)` - Hover over element
+- `fillInput(selectorOrNodeId, value, options)` - Fill input with text
 
 ### Form Handling
-- `check(session, selector, checked)` - Checkbox/radio control
-- `selectOption(session, selector, values)` - Dropdown selection
-- `selectMultipleOptions(session, selector, values)` - Multi-select
-- `submitForm(session, formSelector)` - Submit form
-- `resetForm(session, formSelector)` - Reset form
-- `getFormData(session, formSelector)` - Extract form data
-- `isChecked(session, selector)` - Check checkbox state
-- `getSelectedOptions(session, selector)` - Get selected options
+- `check(selectorOrNodeId, options)` - Check checkbox/radio
+- `uncheck(selectorOrNodeId, options)` - Uncheck checkbox/radio
+- `selectOption(selectorOrNodeId, value, options)` - Select dropdown option
+- `isChecked(selectorOrNodeId, options)` - Check if checked
+- `uploadFile(selectorOrNodeId, filePath, options)` - Upload file
+
+### Keyboard & Input
+- `press(key, options)` - Press keyboard key
+- `type(text, options)` - Type text
+- `sendKeys(keys, options)` - Send key combinations
 
 ### Element State & Properties
-- `getText(session, nodeId)` - Get element text
-- `getAttribute(session, selector, attrName)` - Get attribute
-- `setValue(session, selector, value)` - Set value
-- `isVisible(session, selector)` - Check visibility
-- `isEnabled(session, selector)` - Check enabled state
-- `getElementTagName(session, selector)` - Get tag name
-- `getElementClasses(session, selector)` - Get CSS classes
-- `hasClass(session, selector, className)` - Check for class
+- `getText(selectorOrNodeId, options)` - Get element text
+- `getAttribute(selectorOrNodeId, attributeName, options)` - Get attribute
+- `getValue(selectorOrNodeId, options)` - Get input value
+- `isVisible(selectorOrNodeId, options)` - Check visibility
+- `isEnabled(selectorOrNodeId, options)` - Check enabled state
+- `isDisabled(selectorOrNodeId, options)` - Check disabled state
 
 ### Wait Strategies
-- `waitForElementToBeVisible(session, selector, timeout)` - Wait for visibility
-- `waitForElementToBeClickable(session, selector, timeout)` - Wait for clickability
-- `waitForElementToContainText(session, selector, text, timeout)` - Wait for text
-- `waitForElementToHaveAttribute(session, selector, attribute, value, timeout)` - Wait for attribute
-- `waitForElementToBeEnabled(session, selector, timeout)` - Wait for enabled state
-- `waitForCondition(session, conditionFn, timeout)` - Custom condition waiter
-
-### Data Extraction
-- `getTableData(session, tableSelector)` - Complete table data
-- `getTableHeaders(session, tableSelector)` - Table headers
-- `getTableRow(session, tableSelector, rowIndex)` - Specific row
-- `getTableCell(session, tableSelector, rowIndex, columnIndex)` - Specific cell
-- `getListItems(session, listSelector)` - List items with metadata
-- `getListItemByIndex(session, listSelector, index)` - Specific list item
+- `waitForText(text, options)` - Wait for text to appear
+- `waitForAttribute(selector, attributeName, expectedValue, timeout)` - Wait for attribute
+- `waitForVisible(selector, timeout)` - Wait for visibility
+- `waitForFunction(fn, options)` - Wait for custom condition
 
 ### Visual Testing
-- `takeScreenshot(session, fileName)` - Full page screenshot
-- `takeElementScreenshot(session, selector, fileName)` - Element screenshot
-- `getElementPosition(session, selector)` - Element coordinates
-- `getElementSize(session, selector)` - Element dimensions
-- `getElementBounds(session, selector)` - Complete bounding box
-- `isElementInViewport(session, selector)` - Viewport check
-- `scrollToElement(session, selector)` - Scroll to element
-- `scrollToTop(session)` / `scrollToBottom(session)` - Page scrolling
-- `getScrollPosition(session)` - Current scroll position
+- `takeScreenshot(filePath, options)` - Full page screenshot
+- `setViewport(width, height, options)` - Set viewport size
 
-### Element Analysis
-- `getElementChildren(session, selector)` - Child elements
-- `getElementParent(session, selector)` - Parent element
-- `focus(session, selector)` - Focus element
-- `hover(session, selector)` - Hover over element
+### Network & API
+- `enableNetworkInterception(options)` - Enable network monitoring
+- `waitForRequest(urlPattern, options)` - Wait for network request
+- `waitForResponse(urlPattern, options)` - Wait for network response
+- `getNetworkRequests(urlPattern, options)` - Get captured requests
+- `mockResponse(urlPattern, responseData, options)` - Mock API responses
 
-## 🧪 Testing Examples
+### Multi-Tab Support
+- `getAllTabs(options)` - Get all browser tabs
+- `createNewTab(url, options)` - Create new tab
+- `switchToTab(targetId, options)` - Switch to specific tab
+- `closeTab(targetId, options)` - Close tab
+
+### Device Emulation
+- `emulateDevice(deviceName, options)` - Emulate mobile devices
+- `setGeolocation(latitude, longitude, accuracy, options)` - Set location
+- `clearDeviceEmulation(options)` - Reset to desktop
+
+### Configuration
+- `setDefaultTimeout(timeout)` - Set default element timeout
+- `setNavigationTimeout(timeout)` - Set navigation timeout
+- `setScreenshotTimeout(timeout)` - Set screenshot timeout
+
+## 🧪 Testing Examples (Sessionless API)
 
 ### Screenshot Testing
 ```javascript
 // Take full page screenshot
-await takeScreenshot(session, 'full-page.png');
+await takeScreenshot('./screenshots/full-page.png');
 
-// Take element screenshot
-await takeElementScreenshot(session, '#chart', 'chart-screenshot.png');
+// Take screenshot with custom viewport
+await setViewport(1920, 1080);
+await takeScreenshot('./screenshots/desktop-view.png');
 
-// Visual regression testing
-const bounds = await getElementBounds(session, '#header');
-expect(bounds.height).toBe(60);
+// Mobile screenshot
+await emulateDevice('iPhone 12');
+await takeScreenshot('./screenshots/mobile-view.png');
 ```
 
 ### Advanced Form Testing
 ```javascript
-// Multi-step form with validation
-await fillInput(session, '#step1-name', 'John Doe');
-await click(session, '#next-step');
-await waitForElementToBeVisible(session, '#step2');
+// Multi-step form with smart locators
+await fillInput(getByLabel('Full Name'), 'John Doe');
+await click(getByRole('button', { name: 'Next Step' }));
+await waitForText('Step 2: Skills');
 
-await selectMultipleOptions(session, '#skills', ['javascript', 'python']);
-await uploadMultipleFiles(session, '#documents', ['resume.pdf', 'cover.doc']);
+// Upload files
+await uploadFile(getByLabel('Resume'), './files/resume.pdf');
+await uploadFile(getByLabel('Cover Letter'), './files/cover.doc');
 
-const formData = await getFormData(session, '#application-form');
-expect(formData.name).toBe('John Doe');
-expect(formData.skills).toEqual(['javascript', 'python']);
+// Multi-select with checkboxes
+await check(getByLabel('JavaScript'));
+await check(getByLabel('Python'));
+await check(getByLabel('TypeScript'));
+
+// Verify form state
+const nameValue = await getValue(getByLabel('Full Name'));
+expect(nameValue).toBe('John Doe');
+
+const isJSSelected = await isChecked(getByLabel('JavaScript'));
+expect(isJSSelected).toBe(true);
+```
+
+### Smart Locator Examples
+```javascript
+// Role-based locators
+await click(getByRole('button', { name: 'Submit' }));
+await fillInput(getByRole('textbox', { name: 'Username' }), 'john');
+await click(getByRole('link', { name: 'Learn More' }));
+
+// Text-based locators
+await click(getByText('Sign In'));
+await waitForText('Welcome back!');
+
+// Label-based locators
+await fillInput(getByLabel('Email Address'), 'john@example.com');
+await check(getByLabel('Remember me'));
+
+// Test ID locators (for automation-specific elements)
+await click(getByTestId('submit-button'));
+await fillInput(getByTestId('search-input'), 'automation');
 ```
 
 ## 📊 CI/CD Integration
 
-### GitHub Actions
+### GitHub Actions Workflows
+
+The framework includes comprehensive CI/CD workflows:
+
+#### 1. Main CI Pipeline (.github/workflows/ci.yml)
 ```yaml
-name: Test Suite
+name: Super Pancake CI
 on: [push, pull_request]
 jobs:
-  test:
+  quick-tests:
+    name: Quick Tests (Unit & Config)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -592,12 +763,36 @@ jobs:
         with:
           node-version: '18'
       - run: npm ci
-      - run: npm test
-      - uses: actions/upload-artifact@v3
-        with:
-          name: test-reports
-          path: automationTestReport.html
+      - run: npm run test:unit-stable
+      - run: npm run test:config
+      
+  tier1-core-features:
+    name: TIER 1 Core Features
+    runs-on: ubuntu-latest
+    needs: quick-tests
+    steps:
+      - uses: actions/checkout@v4
+      - uses: browser-actions/setup-chrome@v1
+      - run: npm ci
+      - run: npm test tests/tier1-*.test.js --run
+        env:
+          HEADED: false
 ```
+
+#### 2. Manual TIER 1 Testing (.github/workflows/tier1-manual.yml)
+- Manual workflow dispatch with headed/headless options
+- Individual test selection capabilities
+- Virtual display support for headed mode
+
+#### 3. Nightly Stability (.github/workflows/nightly-stability.yml)
+- Scheduled runs with comprehensive test matrix
+- Node.js 18/20 + Chrome stable/beta combinations
+- Success rate monitoring with 80% threshold
+
+### Test Strategy
+- **Quick Tests**: Unit tests, config validation, performance checks
+- **TIER 1 Core**: Smart locators, advanced waiting, keyboard actions  
+- **Comprehensive**: Full stability suite with long-running tests
 
 ## 🤝 Contributing
 

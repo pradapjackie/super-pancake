@@ -160,17 +160,22 @@ const packageJson = {
   main: 'index.js',
   type: 'module',
   scripts: {
-    test: 'vitest',
+    test: 'node scripts/super-pancake-test.js',
     'test:run': 'vitest run',
     'test:ui': 'super-pancake-ui',
     'test:generate': 'super-pancake-generate',
-    start: 'vitest'
+    'test:tier1': 'npm test tests/tier1-*.test.js --run',
+    'test:headed': 'HEADED=true npm test',
+    'test:sequential': 'npm test --sequential',
+    'test:quick': 'npm run test:unit-stable && npm run test:config',
+    'test:stability': 'vitest run tests/stability-test-suite.test.js',
+    start: 'npm test'
   },
   dependencies: {
     'super-pancake-automation': 'latest',
     'vitest': '^3.2.4'
   },
-  keywords: ['automation', 'testing', 'super-pancake'],
+  keywords: ['automation', 'testing', 'super-pancake', 'sequential-testing', 'ci-cd'],
   author: '',
   license: 'MIT'
 };
@@ -196,9 +201,32 @@ const selectedReport = reportConfig[preferences.reports];
 const configContent = `export default {
   // Browser configuration
   browser: {
-    headless: ${preferences.headless},
-    devtools: ${!preferences.headless},
+    headless: process.env.HEADED !== 'true',
+    devtools: ${!preferences.headless || 'process.env.DEBUG === \'true\''},
     slowMo: ${preferences.headless ? 0 : 100}
+  },
+  
+  // Sequential test execution settings
+  execution: {
+    // Run tests sequentially to avoid Chrome port conflicts
+    sequential: true,
+    
+    // Vitest-specific settings for sequential execution
+    vitest: {
+      pool: 'forks',
+      poolOptions: {
+        forks: {
+          singleFork: true,
+        },
+      },
+      fileParallelism: false,
+      sequence: {
+        concurrent: false,
+        shuffle: false,
+      },
+      bail: 1, // Stop on first failure
+      retry: 1, // Retry failed tests once
+    }
   },
   
   // Test configuration  
@@ -251,183 +279,417 @@ writeFileSync(join(projectPath, 'super-pancake.config.js'), configContent);
 // Create directories
 mkdirSync(join(projectPath, 'tests'), { recursive: true });
 mkdirSync(join(projectPath, 'screenshots'), { recursive: true });
+mkdirSync(join(projectPath, 'scripts'), { recursive: true });
+mkdirSync(join(projectPath, 'utils'), { recursive: true });
+
+// Create the custom Super Pancake test runner
+const testRunnerContent = `#!/usr/bin/env node
+
+import { readFileSync } from 'fs';
+import { resolve } from 'path';
+import { spawn } from 'child_process';
+
+// Load Super Pancake configuration
+function loadSuperPancakeConfig() {
+  try {
+    const configPath = resolve('super-pancake.config.js');
+    const configModule = await import('file://' + configPath);
+    return configModule.default;
+  } catch (error) {
+    console.warn('⚠️ No super-pancake.config.js found, using defaults');
+    return {
+      execution: {
+        sequential: true,
+        vitest: {
+          pool: 'forks',
+          poolOptions: { forks: { singleFork: true } },
+          fileParallelism: false,
+          sequence: { concurrent: false, shuffle: false },
+          bail: 1,
+          retry: 1
+        }
+      }
+    };
+  }
+}
+
+// Build Vitest arguments from Super Pancake config
+function buildVitestArgs(config, userArgs) {
+  const args = [];
+  
+  if (config.execution?.sequential) {
+    args.push('--pool=forks');
+    args.push('--poolOptions.forks.singleFork=true');
+    args.push('--fileParallelism=false');
+    args.push('--sequence.concurrent=false');
+    args.push('--sequence.shuffle=false');
+  }
+  
+  if (config.execution?.vitest?.bail) {
+    args.push(\`--bail=\${config.execution.vitest.bail}\`);
+  }
+  
+  if (config.execution?.vitest?.retry) {
+    args.push(\`--retry=\${config.execution.vitest.retry}\`);
+  }
+  
+  // Add user arguments
+  args.push(...userArgs);
+  
+  return args;
+}
+
+// Run tests with Super Pancake configuration
+async function runTests() {
+  console.log('🥞 Super Pancake Test Runner');
+  console.log('📋 Loading configuration from super-pancake.config.js...');
+  
+  const config = await loadSuperPancakeConfig();
+  const userArgs = process.argv.slice(2);
+  const vitestArgs = buildVitestArgs(config, userArgs);
+  
+  console.log('⚡ Running tests with sequential execution...');
+  console.log(\`📝 Command: vitest \${vitestArgs.join(' ')}\`);
+  
+  const vitestProcess = spawn('npx', ['vitest', ...vitestArgs], {
+    stdio: 'inherit',
+    shell: true
+  });
+  
+  vitestProcess.on('exit', (code) => {
+    if (code === 0) {
+      console.log('✅ All tests completed successfully!');
+    } else {
+      console.log(\`❌ Tests failed with exit code \${code}\`);
+    }
+    process.exit(code);
+  });
+  
+  vitestProcess.on('error', (error) => {
+    console.error('❌ Failed to start test runner:', error.message);
+    process.exit(1);
+  });
+}
+
+runTests().catch(error => {
+  console.error('❌ Test runner error:', error.message);
+  process.exit(1);
+});
+`;
+
+writeFileSync(join(projectPath, 'scripts', 'super-pancake-test.js'), testRunnerContent);
+
+// Create test setup utility
+const testSetupContent = `// Test Setup Utility for ${projectName}
+// Provides automatic Chrome launch, session creation, and cleanup
+
+import { launchChrome } from 'super-pancake-automation/utils/simple-launcher.js';
+import { connectToChrome, closeConnection } from 'super-pancake-automation/core/simple-browser.js';
+import { createSession } from 'super-pancake-automation/core/simple-session.js';
+import { setSession, clearSession } from 'super-pancake-automation/core/session-context.js';
+
+/**
+ * Creates a complete test setup with Chrome, WebSocket, and session
+ * @param {Object} options - Configuration options
+ * @param {boolean} options.headed - Run Chrome in headed mode (default: false)
+ * @param {number} options.port - Chrome debugging port (default: 9222)
+ * @param {string} options.testName - Name for logging (default: 'Test')
+ * @returns {Promise<Object>} Object containing chrome, ws, session
+ */
+export async function createTestEnvironment(options = {}) {
+  const {
+    headed = false,
+    port = 9222,
+    testName = 'Test'
+  } = options;
+
+  console.log('🚀 Starting ' + testName + '...');
+  
+  try {
+    // Launch Chrome
+    const chrome = await launchChrome({ headed, port });
+    console.log('✅ Chrome launched');
+    
+    // Wait for Chrome to fully start
+    await new Promise(resolve => setTimeout(resolve, 5000));
+    
+    // Connect to Chrome
+    const ws = await connectToChrome(port);
+    console.log('✅ WebSocket connected');
+    
+    // Create session
+    const session = createSession(ws);
+    console.log('✅ Session created');
+    
+    // Set session context for simplified API
+    setSession(session);
+    console.log('✅ Session context set');
+    
+    console.log('🎯 ' + testName + ' setup completed successfully');
+    
+    return { chrome, ws, session };
+    
+  } catch (error) {
+    console.error('❌ ' + testName + ' setup failed:', error);
+    throw error;
+  }
+}
+
+/**
+ * Cleans up test environment
+ * @param {Object} environment - Environment object from createTestEnvironment
+ * @param {string} testName - Name for logging
+ */
+export async function cleanupTestEnvironment(environment, testName = 'Test') {
+  console.log('🧹 Cleaning up ' + testName + '...');
+  
+  try {
+    // Clear session context first
+    clearSession();
+    console.log('✅ Session context cleared');
+    
+    if (environment.session) {
+      environment.session.destroy();
+      console.log('✅ Session destroyed');
+    }
+    if (environment.ws) {
+      closeConnection(environment.ws);
+      console.log('✅ WebSocket closed');
+    }
+    if (environment.chrome) {
+      await environment.chrome.kill();
+      console.log('✅ Chrome terminated');
+    }
+    console.log('🎯 ' + testName + ' cleanup completed');
+  } catch (error) {
+    console.warn('⚠️ ' + testName + ' cleanup warning:', error.message);
+  }
+}
+
+/**
+ * Quick setup for standard form tests
+ * @param {string} testName - Name for logging
+ * @returns {Promise<Object>} Test environment with chrome, ws, session
+ */
+export function createFormTestEnvironment(testName = 'Form Test') {
+  return createTestEnvironment({
+    headed: process.env.HEADED === 'true' || process.env.DEBUG === 'true',
+    port: 9222,
+    testName
+  });
+}
+
+/**
+ * Setup for headed tests (useful for debugging)
+ * @param {string} testName - Name for logging
+ * @returns {Promise<Object>} Test environment with chrome, ws, session
+ */
+export function createHeadedTestEnvironment(testName = 'Headed Test') {
+  return createTestEnvironment({
+    headed: true,
+    port: 9222,
+    testName
+  });
+}
+`;
+
+writeFileSync(join(projectPath, 'utils', 'test-setup.js'), testSetupContent);
 
 // Generate sample tests based on user preferences
 function generateSampleTests(projectName, preferences) {
-  const headedValue = !preferences.headless; // headed is opposite of headless
-  const screenshotCode = preferences.screenshots !== 2 ? 
-    `      // Take screenshot\n      await takeElementScreenshot(session, 'h1', './screenshots/example-title.png');` : 
-    `      // Screenshots disabled`;
 
   const sampleTests = {
     0: { // Basic example test
       filename: 'basic.test.js',
-      content: `// Basic Website Testing Examples
-// Perfect for getting started with Super Pancake Automation
-// These tests demonstrate the framework API and patterns
+      content: `// Basic Super Pancake Automation Examples
+// Real browser automation using the sessionless API
+// These tests demonstrate modern Super Pancake patterns
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { createTestEnvironment, cleanupTestEnvironment } from './utils/test-setup.js';
+import {
+  enableDOM,
+  navigateTo,
+  getByText,
+  getByRole,
+  fillInput,
+  click,
+  takeScreenshot,
+  getText,
+  waitForText
+} from 'super-pancake-automation/core/simple-dom-v2.js';
 
-// Note: These are simulation-based tests for demonstration purposes
-// For real browser testing, use the launch functions from super-pancake-automation/utils/launcher.js
+let testEnv;
 
 describe('${projectName} Basic Tests', () => {
   
-  it('should demonstrate navigation and page verification', async () => {
-    console.log('🌐 Simulating website navigation...');
-    
-    // Simulate navigating to a homepage
-    const targetUrl = 'https://example.com';
-    console.log('📍 Navigation target:', targetUrl);
-    
-    // Simulate page title verification
-    const expectedTitle = 'Example Domain';
-    console.log('✅ Page title verified:', expectedTitle);
-    
-    // Demonstrate successful navigation
-    expect(targetUrl).toContain('example.com');
-    console.log('✅ Navigation test completed successfully');
-  });
-
-  it('should demonstrate form input simulation', async () => {
-    console.log('📝 Simulating form input interactions...');
-    
-    // Simulate filling a search form
-    const searchQuery = '${projectName} testing';
-    console.log('🔍 Search query:', searchQuery);
-    
-    // Simulate form validation
-    const isValidInput = searchQuery.length > 0;
-    expect(isValidInput).toBe(true);
-    
-    console.log('✅ Form input simulation completed');
-  });
-
-  it('should demonstrate element visibility checks', async () => {
-    console.log('👁️ Simulating element visibility checks...');
-    
-    // Simulate checking various page elements
-    const elements = [
-      { selector: 'h1', name: 'Main heading', visible: true },
-      { selector: 'nav', name: 'Navigation menu', visible: true },
-      { selector: '.content', name: 'Main content', visible: true }
-    ];
-    
-    elements.forEach(element => {
-      const status = element.visible ? '✅' : '❌';
-      const visibility = element.visible ? 'visible' : 'hidden';
-      console.log(status, element.name, '(' + element.selector + '):', visibility);
-      expect(element.visible).toBe(true);
+  beforeAll(async () => {
+    console.log('🚀 Setting up ${projectName} test environment...');
+    testEnv = await createTestEnvironment({ 
+      headed: ${!preferences.headless},
+      testName: '${projectName} Basic Tests'
     });
+    await enableDOM();
+  }, 30000);
+
+  afterAll(async () => {
+    await cleanupTestEnvironment(testEnv, '${projectName} Basic Tests');
+  });
+  
+  it('should navigate to Example.com and verify content', async () => {
+    console.log('🌐 Testing navigation and content verification...');
     
-    console.log('✅ Element visibility checks completed');
+    // Navigate to example website
+    await navigateTo('https://example.com');
+    
+    // Verify page title using smart locator
+    const heading = await getByText('Example Domain');
+    expect(heading).toBeTruthy();
+    
+    // Get heading text and verify
+    const headingText = await getText(heading);
+    expect(headingText).toContain('Example Domain');
+    
+    console.log('✅ Navigation and content verification completed');
   });
 
-  it('should demonstrate screenshot capture workflow', async () => {
-    console.log('📸 Simulating screenshot capture...');
+  it('should demonstrate smart locators', async () => {
+    console.log('🎯 Testing smart locators...');
     
-    // Simulate screenshot metadata
-    const screenshotInfo = {
-      format: 'png',
-      quality: 90,
-      fullPage: true,
-      timestamp: new Date().toISOString(),
-      filename: \`${projectName}-test-\${Date.now()}.png\`
-    };
+    await navigateTo('https://example.com');
     
-    console.log(\`📸 Screenshot captured: \${screenshotInfo.filename}\`);
-    console.log(\`📊 Format: \${screenshotInfo.format}, Quality: \${screenshotInfo.quality}%\`);
+    // Find link using smart locator
+    const moreInfoLink = await getByText('More information...');
+    expect(moreInfoLink).toBeTruthy();
     
-    expect(screenshotInfo.format).toBe('png');
-    console.log('✅ Screenshot workflow completed');
+    // Verify link is present
+    const linkText = await getText(moreInfoLink);
+    expect(linkText).toBe('More information...');
+    
+    console.log('✅ Smart locators test completed');
+  });
+
+  it('should take screenshots', async () => {
+    console.log('📸 Testing screenshot capture...');
+    
+    await navigateTo('https://example.com');
+    
+    // Take full page screenshot
+    await takeScreenshot('./screenshots/${projectName}-example.png');
+    
+    console.log('✅ Screenshot captured successfully');
+  });
+
+  it('should wait for dynamic content', async () => {
+    console.log('⏳ Testing wait strategies...');
+    
+    await navigateTo('https://example.com');
+    
+    // Wait for specific text to appear
+    await waitForText('Example Domain');
+    
+    // Verify the text is now visible
+    const content = await getByText('This domain is for use in illustrative examples');
+    expect(content).toBeTruthy();
+    
+    console.log('✅ Wait strategies test completed');
   });
 });`
     },
     1: { // Form testing examples
       filename: 'form.test.js',
       content: `// Form Testing Examples
-// Comprehensive form validation and interaction testing
+// Real form automation using Super Pancake sessionless API
 // Perfect for learning form automation patterns
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { createTestEnvironment, cleanupTestEnvironment } from './utils/test-setup.js';
+import {
+  enableDOM,
+  navigateTo,
+  getByLabel,
+  getByRole,
+  getByPlaceholder,
+  fillInput,
+  click,
+  check,
+  selectOption,
+  isChecked,
+  getValue,
+  takeScreenshot,
+  waitForText
+} from 'super-pancake-automation/core/simple-dom-v2.js';
 
-// Note: These are simulation-based tests for demonstration purposes
-// For real browser testing, use the launch functions from super-pancake-automation/utils/launcher.js
+let testEnv;
 
 describe('${projectName} Form Tests', () => {
-
-  it('should test basic form inputs', async () => {
-    console.log('📝 Simulating basic form input testing...');
-    
-    // Simulate form data entry
-    const formData = {
-      customerName: 'John Doe',
-      telephone: '+1-555-123-4567',
-      email: 'john.doe@example.com',
-      message: 'Test message for ${projectName} automation framework.'
-    };
-    
-    console.log('📋 Form input simulation:');
-    console.log(\`   👤 Customer name: \${formData.customerName}\`);
-    console.log(\`   📞 Telephone: \${formData.telephone}\`);
-    console.log(\`   📧 Email: \${formData.email}\`);
-    console.log(\`   💬 Message: \${formData.message.substring(0, 30)}...\`);
-    
-    // Simulate input validation
-    const inputValidation = {
-      nameValid: formData.customerName.length >= 2,
-      phoneValid: /^[+]?[1-9]?[0-9]{7,15}$/.test(formData.telephone.replace(/[^0-9]/g, '')),
-      emailValid: /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(formData.email),
-      messageValid: formData.message.length >= 10
-    };
-    
-    console.log('✅ Input validation results:');
-    Object.entries(inputValidation).forEach(([field, isValid]) => {
-      console.log(\`   \${isValid ? '✅' : '❌'} \${field}: \${isValid}\`);
+  
+  beforeAll(async () => {
+    console.log('🚀 Setting up ${projectName} form test environment...');
+    testEnv = await createTestEnvironment({ 
+      headed: ${!preferences.headless},
+      testName: '${projectName} Form Tests'
     });
-    
-    // Validate all inputs are working correctly
-    const allInputsValid = Object.values(inputValidation).every(valid => valid);
-    expect(allInputsValid).toBe(true);
-    expect(formData.customerName).toBe('John Doe');
-    
-    console.log('✅ Basic form input simulation completed');
+    await enableDOM();
+  }, 30000);
+
+  afterAll(async () => {
+    await cleanupTestEnvironment(testEnv, '${projectName} Form Tests');
   });
 
-  it('should test dropdown selections', async () => {
-    console.log('📎 Simulating dropdown selection testing...');
+  it('should fill and submit a contact form', async () => {
+    console.log('📝 Testing contact form automation...');
     
-    // Simulate dropdown options
-    const dropdownFields = {
-      productType: {
-        options: ['electronics', 'clothing', 'books', 'home'],
-        selected: 'electronics',
-        label: 'Product Type'
-      },
-      priority: {
-        options: ['low', 'medium', 'high', 'urgent'],
-        selected: 'high',
-        label: 'Priority Level'
-      }
-    };
+    // Navigate to a demo form (you can replace with your own form URL)
+    await navigateTo('https://www.selenium.dev/selenium/web/web-form.html');
     
-    console.log('📋 Dropdown selection testing:');
+    // Fill form using smart locators
+    await fillInput(getByLabel('Text input'), 'John Doe');
+    await fillInput(getByLabel('Password'), 'SecurePassword123');
+    await fillInput(getByLabel('Textarea'), 'This is a test message for ${projectName}');
     
-    Object.entries(dropdownFields).forEach(([fieldName, field]) => {
-      console.log(\`   🔽 \${field.label}:\`);
-      console.log(\`      Available: [\${field.options.join(', ')}]\`);
-      console.log(\`      Selected: \${field.selected}\`);
-      
-      // Validate selection is within options
-      const validSelection = field.options.includes(field.selected);
-      console.log(\`      Valid: \${validSelection ? '✅' : '❌'}\`);
-      
-      expect(validSelection).toBe(true);
-    });
+    // Select dropdown option
+    await selectOption(getByLabel('Dropdown (select)'), '2');
     
-    expect(dropdownFields.productType.selected).toBe('electronics');
+    // Check a checkbox
+    await check(getByLabel('Default checkbox'));
     
-    console.log('✅ Dropdown selection simulation completed');
+    // Verify form state
+    const nameValue = await getValue(getByLabel('Text input'));
+    expect(nameValue).toBe('John Doe');
+    
+    const isCheckboxChecked = await isChecked(getByLabel('Default checkbox'));
+    expect(isCheckboxChecked).toBe(true);
+    
+    // Take screenshot before submit
+    await takeScreenshot('./screenshots/${projectName}-form-before-submit.png');
+    
+    // Submit form
+    await click(getByRole('button', { name: 'Submit' }));
+    
+    // Wait for success message
+    await waitForText('Received!');
+    
+    console.log('✅ Form submission completed successfully');
+  });
+
+  it('should test form validation patterns', async () => {
+    console.log('✅ Testing form validation...');
+    
+    await navigateTo('https://www.selenium.dev/selenium/web/web-form.html');
+    
+    // Test required field validation by leaving field empty
+    await click(getByRole('button', { name: 'Submit' }));
+    
+    // Fill form with valid data
+    await fillInput(getByLabel('Text input'), 'Jane Smith');
+    await fillInput(getByLabel('Password'), 'ValidPass123');
+    
+    // Verify the form accepts valid input
+    const inputValue = await getValue(getByLabel('Text input'));
+    expect(inputValue).toBe('Jane Smith');
+    
+    console.log('✅ Form validation patterns tested');
   });
 
   it('should test form validation', async () => {
@@ -474,75 +736,82 @@ describe('${projectName} Form Tests', () => {
     },
     2: { // API testing examples
       filename: 'api.test.js',
-      content: `// API Testing Examples
-// Comprehensive API validation and testing patterns
-// Perfect for learning API automation concepts
+      content: `// API Testing Examples with Browser Integration
+// Test APIs through browser interactions and network monitoring
+// Perfect for learning API automation with Super Pancake
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { createTestEnvironment, cleanupTestEnvironment } from './utils/test-setup.js';
+import {
+  enableDOM,
+  navigateTo,
+  enableNetworkInterception,
+  waitForResponse,
+  getNetworkRequests,
+  click,
+  getByRole,
+  waitForText
+} from 'super-pancake-automation/core/simple-dom-v2.js';
 
-// Note: These are simulation-based tests for demonstration purposes
-// For real API testing, use fetch or axios with the response validation patterns shown
+let testEnv;
 
 describe('${projectName} API Tests', () => {
+  
+  beforeAll(async () => {
+    console.log('🚀 Setting up ${projectName} API test environment...');
+    testEnv = await createTestEnvironment({ 
+      headed: ${!preferences.headless},
+      testName: '${projectName} API Tests'
+    });
+    await enableDOM();
+    await enableNetworkInterception();
+  }, 30000);
 
-  it('should simulate API response validation', async () => {
-    console.log('🔌 Simulating API response testing...');
-    
-    // Simulate API response data
-    const mockApiResponse = {
-      status: 200,
-      statusText: 'OK',
-      headers: {
-        'content-type': 'application/json',
-        'x-response-time': '45ms'
-      },
-      data: {
-        id: 1,
-        title: '${projectName} API Test',
-        userId: 123,
-        completed: false,
-        timestamp: new Date().toISOString()
-      }
-    };
-    
-    console.log('📊 API Response simulation:');
-    console.log(\`   Status: \${mockApiResponse.status} \${mockApiResponse.statusText}\`);
-    console.log(\`   Content-Type: \${mockApiResponse.headers['content-type']}\`);
-    console.log(\`   Response Time: \${mockApiResponse.headers['x-response-time']}\`);
-    console.log(\`   Data ID: \${mockApiResponse.data.id}\`);
-    
-    // Simulate response validation
-    expect(mockApiResponse.status).toBe(200);
-    expect(mockApiResponse.data.id).toBe(1);
-    expect(mockApiResponse.data.title).toContain('${projectName}');
-    expect(mockApiResponse.headers['content-type']).toBe('application/json');
-    
-    console.log('✅ API response validation completed');
+  afterAll(async () => {
+    await cleanupTestEnvironment(testEnv, '${projectName} API Tests');
   });
 
-  it('should test error handling patterns', async () => {
-    console.log('⚠️ Simulating API error handling...');
+  it('should intercept and validate API calls', async () => {
+    console.log('🔌 Testing API interception...');
     
-    // Simulate different error scenarios
-    const errorScenarios = [
-      { status: 400, error: 'Bad Request', message: 'Invalid parameters' },
-      { status: 401, error: 'Unauthorized', message: 'Authentication required' },
-      { status: 404, error: 'Not Found', message: 'Resource not found' },
-      { status: 500, error: 'Internal Server Error', message: 'Server error occurred' }
-    ];
+    // Navigate to a page that makes API calls
+    await navigateTo('https://jsonplaceholder.typicode.com/');
     
-    console.log('🔍 Error handling scenarios:');
+    // Click on a link that triggers API calls
+    await click(getByRole('link', { name: '/posts' }));
     
-    errorScenarios.forEach(scenario => {
-      console.log(\`   \${scenario.status} \${scenario.error}: \${scenario.message}\`);
-      
-      // Validate error status codes
-      expect(scenario.status).toBeGreaterThanOrEqual(400);
-      expect(scenario.error).toBeTruthy();
-      expect(scenario.message).toBeTruthy();
-    });
+    // Wait for API response
+    const response = await waitForResponse('*/posts');
     
-    console.log('✅ Error handling patterns tested');
+    // Validate response
+    expect(response.status).toBe(200);
+    expect(response.headers['content-type']).toContain('application/json');
+    
+    console.log('✅ API interception completed');
+  });
+
+  it('should monitor network requests', async () => {
+    console.log('📊 Testing network monitoring...');
+    
+    await navigateTo('https://httpbin.org/');
+    
+    // Click on HTTP Methods section
+    await click(getByRole('link', { name: 'HTTP Methods' }));
+    
+    // Get all captured network requests
+    const requests = await getNetworkRequests();
+    
+    // Validate that we captured some requests
+    expect(requests.length).toBeGreaterThan(0);
+    
+    // Find requests to httpbin.org
+    const httpbinRequests = requests.filter(req => 
+      req.url.includes('httpbin.org')
+    );
+    
+    expect(httpbinRequests.length).toBeGreaterThan(0);
+    
+    console.log(\`✅ Captured \${requests.length} network requests\`);
   });
 
   it('should validate JSON schema patterns', async () => {
@@ -589,57 +858,106 @@ describe('${projectName} API Tests', () => {
     3: { // E2E workflow examples
       filename: 'e2e.test.js',
       content: `// End-to-End Testing Examples
-// Complete user journeys and workflows
+// Complete user journeys using Super Pancake sessionless API
 // Perfect for demonstrating complex automation scenarios
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { createTestEnvironment, cleanupTestEnvironment } from './utils/test-setup.js';
+import {
+  enableDOM,
+  navigateTo,
+  getByLabel,
+  getByRole,
+  getByText,
+  getByTestId,
+  fillInput,
+  click,
+  check,
+  selectOption,
+  waitForText,
+  takeScreenshot,
+  getValue,
+  isChecked,
+  emulateDevice,
+  setViewport
+} from 'super-pancake-automation/core/simple-dom-v2.js';
 
-// Note: These are simulation-based tests for demonstration purposes
-// For real browser testing, use the launch functions from super-pancake-automation/utils/launcher.js
+let testEnv;
 
 describe('${projectName} E2E Tests', () => {
-
-  it('should complete a user registration workflow', async () => {
-    console.log('👤 Simulating user registration workflow...');
-    
-    // Simulate registration form data
-    const registrationData = {
-      firstName: 'John',
-      lastName: 'Doe',
-      email: 'john.doe@${projectName}.com',
-      password: 'SecurePass123!',
-      confirmPassword: 'SecurePass123!',
-      agreeToTerms: true
-    };
-    
-    console.log('📝 Registration workflow:');
-    console.log(\`   Name: \${registrationData.firstName} \${registrationData.lastName}\`);
-    console.log(\`   Email: \${registrationData.email}\`);
-    console.log(\`   Terms accepted: \${registrationData.agreeToTerms}\`);
-    
-    // Simulate form validation
-    const validationChecks = {
-      emailValid: registrationData.email.includes('@'),
-      passwordMatch: registrationData.password === registrationData.confirmPassword,
-      termsAccepted: registrationData.agreeToTerms,
-      fieldsComplete: Object.values(registrationData).every(field => field)
-    };
-    
-    console.log('✅ Validation results:');
-    Object.entries(validationChecks).forEach(([check, passed]) => {
-      console.log(\`   \${passed ? '✅' : '❌'} \${check}: \${passed}\`);
+  
+  beforeAll(async () => {
+    console.log('🚀 Setting up ${projectName} E2E test environment...');
+    testEnv = await createTestEnvironment({ 
+      headed: ${!preferences.headless},
+      testName: '${projectName} E2E Tests'
     });
-    
-    // Validate registration workflow
-    expect(validationChecks.emailValid).toBe(true);
-    expect(validationChecks.passwordMatch).toBe(true);
-    expect(validationChecks.termsAccepted).toBe(true);
-    
-    console.log('✅ User registration simulation completed');
+    await enableDOM();
+  }, 30000);
+
+  afterAll(async () => {
+    await cleanupTestEnvironment(testEnv, '${projectName} E2E Tests');
   });
 
-  it('should test shopping cart workflow', async () => {
-    console.log('🛒 Simulating shopping cart workflow...');
+  it('should complete a full user registration workflow', async () => {
+    console.log('👤 Testing complete user registration...');
+    
+    // Navigate to registration page (using a demo form)
+    await navigateTo('https://www.selenium.dev/selenium/web/web-form.html');
+    
+    // Fill registration form using smart locators
+    await fillInput(getByLabel('Text input'), 'John Doe');
+    await fillInput(getByLabel('Password'), 'SecurePass123!');
+    await fillInput(getByLabel('Textarea'), 'User from ${projectName} automation test');
+    
+    // Select options and check terms
+    await selectOption(getByLabel('Dropdown (select)'), '1');
+    await check(getByLabel('Default checkbox'));
+    
+    // Take screenshot before submission
+    await takeScreenshot('./screenshots/${projectName}-registration-form.png');
+    
+    // Verify form state before submission
+    const nameValue = await getValue(getByLabel('Text input'));
+    expect(nameValue).toBe('John Doe');
+    
+    const isTermsChecked = await isChecked(getByLabel('Default checkbox'));
+    expect(isTermsChecked).toBe(true);
+    
+    // Submit registration
+    await click(getByRole('button', { name: 'Submit' }));
+    
+    // Wait for success confirmation
+    await waitForText('Received!');
+    
+    console.log('✅ Registration workflow completed successfully');
+  });
+
+  it('should test responsive design on mobile', async () => {
+    console.log('📱 Testing mobile responsive design...');
+    
+    // Emulate iPhone device
+    await emulateDevice('iPhone 12');
+    
+    // Navigate to responsive website
+    await navigateTo('https://example.com');
+    
+    // Verify mobile layout
+    const heading = await getByText('Example Domain');
+    expect(heading).toBeTruthy();
+    
+    // Take mobile screenshot
+    await takeScreenshot('./screenshots/${projectName}-mobile-view.png');
+    
+    // Switch to desktop view
+    await setViewport(1920, 1080);
+    await takeScreenshot('./screenshots/${projectName}-desktop-view.png');
+    
+    console.log('✅ Responsive design testing completed');
+  });
+
+  it('should test search functionality workflow', async () => {
+    console.log('🔍 Testing search functionality...');
     
     // Simulate product catalog
     const products = [
@@ -740,7 +1058,7 @@ generateSampleTests(projectName, preferences);
 // Create README
 const readmeContent = `# ${projectName}
 
-Super Pancake automation testing project
+Super Pancake automation testing project with sequential execution and Chrome port conflict prevention.
 
 ## Quick Start
 
@@ -749,27 +1067,84 @@ Dependencies are automatically installed during project creation.
 ## Usage
 
 \`\`\`bash
-# Run tests
+# Run tests (sequential execution by default)
 npm test
+
+# Run specific test patterns
+npm test tests/tier1-*.test.js --run
+
+# Run tests with visible browser for debugging
+npm run test:headed
 
 # Run tests once
 npm run test:run
 
 # Run with UI
 npm run test:ui
+
+# Environment variables
+HEADED=true npm test    # Run with visible browser
+DEBUG=true npm test     # Enable debug mode
 \`\`\`
+
+## Available Scripts
+
+- \`npm test\` - Run tests with Super Pancake test runner (sequential)
+- \`npm run test:tier1\` - Run TIER 1 core feature tests
+- \`npm run test:headed\` - Run tests with visible browser
+- \`npm run test:sequential\` - Force sequential execution
+- \`npm run test:quick\` - Run quick unit and config tests
+- \`npm run test:stability\` - Run stability test suite
 
 ## Features
 
-- ✅ Screenshot capture (including on failure)
+- ✅ Sequential test execution (prevents Chrome port conflicts)
+- 📸 Screenshot capture (including on failure) 
 - 📊 HTML test reporting
 - 🎯 Chrome DevTools Protocol
-- 🔍 Element selection and interaction
+- 🔍 Advanced element selection and interaction
 - 📱 Responsive test runner UI
+- 🚀 Custom Super Pancake test runner
+- 🔧 Environment variable support
 
 ## Configuration
 
-Edit \`super-pancake.config.js\` to customize browser settings, screenshots, and reporting.
+Edit \`super-pancake.config.js\` to customize:
+- Browser settings (headless/headed mode)
+- Sequential execution settings
+- Screenshot configuration  
+- Test timeouts and retries
+- Reporting options
+
+### Sequential Execution
+
+This project is configured for sequential test execution to prevent Chrome port conflicts:
+
+\`\`\`javascript
+execution: {
+  sequential: true,
+  vitest: {
+    pool: 'forks',
+    poolOptions: { forks: { singleFork: true } },
+    fileParallelism: false,
+    sequence: { concurrent: false, shuffle: false },
+    bail: 1,
+    retry: 1
+  }
+}
+\`\`\`
+
+## Project Structure
+
+\`\`\`
+${projectName}/
+├── scripts/
+│   └── super-pancake-test.js    # Custom test runner
+├── tests/                       # Your test files
+├── screenshots/                 # Auto-generated screenshots
+├── super-pancake.config.js     # Main configuration
+└── package.json                # Project dependencies
+\`\`\`
 
 ## Documentation
 
@@ -802,6 +1177,11 @@ console.log(`  cd ${projectName}`);
 console.log('  npm test');
 console.log('');
 
+console.log('🎯 Key Features Enabled:');
+console.log('  ✅ Sequential test execution (prevents Chrome port conflicts)');
+console.log('  🚀 Custom Super Pancake test runner');
+console.log('  🔧 Environment variable support (HEADED=true, DEBUG=true)');
+
 // Dynamic success message based on preferences
 if (preferences.screenshots !== 2) {
   console.log('📸 Screenshots will be saved to ./screenshots/');
@@ -817,14 +1197,19 @@ if (preferences.ui) {
   console.log('🎯 Run "npx super-pancake-ui" for interactive testing');
 }
 
-if (preferences.headless) {
-  console.log('⚡ Tests will run in headless mode for faster execution');
-} else {
-  console.log('👀 Tests will run with visible browser windows');
-}
+console.log('⚡ Tests configured for sequential execution (headless by default)');
+console.log('👀 Use "npm run test:headed" or "HEADED=true npm test" for visible browser');
 
 const sampleTypes = ['Basic', 'Form testing', 'API testing', 'E2E workflow', 'All'];
 console.log(`📝 Generated ${sampleTypes[preferences.samples]} sample tests`);
+
+console.log('');
+console.log('🛠️ Available Commands:');
+console.log('  npm test                 # Run tests (sequential)');
+console.log('  npm run test:headed      # Run with visible browser');
+console.log('  npm run test:tier1       # Run TIER 1 core tests');
+console.log('  npm run test:quick       # Run quick tests only');
+console.log('  npm run test:ui          # Interactive test runner');
 
 console.log('');
 console.log('Happy testing! 🥞');
