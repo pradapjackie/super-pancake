@@ -7,16 +7,20 @@ import {
   getByPlaceholder, getByTestId, getByTitle, getByAltText,
   fillInput, getValue, click, takeScreenshot
 } from '../core/simple-dom-v2.js';
-import { resolve } from 'path';
+import { getFormPath, getScreenshotsDir, getTestTimeouts, getEnvironmentInfo } from '../utils/ci-config.js';
 
 describe('🎯 TIER 1 Smart Locators Test', () => {
   let testEnv;
-  const formUrl = `file://${resolve('./public/form-comprehensive.html')}`;
+  const formUrl = getFormPath();
+  const timeouts = getTestTimeouts();
+  
+  // Log environment info for debugging
+  console.log('🌍 Environment:', getEnvironmentInfo());
 
   beforeAll(async () => {
     testEnv = await createFormTestEnvironment('Smart Locators Test');
-    setDefaultTimeout(5000);
-  }, 45000);
+    setDefaultTimeout(timeouts.medium);
+  }, timeouts.long);
 
   afterAll(async () => {
     // Skip cleanup if DEBUG environment variable is set
@@ -39,7 +43,7 @@ describe('🎯 TIER 1 Smart Locators Test', () => {
     const submitButton = await getByRole('button', { name: 'Submit' });
     expect(submitButton).toBeDefined();
     
-    await takeScreenshot('./screenshots/getByRole-test.png');
+    await takeScreenshot(`${getScreenshotsDir()}/getByRole-test.png`);
     console.log('✅ getByRole working correctly');
   });
 
@@ -141,7 +145,7 @@ describe('🎯 TIER 1 Smart Locators Test', () => {
     expect(await getValue(emailByPlaceholder)).toBe('john@example.com');
     expect(await getValue(testByTestId)).toBe('Combined test');
     
-    await takeScreenshot('./screenshots/smart-locators-combined.png');
+    await takeScreenshot(`${getScreenshotsDir()}/smart-locators-combined.png`);
     console.log('✅ Combined smart locators workflow working correctly');
   });
 });
