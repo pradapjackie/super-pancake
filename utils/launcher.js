@@ -7,7 +7,7 @@ import fetch from 'node-fetch';
  * @param {Object} options
  * @param {boolean} options.headed - If true, launch with visible window
  */
-export async function launchChrome({ headed = false, port = 9222, maxRetries = 3 } = {}) {
+export async function launchChrome({ headed = false, port = null, maxRetries = 3 } = {}) {
     // Check for environment variable override from UI
     if (process.env.SUPER_PANCAKE_HEADLESS === 'true') {
         headed = false;
@@ -23,21 +23,26 @@ export async function launchChrome({ headed = false, port = 9222, maxRetries = 3
         try {
             console.log(`🚀 Launching Chrome... [Attempt ${attempt}/${maxRetries}]`);
             
-            // Clean up any existing Chrome processes more thoroughly
-            await cleanupChromeProcesses(port);
-            
-            // Verify port is available
-            const isPortFree = await checkPortAvailability(port);
-            if (!isPortFree) {
-                console.log(`⚠️ Port ${port} is still in use after cleanup, trying force cleanup...`);
-                await forceCleanupPort(port);
+            // Clean up any existing Chrome processes
+            if (port) {
+                await cleanupChromeProcesses(port);
                 
-                // Wait a bit more and check again
-                await new Promise(resolve => setTimeout(resolve, 1000));
-                const isPortFreeNow = await checkPortAvailability(port);
-                if (!isPortFreeNow) {
-                    throw new Error(`Port ${port} is still occupied after force cleanup`);
+                // Verify port is available if specified
+                const isPortFree = await checkPortAvailability(port);
+                if (!isPortFree) {
+                    console.log(`⚠️ Port ${port} is still in use after cleanup, trying force cleanup...`);
+                    await forceCleanupPort(port);
+                    
+                    // Wait a bit more and check again
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    const isPortFreeNow = await checkPortAvailability(port);
+                    if (!isPortFreeNow) {
+                        throw new Error(`Port ${port} is still occupied after force cleanup`);
+                    }
                 }
+            } else {
+                // When no port specified, do general cleanup
+                await cleanupChromeProcesses();
             }
 
             const chrome = await chromeLauncher.launch({
@@ -61,13 +66,14 @@ export async function launchChrome({ headed = false, port = 9222, maxRetries = 3
                     '--disable-plugins',
                     '--disable-default-apps'
                 ],
-                port: port,
+                // Let chrome-launcher auto-select port if none specified
+                ...(port ? { port: port } : {}),
                 ignoreDefaultFlags: false,
                 handleSIGINT: true
             });
 
             // Verify Chrome actually launched and is accessible
-            await verifyChromeLaunched(chrome, port);
+            await verifyChromeLaunched(chrome, chrome.port);
             
             console.log(`✅ Chrome successfully launched at port ${chrome.port} in ${headed ? 'headed' : 'headless'} mode`);
 
@@ -119,64 +125,74 @@ async function cleanupChromeProcesses(port) {
         
         try {
             if (process.platform === 'win32') {
-                // Enhanced Windows cleanup
-                console.log('🪟 Windows Chrome cleanup...');
+                // Enhanced Windows cleanup - ONLY target automation Chrome instances
+                console.log('🪟 Windows Chrome cleanup (automation only)...');
                 
-                // Kill Chrome processes more thoroughly
-                await execAsync('taskkill /f /im chrome.exe 2>nul || echo No chrome.exe processes');
-                await execAsync('taskkill /f /im GoogleChromeHelper 2>nul || echo No GoogleChromeHelper processes');
-                await execAsync('taskkill /f /im "Google Chrome" 2>nul || echo No Google Chrome processes');
-                
-                // Kill specific debugging port processes
-                const netstatResult = await execAsync(`netstat -ano | findstr :${port}`, { ignoreErrors: true });
-                if (netstatResult && netstatResult.trim()) {
-                    console.log(`🔍 Found processes on port ${port}, cleaning up...`);
-                    // Extract PIDs and kill them
-                    const lines = netstatResult.split('\n').filter(line => line.includes(':' + port));
-                    for (const line of lines) {
-                        const parts = line.trim().split(/\s+/);
-                        const pid = parts[parts.length - 1];
-                        if (pid && !isNaN(pid)) {
-                            await execAsync(`taskkill /f /pid ${pid} 2>nul || echo PID ${pid} not found`);
+                if (port) {
+                    // Kill specific debugging port processes only
+                    const netstatResult = await execAsync(`netstat -ano | findstr :${port}`, { ignoreErrors: true });
+                    if (netstatResult && netstatResult.trim()) {
+                        console.log(`🔍 Found processes on port ${port}, cleaning up...`);
+                        // Extract PIDs and kill them
+                        const lines = netstatResult.split('\n').filter(line => line.includes(':' + port));
+                        for (const line of lines) {
+                            const parts = line.trim().split(/\s+/);
+                            const pid = parts[parts.length - 1];
+                            if (pid && !isNaN(pid)) {
+                                await execAsync(`taskkill /f /pid ${pid} 2>nul || echo PID ${pid} not found`);
+                            }
                         }
                     }
+                    console.log(`🎯 Cleaned up Chrome processes on port ${port}`);
+                } else {
+                    // When no port specified, try to find automation-specific processes
+                    // Use wmic to find processes with automation flags
+                    await execAsync('wmic process where "CommandLine like \'%--enable-automation%\'" delete 2>nul || echo No automation processes');
+                    await execAsync('wmic process where "CommandLine like \'%--headless%\'" delete 2>nul || echo No headless processes');
+                    console.log('🎯 Cleaned up automation-specific Chrome processes');
                 }
                 
             } else if (process.platform === 'darwin') {
-                // Enhanced macOS cleanup
-                console.log('🍎 macOS Chrome cleanup...');
+                // Enhanced macOS cleanup - ONLY target automation Chrome instances
+                console.log('🍎 macOS Chrome cleanup (automation only)...');
                 
-                // Kill processes by port first
-                await execAsync(`lsof -ti:${port} | xargs kill -9 2>/dev/null || true`);
+                if (port) {
+                    // Kill processes by specific port only
+                    await execAsync(`lsof -ti:${port} | xargs kill -9 2>/dev/null || true`);
+                    console.log(`🎯 Cleaned up Chrome processes on port ${port}`);
+                } else {
+                    // When no port specified, only target automation-specific processes
+                    // Look for Chrome processes with automation flags
+                    await execAsync('pkill -f "chrome.*--enable-automation" 2>/dev/null || true');
+                    await execAsync('pkill -f "chrome.*--headless" 2>/dev/null || true');
+                    await execAsync('pkill -f "chrome.*--disable-dev-shm-usage" 2>/dev/null || true');
+                    console.log('🎯 Cleaned up automation-specific Chrome processes');
+                }
                 
-                // Kill Chrome processes by name and pattern
-                await execAsync('pkill -f "Google Chrome.*--remote-debugging-port" 2>/dev/null || true');
-                await execAsync('pkill -f "Chromium.*--remote-debugging-port" 2>/dev/null || true');
-                await execAsync('pkill -f "chrome.*--remote-debugging-port" 2>/dev/null || true');
+                // Only kill automation-specific Chrome processes with debugging ports
+                if (port) {
+                    await execAsync(`pkill -f "chrome.*--remote-debugging-port=${port}" 2>/dev/null || true`);
+                    await execAsync(`pkill -f "Chromium.*--remote-debugging-port=${port}" 2>/dev/null || true`);
+                }
                 
-                // macOS specific: Kill Chrome Helper processes
-                await execAsync('pkill -f "Google Chrome Helper" 2>/dev/null || true');
-                await execAsync('pkill -f "Chromium Helper" 2>/dev/null || true');
-                
-                // Force quit Chrome application
-                await execAsync('osascript -e \'quit app "Google Chrome"\' 2>/dev/null || true');
+                // DO NOT force quit the Chrome application - user may have other tabs open
                 
             } else {
-                // Enhanced Linux cleanup
-                console.log('🐧 Linux Chrome cleanup...');
+                // Enhanced Linux cleanup - ONLY target automation Chrome instances
+                console.log('🐧 Linux Chrome cleanup (automation only)...');
                 
-                // Kill processes by port
-                await execAsync(`fuser -k ${port}/tcp 2>/dev/null || true`);
-                await execAsync(`lsof -ti:${port} | xargs kill -9 2>/dev/null || true`);
-                
-                // Kill Chrome processes by pattern
-                await execAsync('pkill -f "chrome.*--remote-debugging-port" 2>/dev/null || true');
-                await execAsync('pkill -f "chromium.*--remote-debugging-port" 2>/dev/null || true');
-                await execAsync('pkill -f "google-chrome.*--remote-debugging-port" 2>/dev/null || true');
-                
-                // Kill Chrome sandbox and helper processes
-                await execAsync('pkill -f "chrome.*sandbox" 2>/dev/null || true');
-                await execAsync('pkill -f "chrome.*zygote" 2>/dev/null || true');
+                if (port) {
+                    // Kill processes by specific port only
+                    await execAsync(`fuser -k ${port}/tcp 2>/dev/null || true`);
+                    await execAsync(`lsof -ti:${port} | xargs kill -9 2>/dev/null || true`);
+                    console.log(`🎯 Cleaned up Chrome processes on port ${port}`);
+                } else {
+                    // When no port specified, only target automation-specific processes
+                    await execAsync('pkill -f "chrome.*--enable-automation" 2>/dev/null || true');
+                    await execAsync('pkill -f "chrome.*--headless" 2>/dev/null || true');
+                    await execAsync('pkill -f "chrome.*--disable-dev-shm-usage" 2>/dev/null || true');
+                    console.log('🎯 Cleaned up automation-specific Chrome processes');
+                }
             }
             
             // Verify cleanup by checking port availability
@@ -250,23 +266,37 @@ async function forceCleanupPort(port) {
 async function verifyChromeLaunched(chrome, port) {
     console.log('🔍 Verifying Chrome launch...');
     
-    // Give Chrome a moment to start up
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    // Give Chrome time to fully start - increased wait time
+    await new Promise(resolve => setTimeout(resolve, 3000));
     
-    try {
-        const response = await fetch(`http://localhost:${port}/json/version`, {
-            timeout: 3000
-        });
-        
-        if (!response.ok) {
-            throw new Error(`Chrome health check failed: ${response.status}`);
+    // Try multiple verification attempts
+    const maxAttempts = 3;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        try {
+            console.log(`🔍 Verification attempt ${attempt}/${maxAttempts} for port ${port}`);
+            
+            const response = await fetch(`http://127.0.0.1:${port}/json/version`, {
+                timeout: 5000
+            });
+            
+            if (!response.ok) {
+                throw new Error(`Chrome health check failed: ${response.status}`);
+            }
+            
+            const version = await response.json();
+            console.log(`🎯 Chrome verification successful: ${version.Browser || 'Unknown version'}`);
+            return; // Success, exit
+            
+        } catch (error) {
+            console.log(`⚠️ Verification attempt ${attempt} failed: ${error.message}`);
+            
+            if (attempt < maxAttempts) {
+                console.log(`⏳ Retrying verification in 2 seconds...`);
+                await new Promise(resolve => setTimeout(resolve, 2000));
+            } else {
+                throw new Error(`Chrome launch verification failed after ${maxAttempts} attempts: ${error.message}`);
+            }
         }
-        
-        const version = await response.json();
-        console.log(`🎯 Chrome verification successful: ${version.Browser || 'Unknown version'}`);
-        
-    } catch (error) {
-        throw new Error(`Chrome launch verification failed: ${error.message}`);
     }
 }
 

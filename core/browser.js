@@ -11,7 +11,7 @@ async function waitForDebuggerReady(port = 9222, retries = 30, backoffMultiplier
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout per request
             
-            const res = await fetch(`http://localhost:${port}/json`, {
+            const res = await fetch(`http://127.0.0.1:${port}/json`, {
                 signal: controller.signal,
                 headers: {
                     'Accept': 'application/json',
@@ -508,7 +508,7 @@ export async function createRobustConnection(port = 9222, maxRetries = 3) {
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 3000);
                 
-                const response = await fetch(`http://localhost:${this.port}/json`, {
+                const response = await fetch(`http://127.0.0.1:${this.port}/json`, {
                     signal: controller.signal,
                     headers: { 'User-Agent': 'SuperPancake-HealthCheck' }
                 });

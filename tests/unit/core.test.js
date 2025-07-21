@@ -18,12 +18,12 @@ import {
 
 let chrome, ws, session;
 
-describe.skip('Core DOM Methods Unit Tests', () => {
+describe('Core DOM Methods Unit Tests', () => {
   beforeAll(async () => {
     try {
-      chrome = await launchChrome({ headed: false });
+      chrome = await launchChrome({ headed: false }); // Let launcher auto-select port
       await new Promise(resolve => setTimeout(resolve, 2000)); // Extra wait
-      ws = await connectToChrome();
+      ws = await connectToChrome(chrome.port);
       session = createSession(ws);
       await enableDOM(session);
       await navigateTo(session, 'data:text/html,<html><body><div id="test">Hello</div><input id="input" value="test"/></body></html>');

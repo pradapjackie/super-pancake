@@ -6,7 +6,7 @@ export const connectToChrome = withRetry(async (port = 9222, maxRetries = 3) => 
   console.log(`🔗 Connecting to Chrome on port ${port}`);
 
   // Get available tabs
-  const response = await fetch(`http://localhost:${port}/json`);
+  const response = await fetch(`http://127.0.0.1:${port}/json`);
   const tabs = await response.json();
   
   // Find a suitable tab (usually the first one)
