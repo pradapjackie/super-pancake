@@ -7,16 +7,20 @@ import {
   waitForSelector, waitForVisible,
   click, takeScreenshot
 } from '../core/simple-dom-v2.js';
-import { resolve } from 'path';
+import { getFormPath, getScreenshotsDir, getTestTimeouts, getEnvironmentInfo } from '../utils/ci-config.js';
 
 describe('⏳ TIER 1 Advanced Waiting Test', () => {
   let testEnv;
-  const formUrl = `file://${resolve('./public/form-comprehensive.html')}`;
+  const formUrl = getFormPath();
+  const timeouts = getTestTimeouts();
+  
+  // Log environment info for debugging
+  console.log('🌍 Environment:', getEnvironmentInfo());
 
   beforeAll(async () => {
     testEnv = await createFormTestEnvironment('Advanced Waiting Test');
-    setDefaultTimeout(5000);
-  }, 30000);
+    setDefaultTimeout(timeouts.medium);
+  }, timeouts.long);
 
   afterAll(async () => {
     if (testEnv) {
@@ -75,7 +79,7 @@ describe('⏳ TIER 1 Advanced Waiting Test', () => {
     // Wait for the delayed text to appear
     await waitForText('Delayed text appeared!', { timeout: 5000 });
     
-    await takeScreenshot('./screenshots/delayed-text-test.png');
+    await takeScreenshot(`${getScreenshotsDir()}/delayed-text-test.png`);
     console.log('✅ Delayed text waiting working correctly');
   });
 
@@ -86,7 +90,7 @@ describe('⏳ TIER 1 Advanced Waiting Test', () => {
     // Wait for element to become visible (element has 2s delay in HTML)
     await waitForVisible('#delayed-element', 5000);
     
-    await takeScreenshot('./screenshots/delayed-element-test.png');
+    await takeScreenshot(`${getScreenshotsDir()}/delayed-element-test.png`);
     console.log('✅ Delayed element visibility waiting working correctly');
   });
 
@@ -113,7 +117,7 @@ describe('⏳ TIER 1 Advanced Waiting Test', () => {
     // Wait for completion
     await waitForText('Load complete!', { timeout: 5000 });
     
-    await takeScreenshot('./screenshots/loading-states-test.png');
+    await takeScreenshot(`${getScreenshotsDir()}/loading-states-test.png`);
     console.log('✅ Loading state changes waiting working correctly');
   });
 

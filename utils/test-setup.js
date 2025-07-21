@@ -5,6 +5,7 @@ import { connectToChrome, closeConnection } from '../core/simple-browser.js';
 import { createSession } from '../core/simple-session.js';
 import { enableDOM } from '../core/simple-dom-v2.js';
 import { setSession, clearSession } from '../core/session-context.js';
+import { getChromeConfig, getTestTimeouts } from './ci-config.js';
 
 /**
  * Creates a complete test setup with Chrome, WebSocket, and session
@@ -22,14 +23,17 @@ export async function createTestEnvironment(options = {}) {
   } = options;
 
   console.log(`🚀 Starting ${testName}...`);
+  const timeouts = getTestTimeouts();
   
   try {
-    // Launch Chrome
-    const chrome = await launchChrome({ headed, port });
+    // Launch Chrome with CI-specific configuration
+    const chromeConfig = getChromeConfig({ headed, port });
+    const chrome = await launchChrome(chromeConfig);
     console.log('✅ Chrome launched');
     
-    // Wait for Chrome to fully start
-    await new Promise(resolve => setTimeout(resolve, 5000));
+    // Wait for Chrome to fully start (longer in CI)
+    const startupDelay = timeouts.short;
+    await new Promise(resolve => setTimeout(resolve, startupDelay));
     
     // Connect to Chrome
     const ws = await connectToChrome(port);
