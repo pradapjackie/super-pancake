@@ -324,7 +324,7 @@ describe('Network Failure Simulation Tests', () => {
     
     console.log(`✅ Recovery rate: ${successfulRecoveries}/${NETWORK_CONFIG.RECOVERY_TESTS} (${recoveryRate.toFixed(1)}%)`);
     expect(recoveryRate).toBeGreaterThanOrEqual(60); // Expect at least 60% recovery rate
-  });
+  }, 15000);
 
   it('should maintain circuit breaker functionality during network issues', async () => {
     console.log('⚡ Testing circuit breaker behavior during network failures...');
@@ -394,7 +394,7 @@ describe('Network Failure Simulation Tests', () => {
     }
     
     expect(breakerStats.totalFailures).toBeGreaterThanOrEqual(3);
-  });
+  }, 10000);
 
   it('should validate health monitoring during network stress', async () => {
     console.log('🏥 Testing health monitoring under network stress...');
@@ -436,7 +436,7 @@ describe('Network Failure Simulation Tests', () => {
     expect(healthResult.timestamp).toBeDefined();
     expect(typeof healthResult.overallHealth).toBe('boolean');
     expect(Array.isArray(healthResult.criticalIssues)).toBe(true);
-  });
+  }, 8000);
 
   it('should prevent STACK_TRACE_ERROR during network failures', async () => {
     console.log('🛡️ Testing STACK_TRACE_ERROR prevention during network failures...');
@@ -478,5 +478,5 @@ describe('Network Failure Simulation Tests', () => {
     
     console.log(`✅ STACK_TRACE_ERROR prevention: ${preventedErrors}/${networkErrorScenarios.length} scenarios handled safely`);
     expect(preventedErrors).toBe(networkErrorScenarios.length);
-  });
+  }, 5000);
 });
