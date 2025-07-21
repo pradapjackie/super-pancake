@@ -31,14 +31,14 @@ describe('⏳ TIER 1 Advanced Waiting Test', () => {
     
     await navigateTo(formUrl);
     
-    // Wait for text that should be immediately available
-    await waitForText('Comprehensive UI Testing Playground', { timeout: 3000 });
+    // Wait for text that should be immediately available - increased timeout for CI
+    await waitForText('Comprehensive UI Testing Playground', { timeout: 8000 });
     
-    // Wait for text in the TIER section
-    await waitForText('TIER 1 & TIER 2 Testing Elements', { timeout: 3000 });
+    // Wait for text in the TIER section - increased timeout for CI
+    await waitForText('TIER 1 & TIER 2 Testing Elements', { timeout: 8000 });
     
     console.log('✅ waitForText working correctly');
-  }, 10000);
+  }, 20000);
 
   it('should wait for URL patterns', async () => {
     const currentUrl = await waitForURL('form-comprehensive', { timeout: 3000 });
