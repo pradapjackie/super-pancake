@@ -1,6 +1,6 @@
 // 🚀 TIER 1 & TIER 2 FEATURES DEMO - Complete Playwright-level functionality
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { createFormTestEnvironment, cleanupTestEnvironment } from './utils/test-setup.js';
+import { createFormTestEnvironment, cleanupTestEnvironment } from '../utils/test-setup.js';
 import { 
   // Navigation & Setup
   navigateTo, setDefaultTimeout,
@@ -27,7 +27,7 @@ import {
   
   // Core methods
   click, fillInput, getValue, takeScreenshot
-} from './core/simple-dom-v2.js';
+} from '../core/simple-dom-v2.js';
 import { resolve } from 'path';
 
 describe('🚀 TIER 1 & TIER 2 Features Demo', () => {

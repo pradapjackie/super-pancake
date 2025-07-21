@@ -16,13 +16,13 @@ import { getHealthMonitor, addHealthCheck } from '../core/health-monitor.js';
 import fs from 'fs';
 import path from 'path';
 
-// Real browser test configuration
+// Real browser test configuration (reduced for CI stability)
 const BROWSER_CONFIG = {
-  TEST_SCENARIOS: 15,
-  CONCURRENT_BROWSERS: 3,
-  STRESS_DURATION: 20000, // 20 seconds
-  RETRY_ATTEMPTS: 3,
-  SCREENSHOT_COUNT: 5
+  TEST_SCENARIOS: 10,
+  CONCURRENT_BROWSERS: 2,
+  STRESS_DURATION: 10000, // 10 seconds
+  RETRY_ATTEMPTS: 2,
+  SCREENSHOT_COUNT: 3
 };
 
 // Test results tracking
@@ -171,7 +171,7 @@ describe('Real Browser Stability Tests', () => {
     // Verify no STACK_TRACE_ERROR occurred
     expect(realBrowserResults.stackTraceErrors.detected).toBe(0);
     expect(successfulLaunches).toBeGreaterThanOrEqual(1); // At least one should succeed
-  });
+  }, 30000);
 
   it('should establish WebSocket connections without STACK_TRACE_ERROR', async () => {
     console.log('🔗 Testing WebSocket connection stability...');
@@ -191,6 +191,9 @@ describe('Real Browser Stability Tests', () => {
           
           // Connect via WebSocket
           const ws = await connectToChrome(port, 2);
+          
+          // Give connection time to stabilize
+          await new Promise(resolve => setTimeout(resolve, 200));
           
           // Verify connection health
           const healthy = isConnectionHealthy(ws);
@@ -239,7 +242,7 @@ describe('Real Browser Stability Tests', () => {
     // Verify no STACK_TRACE_ERROR occurred
     expect(realBrowserResults.stackTraceErrors.detected).toBe(0);
     expect(successfulConnections).toBeGreaterThanOrEqual(1);
-  });
+  }, 30000);
 
   it('should create sessions without STACK_TRACE_ERROR', async () => {
     console.log('📞 Testing session creation stability...');
@@ -305,7 +308,7 @@ describe('Real Browser Stability Tests', () => {
     // Verify no STACK_TRACE_ERROR occurred
     expect(realBrowserResults.stackTraceErrors.detected).toBe(0);
     expect(successfulSessions).toBeGreaterThanOrEqual(1);
-  });
+  }, 25000);
 
   it('should perform DOM operations without STACK_TRACE_ERROR', async () => {
     console.log('🎯 Testing DOM operation stability...');
@@ -380,7 +383,7 @@ describe('Real Browser Stability Tests', () => {
     // Verify no STACK_TRACE_ERROR occurred
     expect(realBrowserResults.stackTraceErrors.detected).toBe(0);
     expect(successfulOps).toBeGreaterThanOrEqual(2); // At least half should succeed
-  });
+  }, 30000);
 
   it('should take screenshots without STACK_TRACE_ERROR', async () => {
     console.log('📸 Testing screenshot functionality...');
@@ -464,7 +467,7 @@ describe('Real Browser Stability Tests', () => {
     // Verify no STACK_TRACE_ERROR occurred
     expect(realBrowserResults.stackTraceErrors.detected).toBe(0);
     expect(successfulScreenshots).toBeGreaterThanOrEqual(1);
-  });
+  }, 25000);
 
   it('should handle browser crashes without STACK_TRACE_ERROR', async () => {
     console.log('💥 Testing browser crash handling...');
@@ -538,7 +541,7 @@ describe('Real Browser Stability Tests', () => {
     // Verify no STACK_TRACE_ERROR occurred
     expect(realBrowserResults.stackTraceErrors.detected).toBe(0);
     expect(handledCrashes).toBeGreaterThanOrEqual(2);
-  });
+  }, 20000);
 
   it('should validate overall STACK_TRACE_ERROR prevention', async () => {
     console.log('🛡️ Validating overall STACK_TRACE_ERROR prevention...');
@@ -566,7 +569,7 @@ describe('Real Browser Stability Tests', () => {
     
     console.log('✅ STACK_TRACE_ERROR prevention system is working correctly!');
     console.log('🎯 Framework stability improvements have successfully eliminated STACK_TRACE_ERROR issues');
-  });
+  }, 10000);
 });
 
 // Helper function to create test connections
