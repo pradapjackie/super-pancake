@@ -30,7 +30,10 @@ import {
   assertContainsText,
   
   // Reporting
-  writeReport
+  writeReport,
+  
+  // Port utilities
+  findAvailablePort
 } from 'super-pancake-automation';
 
 let testEnv;
@@ -38,8 +41,14 @@ let testEnv;
 describe('Super Pancake Sample Test', () => {
   beforeAll(async () => {
     console.log('🚀 Setting up Super Pancake test environment...');
+    
+    // Find available port dynamically to avoid conflicts
+    const port = await findAvailablePort(9222, 10);
+    console.log(\`🔍 Using dynamic port: \${port}\`);
+    
     testEnv = await createTestEnvironment({ 
-      headed: false,
+      headed: process.env.SUPER_PANCAKE_HEADLESS === 'false', // Respect UI setting: false=headless, true=headed
+      port: port,     // Use dynamically allocated port
       testName: 'Super Pancake Sample Test'
     });
     await enableDOM(testEnv.session);
@@ -105,7 +114,10 @@ import {
   assertContainsText,
   
   // Reporting
-  writeReport
+  writeReport,
+  
+  // Port utilities
+  findAvailablePort
 } from 'super-pancake-automation';
 
 let testEnv;
@@ -113,9 +125,14 @@ let testEnv;
 describe('Super Pancake NPM Website Tests', () => {
   beforeAll(async () => {
     console.log('🌐 Setting up Super Pancake NPM Website test...');
+    
+    // Find available port dynamically to avoid conflicts
+    const port = await findAvailablePort(9223, 10);
+    console.log(\`🔍 Using dynamic port: \${port}\`);
+    
     testEnv = await createTestEnvironment({ 
-      headed: true,  // Show browser for website testing
-      port: 9223,    // Use different port to avoid conflicts
+      headed: process.env.SUPER_PANCAKE_HEADLESS === 'false', // Respect UI setting: false=headless, true=headed
+      port: port,     // Use dynamically allocated port
       testName: 'Super Pancake NPM Website Tests'
     });
     await enableDOM(testEnv.session);
@@ -293,10 +310,10 @@ Visit Super Pancake Framework for full documentation.
     console.log('✅ README.md created with setup instructions');
 }
 
-console.log('\\n🎉 Setup complete! Run the following commands:');
+console.log('\n🎉 Setup complete! Run the following commands:');
 console.log('   cd', process.cwd());
 console.log('   npm install');
-console.log('\\n📋 Available test commands:');
+console.log('\n📋 Available test commands:');
 console.log('   npm test               # Run all tests');
 console.log('   npm run test:sample    # Basic test (headless)');
 console.log('   npm run test:website   # NPM website UI test (shows browser)');

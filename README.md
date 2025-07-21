@@ -62,9 +62,6 @@ npm install super-pancake-automation
 # Run tests with Super Pancake (Sequential execution)
 npm test
 
-# Run specific test patterns
-npm test tests/tier1-*.test.js --run
-
 # Launch interactive UI
 super-pancake-ui
 
@@ -149,163 +146,90 @@ npx super-pancake --help                   # Show help
 
 ## 💻 Code Examples
 
-### Basic Test Structure (Sessionless API)
+### UI Tests examples 
 ```javascript
+
 import { describe, it, beforeAll, afterAll } from 'vitest';
-import { createTestEnvironment, cleanupTestEnvironment } from './utils/test-setup.js';
 import {
+  // Simplified test setup
+  createTestEnvironment,
+  cleanupTestEnvironment,
+  
+  // DOM operations
   enableDOM,
   navigateTo,
-  fillInput,
-  check,
-  selectOption,
-  click,
-  getAttribute,
   getText,
   waitForSelector,
-  takeScreenshot,
-  getByRole,
-  getByText,
-  getByLabel,
-  getByPlaceholder,
-  getByTestId
-} from 'super-pancake-automation/core/simple-dom-v2.js';
-import {
+  takeElementScreenshot,
+  
+  // Assertions
   assertEqual,
   assertContainsText,
-} from 'super-pancake-automation/core/assert.js';
+  
+  // Reporting
+  writeReport,
+  
+  // Port utilities
+  findAvailablePort
+} from 'super-pancake-automation';
 
 let testEnv;
 
-describe('Modern Super Pancake Test', () => {
+describe('Super Pancake Sample Test', () => {
   beforeAll(async () => {
-    console.log('\n🔷 Super Pancake Test Started');
+    console.log('🚀 Setting up Super Pancake test environment...');
+    
+    // Find available port dynamically to avoid conflicts
+    const port = await findAvailablePort(9222, 10);
+    console.log(`🔍 Using dynamic port: ${port}`);
+    
     testEnv = await createTestEnvironment({ 
-      headed: false, 
-      testName: 'Form Test' 
+      headed: process.env.SUPER_PANCAKE_HEADLESS === 'false', // Respect UI setting: false=headless, true=headed
+      port: port,     // Use dynamically allocated port
+      testName: 'Super Pancake Sample Test'
     });
-    await enableDOM();
+    await enableDOM(testEnv.session);
   }, 30000);
 
   afterAll(async () => {
-    await cleanupTestEnvironment(testEnv, 'Form Test');
+    await cleanupTestEnvironment(testEnv, 'Super Pancake Sample Test');
+    writeReport();
+    console.log('📄 Test report generated');
   });
 
-  it('should navigate and interact with form', async () => {
-    // Navigate to page
-    await navigateTo('http://localhost:8080/form.html');
+  it('should navigate to a test page', async () => {
+    console.log('🌐 Testing navigation...');
     
-    // Use smart locators - no session needed!
-    await fillInput(getByLabel('Full Name'), 'John Doe');
-    await fillInput(getByPlaceholder('Enter your email'), 'john@example.com');
-    await fillInput(getByTestId('message-input'), 'Hello World');
+    // Navigate to a reliable test page
+    await navigateTo(testEnv.session, 'https://example.com');
     
-    // Check boxes and select options
-    await check(getByLabel('Subscribe to newsletter'));
-    await selectOption(getByLabel('Country'), 'US');
+    // Wait for page to load
+    const h1Element = await waitForSelector(testEnv.session, 'h1', 10000);
     
-    // Click submit button
-    await click(getByRole('button', { name: 'Submit' }));
+    // Get page title
+    const title = await getText(testEnv.session, h1Element);
+    console.log('📄 Page title:', title);
     
-    // Verify results
-    const status = await getAttribute('form', 'data-status');
-    assertEqual(status, 'submitted');
+    // Basic assertions
+    assertEqual(typeof title, 'string', 'Page title should be a string');
+    assertContainsText(title, 'Example', 'Page should contain "Example" text');
     
-    // Take screenshot
-    await takeScreenshot('./screenshots/form-completed.png');
+    console.log('✅ Navigation test passed');
   });
 
-  it('should verify dynamic content', async () => {
-    // Wait for and verify text content
-    const heading = await getByText('Success Message');
-    const text = await getText(heading);
-    assertContainsText(text, 'Success');
+  it('should take a screenshot', async () => {
+    console.log('📸 Testing screenshot functionality...');
     
-    // Verify table data
-    const tableCell = await getText('table tr:first-child td:first-child');
-    assertEqual(tableCell, 'John Doe');
+    // Take a screenshot of the current page
+    await takeElementScreenshot(testEnv.session, 'body', './test-screenshot.png');
+    
+    console.log('📸 Screenshot saved as test-screenshot.png');
+    console.log('✅ Screenshot test passed');
   });
+
 });
-```
 
-### Advanced Form Testing (Sessionless API)
-```javascript
-import { 
-  fillInput, 
-  selectOption, 
-  check, 
-  isChecked,
-  getByLabel,
-  getByRole,
-  getByTestId,
-  getAttribute,
-  click,
-  waitForText
-} from 'super-pancake-automation/core/simple-dom-v2.js';
 
-it('should handle complex form interactions', async () => {
-  await navigateTo('https://myapp.com/form');
-  
-  // Fill form fields using smart locators
-  await fillInput(getByLabel('Full Name'), 'John Doe');
-  await fillInput(getByLabel('Email Address'), 'john@example.com');
-  await selectOption(getByLabel('Country'), 'US');
-  await check(getByLabel('Subscribe to newsletter'));
-  
-  // Verify form state
-  const isNewsletterChecked = await isChecked(getByLabel('Subscribe to newsletter'));
-  expect(isNewsletterChecked).toBe(true);
-  
-  // Get form values
-  const nameValue = await getValue(getByLabel('Full Name'));
-  expect(nameValue).toBe('John Doe');
-  
-  // Submit form using role-based locator
-  await click(getByRole('button', { name: 'Submit' }));
-  
-  // Wait for success message
-  await waitForText('Form submitted successfully');
-});
-```
-
-### Table Data Extraction (Sessionless API)
-```javascript
-import { 
-  navigateTo,
-  getText,
-  getAttribute,
-  querySelector,
-  waitForSelector
-} from 'super-pancake-automation/core/simple-dom-v2.js';
-
-it('should extract table data', async () => {
-  await navigateTo('https://myapp.com/users');
-  
-  // Wait for table to load
-  await waitForSelector('#users-table');
-  
-  // Get table headers
-  const headerCells = await querySelectorAll('#users-table thead th');
-  const headers = await Promise.all(
-    headerCells.map(cell => getText(cell))
-  );
-  expect(headers).toContain('Name');
-  
-  // Get first row data
-  const firstRowCells = await querySelectorAll('#users-table tbody tr:first-child td');
-  const firstRowData = await Promise.all(
-    firstRowCells.map(cell => getText(cell))
-  );
-  expect(firstRowData[0]).toBe('John Doe');
-  
-  // Get specific cell value
-  const specificCell = await getText('#users-table tbody tr:first-child td:nth-child(2)');
-  expect(specificCell).toBe('john@example.com');
-  
-  // Count total rows
-  const rows = await querySelectorAll('#users-table tbody tr');
-  console.log(`Table has ${rows.length} data rows`);
-});
 ```
 
 ## 📚 Documentation

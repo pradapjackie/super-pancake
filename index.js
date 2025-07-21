@@ -39,3 +39,11 @@ export {
   invalidateCacheForSelector, 
   configureCaching 
 } from './core/query-cache.js';
+
+// Export port utilities (needed for dynamic port allocation)
+export { 
+  findAvailablePort, 
+  isPortAvailable, 
+  ensurePortAvailable,
+  killPortProcess 
+} from './utils/port-finder.js';

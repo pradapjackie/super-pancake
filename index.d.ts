@@ -362,6 +362,15 @@ declare module 'super-pancake-automation' {
   export function assertFalse(value: any, message?: string): void;
 
   // ========================================
+  // PORT UTILITIES
+  // ========================================
+  
+  export function findAvailablePort(startPort?: number, maxAttempts?: number): Promise<number>;
+  export function isPortAvailable(port: number): Promise<boolean>;
+  export function ensurePortAvailable(preferredPort: number, killExisting?: boolean): Promise<number>;
+  export function killPortProcess(port: number): Promise<boolean>;
+
+  // ========================================
   // CONFIGURATION EXPORT
   // ========================================
   
