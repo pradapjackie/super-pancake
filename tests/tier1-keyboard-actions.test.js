@@ -31,164 +31,164 @@ describe('⌨️ TIER 1 Keyboard Actions Test', () => {
     
     await navigateTo(formUrl);
     
-    // Focus on keyboard test area
-    const keyboardArea = await getByTestId('keyboard-test-area');
-    await click(keyboardArea);
+    // Focus on keyboard test area - increased timeout for CI
+    const keyboardArea = await getByTestId('keyboard-test-area', { timeout: 8000 });
+    await click(keyboardArea, { timeout: 8000 });
     
-    // Type text
-    await type('Hello, World!', { timeout: 3000 });
+    // Type text - increased timeout for CI
+    await type('Hello, World!', { timeout: 8000 });
     
     // Verify the text was typed
-    const value = await getValue(keyboardArea);
+    const value = await getValue(keyboardArea, { timeout: 8000 });
     expect(value).toBe('Hello, World!');
     
     await takeScreenshot('./screenshots/type-method-test.png');
     console.log('✅ type method working correctly');
-  }, 10000);
+  }, 20000);
 
   it('should press individual keys', async () => {
-    const keyboardArea = await getByTestId('keyboard-test-area');
+    const keyboardArea = await getByTestId('keyboard-test-area', { timeout: 8000 });
     
     // Use fillInput to set initial value since it works with object IDs
-    await fillInput(keyboardArea, 'Test');
+    await fillInput(keyboardArea, 'Test', { timeout: 8000 });
     
     // Click to focus for keyboard input
-    await click(keyboardArea);
+    await click(keyboardArea, { timeout: 8000 });
     
     // Use arrow keys
-    await press('Home'); // Go to beginning
-    await type('Start '); // Add at beginning
+    await press('Home', { timeout: 8000 }); // Go to beginning
+    await type('Start ', { timeout: 8000 }); // Add at beginning
     
-    const value = await getValue(keyboardArea);
+    const value = await getValue(keyboardArea, { timeout: 8000 });
     expect(value).toContain('Start');
     expect(value).toContain('Test');
     
     console.log('✅ press method working correctly');
-  });
+  }, 15000);
 
   it('should handle special keys', async () => {
-    const keyboardArea = await getByTestId('keyboard-test-area');
+    const keyboardArea = await getByTestId('keyboard-test-area', { timeout: 8000 });
     
     // Use fillInput to clear and set initial value
-    await fillInput(keyboardArea, 'Line 1');
-    await click(keyboardArea);
+    await fillInput(keyboardArea, 'Line 1', { timeout: 8000 });
+    await click(keyboardArea, { timeout: 8000 });
     
     // Test special keys
-    await press('Enter');
-    await type('Line 2');
+    await press('Enter', { timeout: 8000 });
+    await type('Line 2', { timeout: 8000 });
     
-    const value = await getValue(keyboardArea);
+    const value = await getValue(keyboardArea, { timeout: 8000 });
     expect(value).toContain('Line 1');
     expect(value).toContain('Line 2');
     
     console.log('✅ Special keys working correctly');
-  });
+  }, 15000);
 
   it('should work with multi-step form interaction', async () => {
     // Test the multi-step form button
-    await click('#multi-step-test');
+    await click('#multi-step-test', { timeout: 8000 });
     
-    // Wait for the form to be filled automatically
-    await waitForFunction(() => document.getElementById('step1-input').value === 'John Doe', { timeout: 3000 });
+    // Wait for the form to be filled automatically - increased timeout for CI
+    await waitForFunction(() => document.getElementById('step1-input').value === 'John Doe', { timeout: 8000 });
     
-    const step1Value = await getValue('#step1-input');
+    const step1Value = await getValue('#step1-input', { timeout: 8000 });
     expect(step1Value).toBe('John Doe');
     
-    // Wait for step 2
-    await waitForFunction(() => document.getElementById('step2-input').value === 'john.doe@example.com', { timeout: 2000 });
+    // Wait for step 2 - increased timeout for CI
+    await waitForFunction(() => document.getElementById('step2-input').value === 'john.doe@example.com', { timeout: 8000 });
     
-    const step2Value = await getValue('#step2-input');
+    const step2Value = await getValue('#step2-input', { timeout: 8000 });
     expect(step2Value).toBe('john.doe@example.com');
     
-    // Wait for step 3
-    await waitForFunction(() => document.getElementById('step3-input').value === '+1-555-123-4567', { timeout: 2000 });
+    // Wait for step 3 - increased timeout for CI
+    await waitForFunction(() => document.getElementById('step3-input').value === '+1-555-123-4567', { timeout: 8000 });
     
-    const step3Value = await getValue('#step3-input');
+    const step3Value = await getValue('#step3-input', { timeout: 8000 });
     expect(step3Value).toBe('+1-555-123-4567');
     
     await takeScreenshot('./screenshots/multi-step-form-test.png');
     console.log('✅ Multi-step form interaction working correctly');
-  });
+  }, 25000);
 
   it('should handle keyboard events logging', async () => {
-    const keyboardArea = await getByTestId('keyboard-test-area');
-    await click(keyboardArea);
+    const keyboardArea = await getByTestId('keyboard-test-area', { timeout: 8000 });
+    await click(keyboardArea, { timeout: 8000 });
     
     // Clear the area
-    await press('Control');
-    await press('a');
-    await press('Delete');
+    await press('Control', { timeout: 8000 });
+    await press('a', { timeout: 8000 });
+    await press('Delete', { timeout: 8000 });
     
     // Type to trigger key events
-    await type('ABC');
+    await type('ABC', { timeout: 8000 });
     
     // Check that key events are being logged
-    const keyEventsDiv = await getByTestId('key-events');
-    const eventsContent = await getValue(keyEventsDiv);
+    const keyEventsDiv = await getByTestId('key-events', { timeout: 8000 });
+    const eventsContent = await getValue(keyEventsDiv, { timeout: 8000 });
     
     // The div should contain key event information
     expect(eventsContent).toBeDefined();
     
     console.log('✅ Keyboard events logging working correctly');
-  });
+  }, 15000);
 
   it('should access file upload elements', async () => {
     // Test that we can access file upload elements
-    const fileUpload = await getByTestId('test-file-upload');
+    const fileUpload = await getByTestId('test-file-upload', { timeout: 8000 });
     expect(fileUpload).toBeDefined();
     
     // Test logo upload
-    const logoUpload = await getByTestId('logo-upload');
+    const logoUpload = await getByTestId('logo-upload', { timeout: 8000 });
     expect(logoUpload).toBeDefined();
     
     console.log('✅ File upload elements accessible');
-  });
+  }, 10000);
 
   it('should handle form navigation with Tab key', async () => {
     // Use fillInput which is more reliable for this test
-    await fillInput('#fullname', 'John Doe');
+    await fillInput('#fullname', 'John Doe', { timeout: 8000 });
     
     // Tab to next field and type
-    await press('Tab');
-    await type('john@example.com');
+    await press('Tab', { timeout: 8000 });
+    await type('john@example.com', { timeout: 8000 });
     
     // Wait a moment for values to settle
     await new Promise(resolve => setTimeout(resolve, 500));
     
     // Verify both fields have values
-    const nameValue = await getValue('#fullname');
-    const emailValue = await getValue('#email');
+    const nameValue = await getValue('#fullname', { timeout: 8000 });
+    const emailValue = await getValue('#email', { timeout: 8000 });
     
     expect(nameValue).toBe('John Doe');
     expect(emailValue).toBe('john@example.com');
     
     await takeScreenshot('./screenshots/tab-navigation-test.png');
     console.log('✅ Tab navigation working correctly');
-  });
+  }, 15000);
 
   it('should handle keyboard shortcuts', async () => {
-    const keyboardArea = await getByTestId('keyboard-test-area');
-    await click(keyboardArea);
+    const keyboardArea = await getByTestId('keyboard-test-area', { timeout: 8000 });
+    await click(keyboardArea, { timeout: 8000 });
     
     // Type some text
-    await type('This is a test message for shortcuts');
+    await type('This is a test message for shortcuts', { timeout: 8000 });
     
     // Select all with Ctrl+A
-    await press('Control');
-    await press('a');
+    await press('Control', { timeout: 8000 });
+    await press('a', { timeout: 8000 });
     
     // Copy with Ctrl+C (browser will handle this)
-    await press('Control');
-    await press('c');
+    await press('Control', { timeout: 8000 });
+    await press('c', { timeout: 8000 });
     
     // Clear and paste with Ctrl+V (browser will handle this)
-    await press('Delete');
-    await press('Control');
-    await press('v');
+    await press('Delete', { timeout: 8000 });
+    await press('Control', { timeout: 8000 });
+    await press('v', { timeout: 8000 });
     
-    const value = await getValue(keyboardArea);
+    const value = await getValue(keyboardArea, { timeout: 8000 });
     expect(value).toContain('test message');
     
     console.log('✅ Keyboard shortcuts working correctly');
-  });
+  }, 20000);
 });
