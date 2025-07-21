@@ -1,0 +1,1456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comprehensive UI Testing Playground</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f4f4;
+            padding: 2rem 4rem;
+            max-width: 1400px;
+            margin: auto;
+            color: #333;
+            line-height: 1.6;
+        }
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 2rem;
+        }
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+        section {
+            background: white;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .full-width {
+            grid-column: 1 / -1;
+        }
+        section h2 {
+            margin-top: 0;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 0.5rem;
+            color: #2c3e50;
+        }
+        label {
+            display: block;
+            margin-top: 0.8rem;
+            margin-bottom: 0.3rem;
+            font-weight: bold;
+            color: #34495e;
+        }
+        input, select, textarea, button {
+            display: block;
+            margin-bottom: 1rem;
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid #bdc3c7;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+        input[type="checkbox"], input[type="radio"] {
+            width: auto;
+            display: inline-block;
+            margin-right: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 5px rgba(52, 152, 219, 0.3);
+        }
+        button {
+            padding: 0.8rem 1.5rem;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            width: auto;
+            display: inline-block;
+            margin-right: 1rem;
+            margin-bottom: 1rem;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        button.secondary {
+            background-color: #95a5a6;
+        }
+        button.secondary:hover {
+            background-color: #7f8c8d;
+        }
+        button.danger {
+            background-color: #e74c3c;
+        }
+        button.danger:hover {
+            background-color: #c0392b;
+        }
+        button.success {
+            background-color: #27ae60;
+        }
+        button.success:hover {
+            background-color: #229954;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+        table, th, td {
+            border: 1px solid #bdc3c7;
+        }
+        th {
+            background-color: #ecf0f1;
+            font-weight: bold;
+        }
+        th, td {
+            padding: 0.8rem;
+            text-align: left;
+        }
+        tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        tr:hover {
+            background-color: #e8f4fd;
+        }
+        iframe {
+            width: 100%;
+            height: 300px;
+            border: 1px solid #bdc3c7;
+            border-radius: 4px;
+        }
+        .drag-drop-area {
+            border: 2px dashed #95a5a6;
+            padding: 2rem;
+            text-align: center;
+            background: #ecf0f1;
+            color: #34495e;
+            font-weight: bold;
+            border-radius: 4px;
+            min-height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .drag-item {
+            display: inline-block;
+            padding: 1rem 2rem;
+            background: #27ae60;
+            color: white;
+            cursor: grab;
+            border-radius: 4px;
+            margin: 0.5rem;
+            user-select: none;
+        }
+        .drag-item:active {
+            cursor: grabbing;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background-color: #ecf0f1;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background-color: #3498db;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        .color-preview {
+            width: 50px;
+            height: 30px;
+            border: 1px solid #bdc3c7;
+            border-radius: 4px;
+            display: inline-block;
+            margin-left: 1rem;
+        }
+        .slider-value {
+            display: inline-block;
+            margin-left: 1rem;
+            font-weight: bold;
+            color: #3498db;
+        }
+        .fieldset {
+            border: 2px solid #bdc3c7;
+            border-radius: 4px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+        .fieldset legend {
+            font-weight: bold;
+            color: #2c3e50;
+            padding: 0 0.5rem;
+        }
+        .inline-group {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .status-indicator {
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            font-weight: bold;
+            margin: 0.5rem 0;
+        }
+        .status-success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status-warning {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        .status-error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .accordion {
+            border: 1px solid #bdc3c7;
+            border-radius: 4px;
+            margin-bottom: 1rem;
+        }
+        .accordion-header {
+            background-color: #ecf0f1;
+            padding: 1rem;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .accordion-header:hover {
+            background-color: #d5dbdb;
+        }
+        .accordion-content {
+            padding: 1rem;
+            display: none;
+        }
+        .accordion-content.active {
+            display: block;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        .modal-content {
+            background-color: white;
+            margin: 10% auto;
+            padding: 2rem;
+            border-radius: 8px;
+            width: 80%;
+            max-width: 500px;
+            position: relative;
+        }
+        .modal-close {
+            position: absolute;
+            right: 1rem;
+            top: 1rem;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+        .tabs {
+            border-bottom: 2px solid #bdc3c7;
+            margin-bottom: 1rem;
+        }
+        .tab-button {
+            background: none;
+            border: none;
+            padding: 1rem;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            font-weight: bold;
+        }
+        .tab-button.active {
+            border-bottom-color: #3498db;
+            color: #3498db;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .tooltip {
+            position: relative;
+            cursor: help;
+        }
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 200px;
+            background-color: #34495e;
+            color: white;
+            text-align: center;
+            border-radius: 4px;
+            padding: 0.5rem;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -100px;
+            font-size: 0.8rem;
+        }
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+        }
+        @media (max-width: 768px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+            body {
+                padding: 1rem 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<h1>🧪 Comprehensive UI Testing Playground</h1>
+<p style="text-align: center; color: #7f8c8d; margin-bottom: 2rem;">
+    Complete collection of HTML form elements and interactive components for automation testing
+</p>
+
+<div class="container">
+
+    <!-- Basic Form Elements -->
+    <section>
+        <h2>📝 Basic Form Elements</h2>
+        <form id="basic-form" data-status="">
+            
+            <!-- Text Inputs -->
+            <label>Full Name:</label>
+            <input type="text" name="fullname" id="fullname" placeholder="Enter your full name" maxlength="50" required>
+            
+            <label>Email Address:</label>
+            <input type="email" name="email" id="email" placeholder="Enter your email" data-testid="email-input" title="Enter your email address" required>
+            
+            <label>Password:</label>
+            <input type="password" name="password" id="password" placeholder="Enter password" minlength="8" required>
+            
+            <label>Confirm Password:</label>
+            <input type="password" name="confirm-password" id="confirm-password" placeholder="Confirm password">
+            
+            <label>Phone Number:</label>
+            <input type="tel" name="phone" id="phone" placeholder="+1 (555) 123-4567" pattern="[+]?[\d\s\-\(\)]+">
+            
+            <label>Website URL:</label>
+            <input type="url" name="website" id="website" placeholder="https://example.com">
+            
+            <label>Search Query:</label>
+            <input type="search" name="search" id="search" placeholder="Search for something...">
+            
+            <!-- Textarea -->
+            <label>Comments/Message:</label>
+            <textarea name="message" id="message" rows="4" cols="50" placeholder="Enter your message here..." maxlength="500"></textarea>
+            
+        </form>
+    </section>
+
+    <!-- Date/Time/Number Inputs -->
+    <section>
+        <h2>📅 Date, Time & Number Inputs</h2>
+        
+        <label>Birth Date:</label>
+        <input type="date" name="birthdate" id="birthdate" min="1900-01-01" max="2024-12-31">
+        
+        <label>Appointment Time:</label>
+        <input type="time" name="appointment" id="appointment" step="900">
+        
+        <label>Meeting Date & Time:</label>
+        <input type="datetime-local" name="meeting" id="meeting">
+        
+        <label>Birth Month:</label>
+        <input type="month" name="birth-month" id="birth-month">
+        
+        <label>Academic Week:</label>
+        <input type="week" name="academic-week" id="academic-week">
+        
+        <label>Age:</label>
+        <input type="number" name="age" id="age" min="0" max="120" step="1" placeholder="25">
+        
+        <label>Salary Range (USD):</label>
+        <input type="range" name="salary" id="salary" min="30000" max="200000" step="5000" value="75000">
+        <span class="slider-value" id="salary-value">$75,000</span>
+        
+        <label>Favorite Color:</label>
+        <input type="color" name="color" id="color" value="#3498db">
+        <div class="color-preview" id="color-preview" style="background-color: #3498db;"></div>
+        
+    </section>
+
+    <!-- Selection Elements -->
+    <section>
+        <h2>🔽 Selection & Choice Elements</h2>
+        
+        <label>Country:</label>
+        <select name="country" id="country" required>
+            <option value="">-- Select Country --</option>
+            <option value="us">United States</option>
+            <option value="ca">Canada</option>
+            <option value="uk">United Kingdom</option>
+            <option value="au">Australia</option>
+            <option value="de">Germany</option>
+            <option value="fr">France</option>
+            <option value="jp">Japan</option>
+            <option value="in">India</option>
+        </select>
+        
+        <label>Programming Languages (Multiple):</label>
+        <select name="languages" id="languages" multiple size="5">
+            <option value="javascript">JavaScript</option>
+            <option value="python">Python</option>
+            <option value="java">Java</option>
+            <option value="csharp">C#</option>
+            <option value="cpp">C++</option>
+            <option value="rust">Rust</option>
+            <option value="go">Go</option>
+            <option value="swift">Swift</option>
+        </select>
+        
+        <label>Skills (with optgroups):</label>
+        <select name="skills" id="skills">
+            <option value="">-- Select Skill --</option>
+            <optgroup label="Frontend">
+                <option value="html">HTML/CSS</option>
+                <option value="react">React</option>
+                <option value="vue">Vue.js</option>
+                <option value="angular">Angular</option>
+            </optgroup>
+            <optgroup label="Backend">
+                <option value="nodejs">Node.js</option>
+                <option value="django">Django</option>
+                <option value="flask">Flask</option>
+                <option value="spring">Spring</option>
+            </optgroup>
+            <optgroup label="Database">
+                <option value="mysql">MySQL</option>
+                <option value="postgresql">PostgreSQL</option>
+                <option value="mongodb">MongoDB</option>
+                <option value="redis">Redis</option>
+            </optgroup>
+        </select>
+        
+    </section>
+
+    <!-- Checkboxes and Radio Buttons -->
+    <section>
+        <h2>☑️ Checkboxes & Radio Buttons</h2>
+        
+        <fieldset class="fieldset">
+            <legend>Interests (Multiple Choice)</legend>
+            <label><input type="checkbox" name="interests" value="programming" id="interest-programming"> Programming</label>
+            <label><input type="checkbox" name="interests" value="design" id="interest-design"> UI/UX Design</label>
+            <label><input type="checkbox" name="interests" value="marketing" id="interest-marketing"> Digital Marketing</label>
+            <label><input type="checkbox" name="interests" value="music" id="interest-music"> Music Production</label>
+            <label><input type="checkbox" name="interests" value="gaming" id="interest-gaming"> Game Development</label>
+            <label><input type="checkbox" name="interests" value="ai" id="interest-ai"> Artificial Intelligence</label>
+        </fieldset>
+        
+        <fieldset class="fieldset">
+            <legend>Experience Level (Single Choice)</legend>
+            <label><input type="radio" name="experience" value="beginner" id="exp-beginner"> Beginner (0-1 years)</label>
+            <label><input type="radio" name="experience" value="intermediate" id="exp-intermediate"> Intermediate (2-5 years)</label>
+            <label><input type="radio" name="experience" value="advanced" id="exp-advanced"> Advanced (5-10 years)</label>
+            <label><input type="radio" name="experience" value="expert" id="exp-expert"> Expert (10+ years)</label>
+        </fieldset>
+        
+        <fieldset class="fieldset">
+            <legend>Employment Status</legend>
+            <label><input type="radio" name="employment" value="fulltime" id="emp-fulltime"> Full-time</label>
+            <label><input type="radio" name="employment" value="parttime" id="emp-parttime"> Part-time</label>
+            <label><input type="radio" name="employment" value="freelance" id="emp-freelance"> Freelance</label>
+            <label><input type="radio" name="employment" value="unemployed" id="emp-unemployed"> Looking for work</label>
+            <label><input type="radio" name="employment" value="student" id="emp-student"> Student</label>
+        </fieldset>
+        
+        <label>
+            <input type="checkbox" name="newsletter" id="newsletter" checked> 
+            Subscribe to our newsletter
+        </label>
+        
+        <label>
+            <input type="checkbox" name="terms" id="terms" required> 
+            I agree to the <a href="#" target="_blank">Terms & Conditions</a>
+        </label>
+        
+    </section>
+
+    <!-- File Upload Elements -->
+    <section>
+        <h2>📁 File Upload Elements</h2>
+        
+        <label>Profile Picture:</label>
+        <input type="file" name="profile-pic" id="profile-pic" accept="image/*">
+        
+        <label>Resume/CV (PDF only):</label>
+        <input type="file" name="resume" id="resume" accept=".pdf">
+        
+        <label>Portfolio Files (Multiple):</label>
+        <input type="file" name="portfolio" id="portfolio" multiple accept="image/*,.pdf,.doc,.docx">
+        
+        <label>Documents (Any type):</label>
+        <input type="file" name="documents" id="documents" multiple>
+        
+    </section>
+
+    <!-- Button Variations -->
+    <section>
+        <h2>🔘 Button Variations</h2>
+        
+        <button type="submit" id="submit-btn" data-testid="submit-button" title="Click me">Submit Form</button>
+        <button type="reset" id="reset-btn" class="secondary" data-testid="reset-button" title="Reset all form fields">Reset Form</button>
+        <button type="button" id="save-draft-btn" class="success" data-testid="save-draft-button" title="Save form as draft">Save Draft</button>
+        <button type="button" id="cancel-btn" class="danger" data-testid="cancel-button" title="Cancel form submission">Cancel</button>
+        
+        <br>
+        
+        <button type="button" id="modal-btn">Open Modal</button>
+        <button type="button" id="alert-btn" class="secondary">Show Alert</button>
+        <button type="button" id="confirm-btn" class="success">Show Confirm</button>
+        <button type="button" id="prompt-btn" class="danger">Show Prompt</button>
+        
+        <br>
+        
+        <input type="submit" value="Input Submit" class="submit-input">
+        <input type="button" value="Input Button" class="button-input">
+        <input type="reset" value="Input Reset" class="reset-input">
+        
+        <br>
+        
+        <button type="button" disabled id="disabled-btn">Disabled Button</button>
+        <button type="button" id="toggle-btn" data-state="off">Toggle: OFF</button>
+        
+    </section>
+
+    <!-- Advanced Input Types -->
+    <section>
+        <h2>🎛️ Advanced Input Types</h2>
+        
+        <label>Hidden Field:</label>
+        <input type="hidden" name="hidden-field" id="hidden-field" value="secret-value">
+        <span style="color: #7f8c8d; font-size: 0.9rem;">Hidden input (value: secret-value)</span>
+        
+        <label>Read-only Field:</label>
+        <input type="text" name="readonly-field" id="readonly-field" value="This field is read-only" readonly>
+        
+        <label>Progress Bar:</label>
+        <progress id="progress-bar" value="45" max="100">45%</progress>
+        <span id="progress-text">45%</span>
+        
+        <label>Meter/Gauge:</label>
+        <meter id="disk-usage" value="0.7" min="0" max="1" optimum="0.5" high="0.8" low="0.2">70%</meter>
+        <span>Disk usage: 70%</span>
+        
+        <label>Data List (with autocomplete):</label>
+        <input list="browsers" name="browser" id="browser" placeholder="Choose or type a browser">
+        <datalist id="browsers">
+            <option value="Chrome">
+            <option value="Firefox">
+            <option value="Safari">
+            <option value="Edge">
+            <option value="Opera">
+        </datalist>
+        
+        <label>Custom Range with Steps:</label>
+        <input type="range" name="volume" id="volume" min="0" max="100" step="10" value="50">
+        <span class="slider-value" id="volume-value">50</span>
+        
+    </section>
+
+    <!-- Interactive Elements -->
+    <section class="full-width">
+        <h2>🎯 Interactive Elements</h2>
+        
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab-button active" data-tab="tab1">Personal Info</button>
+            <button class="tab-button" data-tab="tab2">Professional</button>
+            <button class="tab-button" data-tab="tab3">Preferences</button>
+        </div>
+        
+        <div class="tab-content active" id="tab1">
+            <h3>Personal Information</h3>
+            <div class="inline-group">
+                <label>First Name: <input type="text" name="firstname" placeholder="John"></label>
+                <label>Last Name: <input type="text" name="lastname" placeholder="Doe"></label>
+                <label>Middle Initial: <input type="text" name="middle" placeholder="M" maxlength="1"></label>
+            </div>
+        </div>
+        
+        <div class="tab-content" id="tab2">
+            <h3>Professional Information</h3>
+            <label>Job Title: <input type="text" name="jobtitle" placeholder="Software Engineer"></label>
+            <label>Company: <input type="text" name="company" placeholder="Tech Corp Inc."></label>
+            <label>Years of Experience: <input type="number" name="years" min="0" max="50"></label>
+        </div>
+        
+        <div class="tab-content" id="tab3">
+            <h3>Preferences</h3>
+            <label>Theme: 
+                <select name="theme">
+                    <option value="light">Light</option>
+                    <option value="dark">Dark</option>
+                    <option value="auto">Auto</option>
+                </select>
+            </label>
+            <label>Language: 
+                <select name="language">
+                    <option value="en">English</option>
+                    <option value="es">Español</option>
+                    <option value="fr">Français</option>
+                    <option value="de">Deutsch</option>
+                </select>
+            </label>
+        </div>
+        
+    </section>
+
+    <!-- Drag and Drop -->
+    <section>
+        <h2>🎯 Drag & Drop</h2>
+        
+        <div style="margin-bottom: 1rem;">
+            <div class="drag-item" id="drag-item-1" draggable="true">Drag me to Zone 1</div>
+            <div class="drag-item" id="drag-item-2" draggable="true">Drag me to Zone 2</div>
+            <div class="drag-item" id="drag-item-3" draggable="true">Drag me anywhere</div>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div class="drag-drop-area" id="drop-zone-1" data-zone="1">
+                Drop Zone 1<br>
+                <small>Only accepts item 1</small>
+            </div>
+            <div class="drag-drop-area" id="drop-zone-2" data-zone="2">
+                Drop Zone 2<br>
+                <small>Only accepts item 2</small>
+            </div>
+        </div>
+        
+        <div class="drag-drop-area" id="drop-zone-any" style="margin-top: 1rem;">
+            Universal Drop Zone<br>
+            <small>Accepts any item</small>
+        </div>
+        
+    </section>
+
+    <!-- Table with Interactive Elements -->
+    <section>
+        <h2>📊 Interactive Data Table</h2>
+        
+        <div style="margin-bottom: 1rem;">
+            <input type="text" id="table-filter" placeholder="Filter table..." style="width: 200px; display: inline-block;">
+            <button type="button" id="add-row-btn" style="margin-left: 1rem;">Add Row</button>
+            <button type="button" id="sort-name-btn">Sort by Name</button>
+        </div>
+        
+        <table id="data-table">
+            <thead>
+                <tr>
+                    <th><input type="checkbox" id="select-all"></th>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Role</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr data-id="1">
+                    <td><input type="checkbox" name="row-select" value="1"></td>
+                    <td>1</td>
+                    <td>Alice Johnson</td>
+                    <td>
+                        <select name="role-1" style="width: 100%; margin: 0;">
+                            <option value="admin" selected>Admin</option>
+                            <option value="user">User</option>
+                            <option value="moderator">Moderator</option>
+                        </select>
+                    </td>
+                    <td><span class="status-indicator status-success">Active</span></td>
+                    <td>
+                        <button type="button" class="edit-btn" data-id="1" style="padding: 0.3rem 0.6rem; margin: 0.1rem;">Edit</button>
+                        <button type="button" class="delete-btn danger" data-id="1" style="padding: 0.3rem 0.6rem; margin: 0.1rem;">Delete</button>
+                    </td>
+                </tr>
+                <tr data-id="2">
+                    <td><input type="checkbox" name="row-select" value="2"></td>
+                    <td>2</td>
+                    <td>Bob Smith</td>
+                    <td>
+                        <select name="role-2" style="width: 100%; margin: 0;">
+                            <option value="admin">Admin</option>
+                            <option value="user" selected>User</option>
+                            <option value="moderator">Moderator</option>
+                        </select>
+                    </td>
+                    <td><span class="status-indicator status-warning">Pending</span></td>
+                    <td>
+                        <button type="button" class="edit-btn" data-id="2" style="padding: 0.3rem 0.6rem; margin: 0.1rem;">Edit</button>
+                        <button type="button" class="delete-btn danger" data-id="2" style="padding: 0.3rem 0.6rem; margin: 0.1rem;">Delete</button>
+                    </td>
+                </tr>
+                <tr data-id="3">
+                    <td><input type="checkbox" name="row-select" value="3"></td>
+                    <td>3</td>
+                    <td>Charlie Brown</td>
+                    <td>
+                        <select name="role-3" style="width: 100%; margin: 0;">
+                            <option value="admin">Admin</option>
+                            <option value="user">User</option>
+                            <option value="moderator" selected>Moderator</option>
+                        </select>
+                    </td>
+                    <td><span class="status-indicator status-error">Inactive</span></td>
+                    <td>
+                        <button type="button" class="edit-btn" data-id="3" style="padding: 0.3rem 0.6rem; margin: 0.1rem;">Edit</button>
+                        <button type="button" class="delete-btn danger" data-id="3" style="padding: 0.3rem 0.6rem; margin: 0.1rem;">Delete</button>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+        
+    </section>
+
+    <!-- Accordion -->
+    <section>
+        <h2>📋 Accordion/Collapsible Content</h2>
+        
+        <div class="accordion">
+            <div class="accordion-header" data-target="section1">
+                <span>📧 Contact Information</span>
+            </div>
+            <div class="accordion-content" id="section1">
+                <label>Email: <input type="email" name="contact-email" placeholder="contact@example.com"></label>
+                <label>Phone: <input type="tel" name="contact-phone" placeholder="+1-555-123-4567"></label>
+                <label>Address: <textarea name="address" rows="3" placeholder="Street address, City, State, ZIP"></textarea></label>
+            </div>
+        </div>
+        
+        <div class="accordion">
+            <div class="accordion-header" data-target="section2">
+                <span>🎓 Education & Certifications</span>
+            </div>
+            <div class="accordion-content" id="section2">
+                <label>Highest Degree: 
+                    <select name="degree">
+                        <option value="">-- Select --</option>
+                        <option value="highschool">High School</option>
+                        <option value="associate">Associate</option>
+                        <option value="bachelor">Bachelor's</option>
+                        <option value="master">Master's</option>
+                        <option value="doctorate">Doctorate</option>
+                    </select>
+                </label>
+                <label>Field of Study: <input type="text" name="field-study" placeholder="Computer Science"></label>
+                <label>Graduation Year: <input type="number" name="grad-year" min="1950" max="2030"></label>
+                <label>Certifications: <textarea name="certifications" rows="3" placeholder="List your professional certifications..."></textarea></label>
+            </div>
+        </div>
+        
+        <div class="accordion">
+            <div class="accordion-header" data-target="section3">
+                <span>💼 Work History</span>
+            </div>
+            <div class="accordion-content" id="section3">
+                <label>Current Position: <input type="text" name="current-position" placeholder="Senior Developer"></label>
+                <label>Previous Company: <input type="text" name="prev-company" placeholder="Previous Corp"></label>
+                <label>Employment Gap: 
+                    <label><input type="radio" name="gap" value="none"> No gaps</label>
+                    <label><input type="radio" name="gap" value="short"> Short gap (< 6 months)</label>
+                    <label><input type="radio" name="gap" value="long"> Long gap (> 6 months)</label>
+                </label>
+            </div>
+        </div>
+        
+    </section>
+
+    <!-- Lists and Navigation -->
+    <section>
+        <h2>📋 Lists & Navigation</h2>
+        
+        <h4>Unordered List:</h4>
+        <ul id="skills-list">
+            <li>JavaScript Programming</li>
+            <li>UI/UX Design</li>
+            <li>Database Management</li>
+            <li>Project Management</li>
+            <li>Quality Assurance</li>
+        </ul>
+        
+        <h4>Ordered List (Priorities):</h4>
+        <ol id="priorities-list">
+            <li>Code Quality</li>
+            <li>User Experience</li>
+            <li>Performance</li>
+            <li>Security</li>
+            <li>Maintainability</li>
+        </ol>
+        
+        <h4>Definition List:</h4>
+        <dl>
+            <dt>Frontend</dt>
+            <dd>User interface and experience development</dd>
+            <dt>Backend</dt>
+            <dd>Server-side logic and database management</dd>
+            <dt>DevOps</dt>
+            <dd>Development operations and infrastructure</dd>
+        </dl>
+        
+    </section>
+
+    <!-- Embedded Content -->
+    <section>
+        <h2>🖼️ Embedded Content</h2>
+        
+        <h4>Iframe Example:</h4>
+        <iframe src="https://example.com" title="Example Website" id="example-iframe"></iframe>
+        
+        <h4>Tooltip Elements:</h4>
+        <p>
+            This is a <span class="tooltip">tooltip example
+                <span class="tooltiptext">This is a helpful tooltip message that appears on hover!</span>
+            </span> that you can test hover interactions on.
+        </p>
+        
+        <h4>Details/Summary (Collapsible):</h4>
+        <details id="details-element">
+            <summary>Click to expand details</summary>
+            <p>This content is hidden by default and can be expanded by clicking the summary. This is useful for FAQ sections or detailed information that users can choose to view.</p>
+            <label>Hidden Input: <input type="text" name="hidden-input" placeholder="This input is inside details"></label>
+        </details>
+        
+    </section>
+
+    <!-- TIER 1 & TIER 2 Testing Elements -->
+    <section class="full-width">
+        <h2>🚀 TIER 1 & TIER 2 Testing Elements</h2>
+        
+        <!-- Smart Locator Testing -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem;">
+            <div>
+                <h3>🎯 Smart Locator Elements</h3>
+                
+                <!-- Test ID Elements -->
+                <label>Test ID Input:</label>
+                <input type="text" data-testid="test-input" placeholder="Testing getByTestId" title="Test input with data-testid">
+                
+                <label>Test ID Button:</label>
+                <button type="button" data-testid="test-button" title="Test button for automation">Test Button</button>
+                
+                <label>Test ID Select:</label>
+                <select data-testid="test-select" title="Test dropdown selection">
+                    <option value="">-- Select Option --</option>
+                    <option value="option1">Option 1</option>
+                    <option value="option2">Option 2</option>
+                    <option value="option3">Option 3</option>
+                </select>
+
+                <!-- Placeholder Elements -->
+                <label>Search Test:</label>
+                <input type="search" placeholder="Search for products" data-testid="search-input" title="Product search field">
+                
+                <label>Comment Box:</label>
+                <textarea placeholder="Enter your feedback here" data-testid="feedback-textarea" title="Feedback text area"></textarea>
+            </div>
+            
+            <div>
+                <h3>🖼️ Image Elements with Alt Text</h3>
+                
+                <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem;">
+                    <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Crect width='100' height='100' fill='%233498db'/%3E%3Ctext x='50' y='55' text-anchor='middle' fill='white' font-size='14'%3EProfile%3C/text%3E%3C/svg%3E" 
+                         alt="Profile picture" data-testid="profile-image" title="User profile picture" style="border-radius: 4px;">
+                    
+                    <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Crect width='100' height='100' fill='%2327ae60'/%3E%3Ctext x='50' y='55' text-anchor='middle' fill='white' font-size='14'%3ELogo%3C/text%3E%3C/svg%3E" 
+                         alt="Company logo" data-testid="company-logo" title="Company brand logo" style="border-radius: 4px;">
+                    
+                    <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Crect width='100' height='100' fill='%23e74c3c'/%3E%3Ctext x='50' y='55' text-anchor='middle' fill='white' font-size='12'%3EProduct%3C/text%3E%3C/svg%3E" 
+                         alt="Product image" data-testid="product-image" title="Featured product image" style="border-radius: 4px;">
+                </div>
+                
+                <label>Logo Upload:</label>
+                <input type="file" accept="image/*" data-testid="logo-upload" title="Upload company logo">
+                
+                <label>Banner Image:</label>
+                <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='100'%3E%3Crect width='300' height='100' fill='%23f39c12'/%3E%3Ctext x='150' y='55' text-anchor='middle' fill='white' font-size='16'%3EBanner Image%3C/text%3E%3C/svg%3E" 
+                     alt="Banner image" data-testid="banner-image" title="Website banner" style="width: 100%; border-radius: 4px;">
+            </div>
+        </div>
+        
+        <!-- Network Testing Elements -->
+        <div style="margin-bottom: 2rem;">
+            <h3>🌐 Network & API Testing</h3>
+            <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                <button type="button" id="api-test-btn" data-testid="api-test-button" title="Test API call">Test API Call</button>
+                <button type="button" id="fetch-data-btn" data-testid="fetch-data-button" title="Fetch remote data">Fetch Data</button>
+                <button type="button" id="upload-test-btn" data-testid="upload-test-button" title="Test file upload">Upload Test</button>
+                <button type="button" id="slow-request-btn" data-testid="slow-request-button" title="Simulate slow request">Slow Request</button>
+            </div>
+            
+            <div id="api-response" data-testid="api-response" style="margin-top: 1rem; padding: 1rem; background: #ecf0f1; border-radius: 4px; min-height: 50px;">
+                API Response will appear here...
+            </div>
+        </div>
+        
+        <!-- Multiple Iframe Testing -->
+        <div style="margin-bottom: 2rem;">
+            <h3>🖼️ Multiple Frame Testing</h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div>
+                    <label>Frame 1 (Example):</label>
+                    <iframe id="test-frame-1" data-testid="test-frame-1" title="Test frame 1" 
+                            src="data:text/html,<html><body style='font-family: Arial; padding: 20px; background: %23e8f6f3;'><h2>Frame 1</h2><p>This is test frame 1 content.</p><button onclick='alert(\"Frame 1 button clicked!\")'>Frame 1 Button</button><input type='text' placeholder='Frame 1 input' id='frame1-input'></body></html>"
+                            style="height: 200px; border: 2px solid #3498db;"></iframe>
+                </div>
+                
+                <div>
+                    <label>Frame 2 (Form):</label>
+                    <iframe id="test-frame-2" data-testid="test-frame-2" title="Test frame 2"
+                            src="data:text/html,<html><body style='font-family: Arial; padding: 20px; background: %23fdf2e9;'><h2>Frame 2</h2><form><label>Name: <input type='text' id='frame2-name'></label><br><br><label>Email: <input type='email' id='frame2-email'></label><br><br><button type='button' onclick='alert(\"Frame 2 form submitted!\")'>Submit</button></form></body></html>"
+                            style="height: 200px; border: 2px solid #e67e22;"></iframe>
+                </div>
+            </div>
+            
+            <div style="margin-top: 1rem;">
+                <button type="button" id="switch-frame-1" data-testid="switch-frame-1" title="Switch to frame 1">Switch to Frame 1</button>
+                <button type="button" id="switch-frame-2" data-testid="switch-frame-2" title="Switch to frame 2">Switch to Frame 2</button>
+                <button type="button" id="switch-main" data-testid="switch-main" title="Switch to main frame">Switch to Main</button>
+            </div>
+        </div>
+        
+        <!-- Device Testing Indicators -->
+        <div style="margin-bottom: 2rem;">
+            <h3>📱 Device Emulation Testing</h3>
+            <div id="device-info" data-testid="device-info" style="padding: 1rem; background: #f8f9fa; border-radius: 4px; border: 2px solid #6c757d;">
+                <div>Screen Width: <span id="screen-width">Unknown</span>px</div>
+                <div>Screen Height: <span id="screen-height">Unknown</span>px</div>
+                <div>User Agent: <span id="user-agent" style="font-size: 0.8rem;">Unknown</span></div>
+                <div>Touch Support: <span id="touch-support">Unknown</span></div>
+            </div>
+            
+            <div style="margin-top: 1rem;">
+                <button type="button" id="get-location-btn" data-testid="get-location-button" title="Test geolocation">Get Location</button>
+                <button type="button" id="test-orientation-btn" data-testid="test-orientation-button" title="Test orientation">Test Orientation</button>
+                <div id="location-info" data-testid="location-info" style="margin-top: 0.5rem; font-size: 0.9rem; color: #6c757d;">
+                    Location info will appear here...
+                </div>
+            </div>
+        </div>
+        
+        <!-- Advanced Waiting Test Elements -->
+        <div style="margin-bottom: 2rem;">
+            <h3>⏳ Advanced Waiting Testing</h3>
+            <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                <button type="button" id="delayed-text-btn" data-testid="delayed-text-button" title="Show delayed text">Show Delayed Text</button>
+                <button type="button" id="delayed-element-btn" data-testid="delayed-element-button" title="Show delayed element">Show Delayed Element</button>
+                <button type="button" id="change-url-btn" data-testid="change-url-button" title="Change URL hash">Change URL</button>
+                <button type="button" id="loading-state-btn" data-testid="loading-state-button" title="Test loading state">Loading State</button>
+            </div>
+            
+            <div id="delayed-content" data-testid="delayed-content" style="margin-top: 1rem; padding: 1rem; background: #f8f9fa; border-radius: 4px; min-height: 50px;">
+                Delayed content will appear here...
+            </div>
+            
+            <div id="delayed-element" data-testid="delayed-element" style="display: none; margin-top: 1rem; padding: 1rem; background: #d4edda; border-radius: 4px;">
+                This is a delayed element that appears after clicking the button!
+            </div>
+        </div>
+        
+        <!-- Keyboard Testing Area -->
+        <div>
+            <h3>⌨️ Keyboard & Input Testing</h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div>
+                    <label>Keyboard Test Area:</label>
+                    <textarea id="keyboard-test-area" data-testid="keyboard-test-area" placeholder="Type here to test keyboard events" 
+                              title="Keyboard testing area" rows="4" style="font-family: monospace;"></textarea>
+                    
+                    <div id="key-events" data-testid="key-events" style="margin-top: 0.5rem; padding: 0.5rem; background: #f8f9fa; border-radius: 4px; font-size: 0.8rem; max-height: 100px; overflow-y: auto;">
+                        Key events will appear here...
+                    </div>
+                </div>
+                
+                <div>
+                    <label>File Upload Testing:</label>
+                    <input type="file" id="test-file-upload" data-testid="test-file-upload" multiple title="Test file upload">
+                    
+                    <label>Multi-step Form:</label>
+                    <input type="text" id="step1-input" data-testid="step1-input" placeholder="Step 1: Enter name" title="Step 1 input">
+                    <input type="email" id="step2-input" data-testid="step2-input" placeholder="Step 2: Enter email" title="Step 2 input">
+                    <input type="tel" id="step3-input" data-testid="step3-input" placeholder="Step 3: Enter phone" title="Step 3 input">
+                    
+                    <button type="button" id="multi-step-test" data-testid="multi-step-test" title="Test multi-step form">Test Multi-Step</button>
+                </div>
+            </div>
+        </div>
+        
+    </section>
+
+</div>
+
+<!-- Modal Dialog -->
+<div id="test-modal" class="modal">
+    <div class="modal-content">
+        <span class="modal-close" id="modal-close">&times;</span>
+        <h3>Modal Dialog Example</h3>
+        <p>This is a modal dialog for testing popup interactions.</p>
+        <label>Modal Input: <input type="text" id="modal-input" placeholder="Enter something..."></label>
+        <br>
+        <button type="button" id="modal-ok">OK</button>
+        <button type="button" id="modal-cancel" class="secondary">Cancel</button>
+    </div>
+</div>
+
+<script>
+// Enhanced JavaScript for comprehensive testing
+document.addEventListener('DOMContentLoaded', function() {
+    
+    // Form submission
+    document.getElementById('submit-btn').addEventListener('click', function(e) {
+        e.preventDefault();
+        document.getElementById('basic-form').setAttribute('data-status', 'submitted');
+        alert('Form submitted successfully!');
+    });
+    
+    // Form reset
+    document.getElementById('reset-btn').addEventListener('click', function() {
+        document.getElementById('basic-form').reset();
+        document.getElementById('basic-form').setAttribute('data-status', 'reset');
+    });
+    
+    // Save draft
+    document.getElementById('save-draft-btn').addEventListener('click', function() {
+        document.getElementById('basic-form').setAttribute('data-status', 'draft-saved');
+        alert('Draft saved!');
+    });
+    
+    // Range sliders
+    const salarySlider = document.getElementById('salary');
+    const salaryValue = document.getElementById('salary-value');
+    salarySlider.addEventListener('input', function() {
+        salaryValue.textContent = '$' + parseInt(this.value).toLocaleString();
+    });
+    
+    const volumeSlider = document.getElementById('volume');
+    const volumeValue = document.getElementById('volume-value');
+    volumeSlider.addEventListener('input', function() {
+        volumeValue.textContent = this.value;
+    });
+    
+    // Color picker
+    const colorPicker = document.getElementById('color');
+    const colorPreview = document.getElementById('color-preview');
+    colorPicker.addEventListener('input', function() {
+        colorPreview.style.backgroundColor = this.value;
+    });
+    
+    // Progress bar animation
+    const progressBar = document.getElementById('progress-bar');
+    const progressText = document.getElementById('progress-text');
+    let progress = 45;
+    setInterval(() => {
+        progress = (progress + 1) % 101;
+        progressBar.value = progress;
+        progressText.textContent = progress + '%';
+    }, 100);
+    
+    // Toggle button
+    const toggleBtn = document.getElementById('toggle-btn');
+    toggleBtn.addEventListener('click', function() {
+        const state = this.getAttribute('data-state');
+        if (state === 'off') {
+            this.setAttribute('data-state', 'on');
+            this.textContent = 'Toggle: ON';
+            this.style.backgroundColor = '#27ae60';
+        } else {
+            this.setAttribute('data-state', 'off');
+            this.textContent = 'Toggle: OFF';
+            this.style.backgroundColor = '#e74c3c';
+        }
+    });
+    
+    // Tab functionality
+    const tabButtons = document.querySelectorAll('.tab-button');
+    const tabContents = document.querySelectorAll('.tab-content');
+    
+    tabButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const targetTab = this.getAttribute('data-tab');
+            
+            // Remove active class from all buttons and contents
+            tabButtons.forEach(btn => btn.classList.remove('active'));
+            tabContents.forEach(content => content.classList.remove('active'));
+            
+            // Add active class to clicked button and corresponding content
+            this.classList.add('active');
+            document.getElementById(targetTab).classList.add('active');
+        });
+    });
+    
+    // Accordion functionality
+    const accordionHeaders = document.querySelectorAll('.accordion-header');
+    accordionHeaders.forEach(header => {
+        header.addEventListener('click', function() {
+            const targetId = this.getAttribute('data-target');
+            const content = document.getElementById(targetId);
+            
+            if (content.classList.contains('active')) {
+                content.classList.remove('active');
+            } else {
+                // Close all other accordions
+                document.querySelectorAll('.accordion-content').forEach(c => c.classList.remove('active'));
+                content.classList.add('active');
+            }
+        });
+    });
+    
+    // Modal functionality
+    const modal = document.getElementById('test-modal');
+    const modalBtn = document.getElementById('modal-btn');
+    const modalClose = document.getElementById('modal-close');
+    const modalOk = document.getElementById('modal-ok');
+    const modalCancel = document.getElementById('modal-cancel');
+    
+    modalBtn.addEventListener('click', function() {
+        modal.style.display = 'block';
+    });
+    
+    modalClose.addEventListener('click', function() {
+        modal.style.display = 'none';
+    });
+    
+    modalOk.addEventListener('click', function() {
+        const input = document.getElementById('modal-input').value;
+        alert('Modal input: ' + input);
+        modal.style.display = 'none';
+    });
+    
+    modalCancel.addEventListener('click', function() {
+        modal.style.display = 'none';
+    });
+    
+    // Alert buttons
+    document.getElementById('alert-btn').addEventListener('click', function() {
+        alert('This is a test alert dialog!');
+    });
+    
+    document.getElementById('confirm-btn').addEventListener('click', function() {
+        if (confirm('Are you sure you want to proceed?')) {
+            alert('You clicked OK!');
+        } else {
+            alert('You clicked Cancel!');
+        }
+    });
+    
+    document.getElementById('prompt-btn').addEventListener('click', function() {
+        const result = prompt('Please enter your name:', 'Default Name');
+        if (result !== null) {
+            alert('Hello, ' + result + '!');
+        }
+    });
+    
+    // Drag and drop functionality
+    const dragItems = document.querySelectorAll('.drag-item');
+    const dropZones = document.querySelectorAll('.drag-drop-area');
+    
+    dragItems.forEach(item => {
+        item.addEventListener('dragstart', function(e) {
+            e.dataTransfer.setData('text/plain', this.id);
+            e.dataTransfer.setData('text/html', this.outerHTML);
+        });
+    });
+    
+    dropZones.forEach(zone => {
+        zone.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            this.style.backgroundColor = '#d5dbdb';
+        });
+        
+        zone.addEventListener('dragleave', function(e) {
+            this.style.backgroundColor = '#ecf0f1';
+        });
+        
+        zone.addEventListener('drop', function(e) {
+            e.preventDefault();
+            const draggedId = e.dataTransfer.getData('text/plain');
+            const zoneNumber = this.getAttribute('data-zone');
+            
+            if (this.id === 'drop-zone-any') {
+                this.innerHTML = `${draggedId} dropped in universal zone!`;
+            } else if (zoneNumber && draggedId.includes(zoneNumber)) {
+                this.innerHTML = `${draggedId} dropped correctly!`;
+            } else if (zoneNumber) {
+                this.innerHTML = `Wrong item! Only drag-item-${zoneNumber} allowed here.`;
+            } else {
+                this.innerHTML = `${draggedId} dropped!`;
+            }
+            
+            this.style.backgroundColor = '#ecf0f1';
+        });
+    });
+    
+    // Table functionality
+    const selectAllCheckbox = document.getElementById('select-all');
+    const rowCheckboxes = document.querySelectorAll('input[name="row-select"]');
+    
+    selectAllCheckbox.addEventListener('change', function() {
+        rowCheckboxes.forEach(checkbox => {
+            checkbox.checked = this.checked;
+        });
+    });
+    
+    // Add row functionality
+    document.getElementById('add-row-btn').addEventListener('click', function() {
+        const table = document.getElementById('data-table').getElementsByTagName('tbody')[0];
+        const newRow = table.insertRow();
+        const rowCount = table.rows.length;
+        
+        newRow.innerHTML = `
+            <td><input type="checkbox" name="row-select" value="${rowCount}"></td>
+            <td>${rowCount}</td>
+            <td>New User ${rowCount}</td>
+            <td>
+                <select name="role-${rowCount}" style="width: 100%; margin: 0;">
+                    <option value="admin">Admin</option>
+                    <option value="user" selected>User</option>
+                    <option value="moderator">Moderator</option>
+                </select>
+            </td>
+            <td><span class="status-indicator status-warning">New</span></td>
+            <td>
+                <button type="button" class="edit-btn" data-id="${rowCount}" style="padding: 0.3rem 0.6rem; margin: 0.1rem;">Edit</button>
+                <button type="button" class="delete-btn danger" data-id="${rowCount}" style="padding: 0.3rem 0.6rem; margin: 0.1rem;">Delete</button>
+            </td>
+        `;
+    });
+    
+    // Table filter
+    document.getElementById('table-filter').addEventListener('input', function() {
+        const filter = this.value.toLowerCase();
+        const rows = document.querySelectorAll('#data-table tbody tr');
+        
+        rows.forEach(row => {
+            const text = row.textContent.toLowerCase();
+            row.style.display = text.includes(filter) ? '' : 'none';
+        });
+    });
+    
+    // Edit and delete button handlers (event delegation)
+    document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('edit-btn')) {
+            const id = e.target.getAttribute('data-id');
+            alert(`Edit user ${id}`);
+        }
+        
+        if (e.target.classList.contains('delete-btn')) {
+            const id = e.target.getAttribute('data-id');
+            if (confirm(`Delete user ${id}?`)) {
+                e.target.closest('tr').remove();
+            }
+        }
+    });
+    
+    // TIER 1 & TIER 2 Testing JavaScript
+    
+    // Device info updates
+    function updateDeviceInfo() {
+        document.getElementById('screen-width').textContent = window.screen.width;
+        document.getElementById('screen-height').textContent = window.screen.height;
+        document.getElementById('user-agent').textContent = navigator.userAgent;
+        document.getElementById('touch-support').textContent = 'ontouchstart' in window ? 'Yes' : 'No';
+    }
+    updateDeviceInfo();
+    
+    // Network testing buttons
+    document.getElementById('api-test-btn').addEventListener('click', async function() {
+        const responseDiv = document.getElementById('api-response');
+        responseDiv.textContent = 'Making API call...';
+        
+        try {
+            // Simulate API call with fetch to jsonplaceholder
+            const response = await fetch('https://jsonplaceholder.typicode.com/posts/1');
+            const data = await response.json();
+            responseDiv.innerHTML = `<strong>API Success:</strong><br>Title: ${data.title}<br>Body: ${data.body.substring(0, 100)}...`;
+        } catch (error) {
+            responseDiv.innerHTML = `<strong>API Error:</strong> ${error.message}`;
+        }
+    });
+    
+    document.getElementById('fetch-data-btn').addEventListener('click', async function() {
+        const responseDiv = document.getElementById('api-response');
+        responseDiv.textContent = 'Fetching data...';
+        
+        try {
+            const response = await fetch('https://httpbin.org/json');
+            const data = await response.json();
+            responseDiv.innerHTML = `<strong>Data Fetched:</strong><br>Slideshow: ${data.slideshow.title}`;
+        } catch (error) {
+            responseDiv.innerHTML = `<strong>Fetch Error:</strong> ${error.message}`;
+        }
+    });
+    
+    document.getElementById('slow-request-btn').addEventListener('click', async function() {
+        const responseDiv = document.getElementById('api-response');
+        responseDiv.textContent = 'Making slow request...';
+        
+        try {
+            const response = await fetch('https://httpbin.org/delay/3');
+            const data = await response.json();
+            responseDiv.innerHTML = `<strong>Slow Request Complete:</strong><br>Origin: ${data.origin}`;
+        } catch (error) {
+            responseDiv.innerHTML = `<strong>Slow Request Error:</strong> ${error.message}`;
+        }
+    });
+    
+    // Advanced waiting test buttons
+    document.getElementById('delayed-text-btn').addEventListener('click', function() {
+        const contentDiv = document.getElementById('delayed-content');
+        contentDiv.textContent = 'Loading delayed text...';
+        
+        setTimeout(() => {
+            contentDiv.innerHTML = '<strong>✅ Delayed text appeared!</strong><br>This text appeared after 2 seconds.';
+        }, 2000);
+    });
+    
+    document.getElementById('delayed-element-btn').addEventListener('click', function() {
+        const elementDiv = document.getElementById('delayed-element');
+        
+        setTimeout(() => {
+            elementDiv.style.display = 'block';
+        }, 1500);
+    });
+    
+    document.getElementById('change-url-btn').addEventListener('click', function() {
+        window.location.hash = 'testing-url-change-' + Date.now();
+    });
+    
+    document.getElementById('loading-state-btn').addEventListener('click', function() {
+        const contentDiv = document.getElementById('delayed-content');
+        contentDiv.innerHTML = '<div style="text-align: center;">⏳ Loading...</div>';
+        
+        // Simulate loading state changes
+        setTimeout(() => {
+            contentDiv.innerHTML = '<div style="text-align: center;">🔄 Processing...</div>';
+        }, 1000);
+        
+        setTimeout(() => {
+            contentDiv.innerHTML = '<div style="text-align: center;">✅ Load complete!</div>';
+        }, 3000);
+    });
+    
+    // Keyboard testing
+    const keyboardArea = document.getElementById('keyboard-test-area');
+    const keyEventsDiv = document.getElementById('key-events');
+    
+    keyboardArea.addEventListener('keydown', function(e) {
+        keyEventsDiv.innerHTML = `Key Down: "${e.key}" (Code: ${e.code})` + '<br>' + keyEventsDiv.innerHTML;
+    });
+    
+    keyboardArea.addEventListener('keyup', function(e) {
+        keyEventsDiv.innerHTML = `Key Up: "${e.key}" (Code: ${e.code})` + '<br>' + keyEventsDiv.innerHTML;
+    });
+    
+    // Multi-step form testing
+    document.getElementById('multi-step-test').addEventListener('click', function() {
+        const step1 = document.getElementById('step1-input');
+        const step2 = document.getElementById('step2-input');
+        const step3 = document.getElementById('step3-input');
+        
+        // Auto-fill with test data
+        step1.value = 'John Doe';
+        
+        setTimeout(() => {
+            step2.value = 'john.doe@example.com';
+        }, 500);
+        
+        setTimeout(() => {
+            step3.value = '+1-555-123-4567';
+        }, 1000);
+    });
+    
+    // Geolocation testing
+    document.getElementById('get-location-btn').addEventListener('click', function() {
+        const locationDiv = document.getElementById('location-info');
+        
+        if ('geolocation' in navigator) {
+            locationDiv.textContent = 'Getting location...';
+            
+            navigator.geolocation.getCurrentPosition(
+                function(position) {
+                    locationDiv.innerHTML = `Location: ${position.coords.latitude.toFixed(4)}, ${position.coords.longitude.toFixed(4)}<br>Accuracy: ${position.coords.accuracy}m`;
+                },
+                function(error) {
+                    locationDiv.textContent = `Location error: ${error.message}`;
+                }
+            );
+        } else {
+            locationDiv.textContent = 'Geolocation not supported';
+        }
+    });
+    
+    // Orientation testing
+    document.getElementById('test-orientation-btn').addEventListener('click', function() {
+        const locationDiv = document.getElementById('location-info');
+        
+        if (window.DeviceOrientationEvent) {
+            locationDiv.textContent = 'Testing device orientation...';
+            
+            window.addEventListener('deviceorientation', function(e) {
+                locationDiv.innerHTML = `Orientation - Alpha: ${e.alpha?.toFixed(1) || 'N/A'}°, Beta: ${e.beta?.toFixed(1) || 'N/A'}°, Gamma: ${e.gamma?.toFixed(1) || 'N/A'}°`;
+            }, { once: true });
+        } else {
+            locationDiv.textContent = 'Device orientation not supported';
+        }
+    });
+    
+    // File upload testing
+    document.getElementById('test-file-upload').addEventListener('change', function(e) {
+        const files = Array.from(e.target.files);
+        const responseDiv = document.getElementById('api-response');
+        
+        if (files.length > 0) {
+            const fileInfo = files.map(f => `${f.name} (${f.size} bytes)`).join(', ');
+            responseDiv.innerHTML = `<strong>Files Selected:</strong><br>${fileInfo}`;
+        }
+    });
+    
+    // Frame switching simulation (visual feedback)
+    document.getElementById('switch-frame-1').addEventListener('click', function() {
+        document.querySelectorAll('iframe').forEach(f => f.style.border = '2px solid #bdc3c7');
+        document.getElementById('test-frame-1').style.border = '4px solid #27ae60';
+        document.getElementById('api-response').textContent = 'Switched to Frame 1 context';
+    });
+    
+    document.getElementById('switch-frame-2').addEventListener('click', function() {
+        document.querySelectorAll('iframe').forEach(f => f.style.border = '2px solid #bdc3c7');
+        document.getElementById('test-frame-2').style.border = '4px solid #27ae60';
+        document.getElementById('api-response').textContent = 'Switched to Frame 2 context';
+    });
+    
+    document.getElementById('switch-main').addEventListener('click', function() {
+        document.querySelectorAll('iframe').forEach(f => f.style.border = '2px solid #bdc3c7');
+        document.getElementById('api-response').textContent = 'Switched to Main frame context';
+    });
+    
+});
+</script>
+
+</body>
+</html>

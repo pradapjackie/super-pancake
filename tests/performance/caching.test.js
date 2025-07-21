@@ -7,14 +7,14 @@ import { enableDOM, navigateTo, querySelector } from '../../core/dom.js';
 
 let chrome, ws, session;
 
-describe.skip('Performance and Caching Tests', () => {
+describe('Performance and Caching Tests', () => {
   beforeAll(async () => {
     chrome = await launchChrome({ headed: false });
-    ws = await connectToChrome();
+    ws = await connectToChrome(chrome.port);
     session = createSession(ws);
     await enableDOM(session);
     await navigateTo(session, 'data:text/html,<html><body><div id="test">Performance Test</div></body></html>');
-  });
+  }, 30000);
 
   afterAll(async () => {
     if (ws) ws.close();

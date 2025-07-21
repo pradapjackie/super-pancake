@@ -25,15 +25,15 @@ const UI_SERVER_URL = process.env.UI_SERVER_URL || 'http://localhost:3003';
 
 let chrome, ws, session;
 
-describe.skip('End-to-End UI Workflow Tests', () => {
+describe('End-to-End UI Workflow Tests', () => {
   beforeAll(async () => {
     // Servers are started by test-with-server.js
     // Launch browser for testing
     chrome = await launchChrome({ headed: false });
-    ws = await connectToChrome();
+    ws = await connectToChrome(chrome.port);
     session = createSession(ws);
     await enableDOM(session);
-  });
+  }, 30000);
 
   afterAll(async () => {
     if (ws) ws.close();
@@ -107,7 +107,7 @@ describe.skip('End-to-End UI Workflow Tests', () => {
     // Check table cell
     const emailCell = await getTableCell(session, '#dataTable', 1, 2);
     expect(emailCell).toBe('alice@example.com');
-  });
+  }, 15000);
 
   it('should handle dynamic content updates', async () => {
     await navigateTo(session, TEST_APP_URL);
@@ -123,22 +123,22 @@ describe.skip('End-to-End UI Workflow Tests', () => {
     const dynamicContentNodeId = await querySelector(session, '#dynamicContent');
     const updatedContent = await getText(session, dynamicContentNodeId);
     expect(updatedContent).toContain('Content updated at:');
-  });
+  }, 15000);
 
   it('should test visibility and state changes', async () => {
     await navigateTo(session, TEST_APP_URL);
     
     // Initially hidden button should become visible
-    await waitForSelector(session, '#hiddenButton', 5000);
+    await waitForSelector(session, '#hiddenButton', 15000);
     const hiddenBtn = await isVisible(session, '#hiddenButton');
     expect(hiddenBtn).toBe(true);
     
     // Initially disabled button should become enabled
     await waitForCondition(session, 
       () => isEnabled(session, '#disabledButton'), 
-      5000
+      15000
     );
     const enabledBtn = await isEnabled(session, '#disabledButton');
     expect(enabledBtn).toBe(true);
-  });
+  }, 15000);
 });
