@@ -24,14 +24,8 @@ jobs:
     - name: Install dependencies
       run: npm i
       
-    - name: Run quick unit tests
-      run: npm run test:unit-stable
-      
-    - name: Run configuration tests
-      run: npm run test:config
-      
-    - name: Run performance tests
-      run: npm run test:performance-stable
+    - name: Run quick CI tests
+      run: npm run test:ci
 
   tier1-core-features:
     name: TIER 1 Core Features
@@ -56,28 +50,30 @@ jobs:
       with:
         chrome-version: stable
         
-    - name: Verify Chrome installation
+    - name: Setup test environment for CI
       run: |
         google-chrome --version
         which google-chrome
-        
-    - name: Kill any existing Chrome processes
-      run: |
+        # Setup virtual display for headless testing
+        export DISPLAY=:99
+        # Kill any existing Chrome processes
         pkill -f "chrome.*remote-debugging-port" || true
         rm -rf /tmp/chrome-automation-test || true
+        # Create screenshots directory
+        mkdir -p screenshots
         
     - name: Run TIER 1 Smart Locators test
-      run: npm test tests/tier1-smart-locators.test.js --run
+      run: npm test tests/tier1-smart-locators.test.js
       env:
         HEADED: false
         
     - name: Run TIER 1 Advanced Waiting test
-      run: npm test tests/tier1-advanced-waiting.test.js --run
+      run: npm test tests/tier1-advanced-waiting.test.js
       env:
         HEADED: false
         
     - name: Run TIER 1 Keyboard Actions test
-      run: npm test tests/tier1-keyboard-actions.test.js --run
+      run: npm test tests/tier1-keyboard-actions.test.js
       env:
         HEADED: false
         

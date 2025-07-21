@@ -30,11 +30,11 @@ jobs:
       run: npm i
       timeout-minutes: 5
     - name: Run tests
-      run: npm run test:all-no-server
+      run: npm run test:ci
       env:
         NODE_ENV: test
         CI: true
-      timeout-minutes: 10
+      timeout-minutes: 5
       
     - name: Generate test report
       run: npm run test:report

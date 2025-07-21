@@ -56,6 +56,7 @@
     "test:watch": "vitest watch",
     "test:all": "node scripts/test-with-server.js all",
     "test:all-no-server": "node scripts/run-all-tests.js",
+    "test:ci": "npm run test:unit-stable && npm run test:config && npm run test:performance-stable",
     "test:quick": "npm run test:unit-stable && npm run test:config && npm run test:performance-stable",
     "test:unit-stable": "vitest run tests/unit/browser.test.js tests/unit/errors.test.js tests/unit/dom.test.js",
     "test:performance-stable": "vitest run tests/performance/query-cache.test.js",
