@@ -28,7 +28,7 @@ const PERF_CONFIG = {
   CONCURRENT_OPERATIONS: 20,
   STRESS_TEST_DURATION: 30000, // 30 seconds
   MEMORY_SAMPLE_INTERVAL: 1000, // 1 second
-  PERFORMANCE_THRESHOLDS: getPerformanceThresholds()
+   PERFORMANCE_THRESHOLDS: getPerformanceThresholds()
 };
 
 // Performance results tracking
