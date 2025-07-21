@@ -1,6 +1,7 @@
 import chromeLauncher from 'chrome-launcher';
 import { exec } from 'child_process';
 import fetch from 'node-fetch';
+import net from 'net';
 
 /**
  * Launch Chrome in headed or headless mode
@@ -233,7 +234,6 @@ async function cleanupChromeProcesses(port) {
 
 async function checkPortAvailability(port) {
     return new Promise((resolve) => {
-        const net = require('net');
         const server = net.createServer();
         
         server.listen(port, () => {

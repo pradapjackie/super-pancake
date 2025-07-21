@@ -2,6 +2,7 @@
 import { spawn } from 'child_process';
 import WebSocket from 'ws';
 import fetch from 'node-fetch';
+import os from 'os';
 
 let chromeProcess = null;
 
@@ -41,7 +42,7 @@ export async function startTestChrome() {
     '--disable-backgrounding-occluded-windows',
     '--disable-renderer-backgrounding',
     process.platform === 'win32' 
-      ? '--user-data-dir=' + require('os').tmpdir() + '\\chrome-test-' + Date.now()
+      ? '--user-data-dir=' + os.tmpdir() + '\\chrome-test-' + Date.now()
       : '--user-data-dir=/tmp/chrome-test-' + Date.now()
   ], {
     stdio: 'pipe'

@@ -22,6 +22,16 @@ export * from './core/api.js';
 // Session context utilities (needed by generators)
 export { setSession, clearSession, getSession } from './core/session-context.js';
 
+// Test setup utilities (needed by generators)
+export { 
+  createTestEnvironment, 
+  cleanupTestEnvironment,
+  withTestEnvironment,
+  createFormTestEnvironment,
+  createComprehensiveTestEnvironment,
+  createHeadedTestEnvironment 
+} from './utils/test-setup.js';
+
 // Export caching utilities
 export { 
   getCacheStats, 

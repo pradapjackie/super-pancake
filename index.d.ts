@@ -321,6 +321,47 @@ declare module 'super-pancake-automation' {
   export function withRetry<T>(fn: (...args: any[]) => Promise<T>, maxRetries?: number, delay?: number): (...args: any[]) => Promise<T>;
   
   // ========================================
+  // TEST SETUP UTILITIES
+  // ========================================
+
+  export interface TestEnvironmentOptions {
+    headed?: boolean;
+    port?: number;
+    testName?: string;
+  }
+
+  export interface TestEnvironment {
+    chrome: any;
+    ws: any;
+    session: Session;
+  }
+
+  export function createTestEnvironment(options?: TestEnvironmentOptions): Promise<TestEnvironment>;
+  export function cleanupTestEnvironment(environment: TestEnvironment, testName?: string): Promise<void>;
+  export function withTestEnvironment(options?: TestEnvironmentOptions): (testFn: (env: TestEnvironment, ...args: any[]) => Promise<any>) => (...args: any[]) => Promise<any>;
+  export function createFormTestEnvironment(testName?: string): Promise<TestEnvironment>;
+  export function createComprehensiveTestEnvironment(testName?: string): Promise<TestEnvironment>;
+  export function createHeadedTestEnvironment(testName?: string): Promise<TestEnvironment>;
+
+  // ========================================
+  // SESSION CONTEXT UTILITIES
+  // ========================================
+
+  export function setSession(session: Session): void;
+  export function clearSession(): void;
+  export function getSession(): Session | null;
+
+  // ========================================
+  // ASSERTION UTILITIES  
+  // ========================================
+
+  export function assertEqual(actual: any, expected: any, message?: string): void;
+  export function assertContainsText(text: string, substring: string, message?: string): void;
+  export function assertNotEqual(actual: any, expected: any, message?: string): void;
+  export function assertTrue(value: any, message?: string): void;
+  export function assertFalse(value: any, message?: string): void;
+
+  // ========================================
   // CONFIGURATION EXPORT
   // ========================================
   
