@@ -19,6 +19,9 @@ export * from './config.js';
 // Export API utilities
 export * from './core/api.js';
 
+// Session context utilities (needed by generators)
+export { setSession, clearSession, getSession } from './core/session-context.js';
+
 // Export caching utilities
 export { 
   getCacheStats, 

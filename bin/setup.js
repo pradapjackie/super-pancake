@@ -75,7 +75,7 @@ async function setup() {
         test: 'vitest',
         'test:run': 'vitest run',
         'test:watch': 'vitest watch',
-        'test:ui': 'super-pancake-ui',
+        'test:ui': 'vitest --ui',
         'test:report': 'vitest run && super-pancake-generate',
         start: 'vitest'
       },
@@ -137,9 +137,7 @@ async function setup() {
     
     // Generate comprehensive sample test
     const sampleTest = `import { describe, it, beforeAll, afterAll } from 'vitest';
-import { launchChrome } from 'super-pancake-automation/utils/launcher.js';
-import { connectToChrome } from 'super-pancake-automation/core/browser.js';
-import { createSession } from 'super-pancake-automation/core/session.js';
+import { launchChrome, connectToChrome, createSession } from 'super-pancake-automation';
 import {
   enableDOM,
   navigateTo,
@@ -148,13 +146,12 @@ import {
   getText,
   waitForSelector,
   takeElementScreenshot
-} from 'super-pancake-automation/core/dom.js';
+} from 'super-pancake-automation';
 import {
   assertEqual,
   assertContainsText,
-} from 'super-pancake-automation/core/assert.js';
-import { addTestResult, writeReport } from 'super-pancake-automation/reporter/htmlReporter.js';
-import { testWithReport } from 'super-pancake-automation/helpers/testWrapper.js';
+} from 'super-pancake-automation';
+import { addTestResult, writeReport, testWithReport } from 'super-pancake-automation';
 
 let chrome, ws, session;
 

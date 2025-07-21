@@ -33,7 +33,7 @@ const packageJson = {
   "scripts": {
     "test": "vitest",
     "test:run": "vitest run",
-    "test:ui": "super-pancake-ui",
+    "test:ui": "vitest --ui",
     "test:generate": "super-pancake-generate",
     "start": "vitest"
   },
@@ -57,9 +57,7 @@ writeFileSync(
 
 // Create test.js
 const testContent = `import { describe, it, beforeAll, afterAll } from 'vitest';
-import { launchChrome } from 'super-pancake-automation/utils/launcher.js';
-import { connectToChrome } from 'super-pancake-automation/core/browser.js';
-import { createSession } from 'super-pancake-automation/core/session.js';
+import { launchChrome, connectToChrome, createSession } from 'super-pancake-automation';
 import {
   enableDOM,
   navigateTo,
@@ -67,11 +65,11 @@ import {
   click,
   getText,
   waitForSelector
-} from 'super-pancake-automation/core/dom.js';
+} from 'super-pancake-automation';
 import {
   assertEqual,
   assertContainsText,
-} from 'super-pancake-automation/core/assert.js';
+} from 'super-pancake-automation';
 
 let chrome, ws, session;
 

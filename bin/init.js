@@ -160,15 +160,12 @@ const packageJson = {
   main: 'index.js',
   type: 'module',
   scripts: {
-    test: 'node scripts/super-pancake-test.js',
+    test: 'vitest run',
     'test:run': 'vitest run',
-    'test:ui': 'super-pancake-ui',
-    'test:generate': 'super-pancake-generate',
-    'test:tier1': 'npm test tests/tier1-*.test.js --run',
-    'test:headed': 'HEADED=true npm test',
-    'test:sequential': 'npm test --sequential',
-    'test:quick': 'npm run test:unit-stable && npm run test:config',
-    'test:stability': 'vitest run tests/stability-test-suite.test.js',
+    'test:ui': 'vitest --ui',
+    'test:watch': 'vitest watch',
+    'test:headed': 'HEADED=true vitest run',
+    'test:debug': 'DEBUG=true vitest run',
     start: 'npm test'
   },
   dependencies: {
@@ -383,10 +380,14 @@ writeFileSync(join(projectPath, 'scripts', 'super-pancake-test.js'), testRunnerC
 const testSetupContent = `// Test Setup Utility for ${projectName}
 // Provides automatic Chrome launch, session creation, and cleanup
 
-import { launchChrome } from 'super-pancake-automation/utils/simple-launcher.js';
-import { connectToChrome, closeConnection } from 'super-pancake-automation/core/simple-browser.js';
-import { createSession } from 'super-pancake-automation/core/simple-session.js';
-import { setSession, clearSession } from 'super-pancake-automation/core/session-context.js';
+import {
+  launchChrome,
+  connectToChrome,
+  closeConnection,
+  createSession,
+  setSession,
+  clearSession
+} from 'super-pancake-automation';
 
 /**
  * Creates a complete test setup with Chrome, WebSocket, and session
@@ -506,7 +507,7 @@ function generateSampleTests(projectName, preferences) {
 // These tests demonstrate modern Super Pancake patterns
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { createTestEnvironment, cleanupTestEnvironment } from './utils/test-setup.js';
+// Note: createTestEnvironment and cleanupTestEnvironment are part of the test setup
 import {
   enableDOM,
   navigateTo,
@@ -517,7 +518,7 @@ import {
   takeScreenshot,
   getText,
   waitForText
-} from 'super-pancake-automation/core/simple-dom-v2.js';
+} from 'super-pancake-automation';
 
 let testEnv;
 
@@ -603,7 +604,7 @@ describe('${projectName} Basic Tests', () => {
 // Perfect for learning form automation patterns
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { createTestEnvironment, cleanupTestEnvironment } from './utils/test-setup.js';
+// Note: createTestEnvironment and cleanupTestEnvironment are part of the test setup
 import {
   enableDOM,
   navigateTo,
@@ -618,7 +619,7 @@ import {
   getValue,
   takeScreenshot,
   waitForText
-} from 'super-pancake-automation/core/simple-dom-v2.js';
+} from 'super-pancake-automation';
 
 let testEnv;
 
@@ -741,7 +742,7 @@ describe('${projectName} Form Tests', () => {
 // Perfect for learning API automation with Super Pancake
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { createTestEnvironment, cleanupTestEnvironment } from './utils/test-setup.js';
+// Note: createTestEnvironment and cleanupTestEnvironment are part of the test setup
 import {
   enableDOM,
   navigateTo,
@@ -751,7 +752,7 @@ import {
   click,
   getByRole,
   waitForText
-} from 'super-pancake-automation/core/simple-dom-v2.js';
+} from 'super-pancake-automation';
 
 let testEnv;
 
@@ -862,7 +863,7 @@ describe('${projectName} API Tests', () => {
 // Perfect for demonstrating complex automation scenarios
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { createTestEnvironment, cleanupTestEnvironment } from './utils/test-setup.js';
+// Note: createTestEnvironment and cleanupTestEnvironment are part of the test setup
 import {
   enableDOM,
   navigateTo,
@@ -880,7 +881,7 @@ import {
   isChecked,
   emulateDevice,
   setViewport
-} from 'super-pancake-automation/core/simple-dom-v2.js';
+} from 'super-pancake-automation';
 
 let testEnv;
 
@@ -1194,7 +1195,7 @@ if (preferences.reports === 0) {
 }
 
 if (preferences.ui) {
-  console.log('🎯 Run "npx super-pancake-ui" for interactive testing');
+  console.log('🎯 Run "npm run test:ui" for interactive testing with Vitest UI');
 }
 
 console.log('⚡ Tests configured for sequential execution (headless by default)');
@@ -1205,11 +1206,11 @@ console.log(`📝 Generated ${sampleTypes[preferences.samples]} sample tests`);
 
 console.log('');
 console.log('🛠️ Available Commands:');
-console.log('  npm test                 # Run tests (sequential)');
+console.log('  npm test                 # Run all tests');
 console.log('  npm run test:headed      # Run with visible browser');
-console.log('  npm run test:tier1       # Run TIER 1 core tests');
-console.log('  npm run test:quick       # Run quick tests only');
-console.log('  npm run test:ui          # Interactive test runner');
+console.log('  npm run test:debug       # Run in debug mode');
+console.log('  npm run test:watch       # Watch mode for development');
+console.log('  npm run test:ui          # Vitest UI interface');
 
 console.log('');
 console.log('Happy testing! 🥞');
