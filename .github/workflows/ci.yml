@@ -50,7 +50,7 @@ jobs:
         cache: 'npm'
         
     - name: Install dependencies
-      run: npm 1
+      run: npm i
       
     - name: Setup Chrome for testing
       uses: browser-actions/setup-chrome@v1
