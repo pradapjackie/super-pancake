@@ -3,6 +3,10 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { createRequire } from 'module';
+
+const require = createRequire(import.meta.url);
+const packageJson = require('../package.json');
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -10,6 +14,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const testDir = path.resolve(process.cwd(), 'tests');
 const testFile = path.join(testDir, 'sample.test.js');
 const uiTestFile = path.join(testDir, 'ui-website.test.js');
+const apiTestFile = path.join(testDir, 'api.test.js');
 
 const sampleContent = `
 import { describe, it, beforeAll, afterAll } from 'vitest';
@@ -230,6 +235,189 @@ describe('Super Pancake NPM Website Tests', () => {
 
 `;
 
+// API Test Content
+const apiTestContent = `
+import { describe, it, beforeAll, afterAll } from 'vitest';
+import {
+  // API testing functions
+  sendGet,
+  sendPost,
+  setAuthToken,
+  withBaseUrl,
+  timedRequest,
+  
+  // Assertions for API responses
+  assertStatus,
+  assertHeader,
+  assertBodyContains,
+  assertResponseTime,
+  validateSchema,
+  assertJsonPath,
+  
+  // Utilities
+  buildUrlWithParams,
+  logResponse
+} from 'super-pancake-automation';
+
+describe('Super Pancake API Tests', () => {
+  beforeAll(async () => {
+    console.log('🚀 Setting up API tests...');
+    // Optional: Set base URL or auth token
+    // setAuthToken('your-api-token');
+  });
+
+  afterAll(async () => {
+    console.log('🧹 API tests completed');
+  });
+
+  it('should perform a GET request to JSONPlaceholder API', async () => {
+    console.log('🌐 Testing GET request...');
+    
+    // Make a GET request to a public API
+    const response = await sendGet('https://jsonplaceholder.typicode.com/posts/1');
+    
+    // Assert response status
+    assertStatus(response, 200);
+    
+    // Assert response contains expected data
+    assertBodyContains(response, 'userId', 1);
+    assertBodyContains(response, 'id', 1);
+    
+    // Verify response structure
+    const expectedSchema = {
+      type: 'object',
+      properties: {
+        userId: { type: 'number' },
+        id: { type: 'number' },
+        title: { type: 'string' },
+        body: { type: 'string' }
+      },
+      required: ['userId', 'id', 'title', 'body']
+    };
+    
+    validateSchema(response.data, expectedSchema);
+    
+    console.log('✅ GET request test passed');
+  });
+
+  it('should test POST request with data', async () => {
+    console.log('📤 Testing POST request...');
+    
+    const postData = {
+      title: 'Super Pancake Test Post',
+      body: 'This is a test post created by Super Pancake automation',
+      userId: 1
+    };
+    
+    // Make a POST request
+    const response = await sendPost('https://jsonplaceholder.typicode.com/posts', postData);
+    
+    // Assert response status for creation
+    assertStatus(response, 201);
+    
+    // Assert the posted data is in response
+    assertBodyContains(response, 'title', 'Super Pancake Test Post');
+    assertBodyContains(response, 'userId', 1);
+    
+    // Check that an ID was assigned
+    const responseId = response.data.id;
+    if (typeof responseId !== 'number' || responseId <= 0) {
+      throw new Error(\`Expected positive number ID, got: \${responseId}\`);
+    }
+    
+    console.log('✅ POST request test passed');
+  });
+
+  it('should test response time performance', async () => {
+    console.log('⏱️ Testing API response time...');
+    
+    // Use timed request to measure performance
+    const timedResponse = await timedRequest(() => 
+      sendGet('https://jsonplaceholder.typicode.com/posts')
+    );
+    
+    // Assert response time is reasonable (under 3 seconds)
+    assertResponseTime(timedResponse, 3000);
+    
+    // Assert we got multiple posts
+    const posts = timedResponse.data;
+    if (!Array.isArray(posts) || posts.length === 0) {
+      throw new Error('Expected array of posts');
+    }
+    
+    console.log(\`📊 Response time: \${timedResponse.duration}ms\`);
+    console.log(\`📋 Received \${posts.length} posts\`);
+    console.log('✅ Performance test passed');
+  });
+
+  it('should test URL building with parameters', async () => {
+    console.log('🔗 Testing URL parameter building...');
+    
+    const baseUrl = 'https://jsonplaceholder.typicode.com/posts';
+    const params = { userId: 1, _limit: 5 };
+    
+    // Build URL with parameters
+    const urlWithParams = buildUrlWithParams(baseUrl, params);
+    console.log('🌐 Built URL:', urlWithParams);
+    
+    // Make request with parameters
+    const response = await sendGet(urlWithParams);
+    
+    assertStatus(response, 200);
+    
+    // Should get posts from user 1, limited to 5
+    const posts = response.data;
+    if (posts.length > 5) {
+      throw new Error(\`Expected max 5 posts, got \${posts.length}\`);
+    }
+    
+    // All posts should be from userId 1
+    for (const post of posts) {
+      if (post.userId !== 1) {
+        throw new Error(\`Expected userId 1, got \${post.userId}\`);
+      }
+    }
+    
+    console.log(\`✅ URL parameters test passed - got \${posts.length} posts\`);
+  });
+
+  it('should test error handling for invalid endpoints', async () => {
+    console.log('❌ Testing error handling...');
+    
+    try {
+      // Try to access a non-existent endpoint
+      await sendGet('https://jsonplaceholder.typicode.com/nonexistent');
+      throw new Error('Expected request to fail');
+    } catch (error) {
+      // This should happen - the endpoint doesn't exist
+      console.log('✅ Correctly handled 404 error:', error.message);
+    }
+  });
+
+  it('should log and inspect API response', async () => {
+    console.log('🔍 Testing response logging...');
+    
+    const response = await sendGet('https://jsonplaceholder.typicode.com/users/1');
+    
+    // Log the full response for inspection
+    logResponse(response);
+    
+    // Assert basic structure
+    assertStatus(response, 200);
+    assertBodyContains(response, 'name', 'Leanne Graham');
+    assertBodyContains(response, 'email', 'Sincere@april.biz');
+    
+    // Test nested object access
+    assertJsonPath(response.data, 'address.city', 'Gwenborough');
+    assertJsonPath(response.data, 'company.name', 'Romaguera-Crona');
+    
+    console.log('✅ Response logging test passed');
+  });
+
+});
+
+`;
+
 if (!fs.existsSync(testDir)) {
     fs.mkdirSync(testDir, { recursive: true });
 }
@@ -247,14 +435,13 @@ if (!fs.existsSync(packageJsonPath)) {
             "test:ui": "vitest --ui",
             "test:sample": "vitest run tests/sample.test.js",
             "test:website": "vitest run tests/ui-website.test.js",
+            "test:api": "vitest run tests/api.test.js",
             "test:headed": "HEADED=true vitest run",
             "test:debug": "DEBUG=true vitest run"
         },
-        "devDependencies": {
-            "vitest": "^3.2.0"
-        },
         "dependencies": {
-            "super-pancake-automation": "^2.6.15"
+            "super-pancake-automation": "^" + packageJson.version,
+            "vitest": "^3.2.4"
         }
     };
     
@@ -278,6 +465,14 @@ if (!fs.existsSync(uiTestFile)) {
     console.log('⚠️ UI website test file already exists at:', uiTestFile);
 }
 
+// Create the API test file
+if (!fs.existsSync(apiTestFile)) {
+    fs.writeFileSync(apiTestFile, apiTestContent, 'utf-8');
+    console.log('✅ API test file created at:', apiTestFile);
+} else {
+    console.log('⚠️ API test file already exists at:', apiTestFile);
+}
+
 // Create a README with instructions
 const readmePath = path.join(process.cwd(), 'README.md');
 if (!fs.existsSync(readmePath)) {
@@ -294,12 +489,14 @@ npm install
 
 Run basic test: npm run test:sample
 Run website test: npm run test:website
+Run API test: npm run test:api
 Run all tests: npm test
 
 ## Test Files
 
 - tests/sample.test.js - Basic functionality test
 - tests/ui-website.test.js - NPM website UI test
+- tests/api.test.js - API testing example
 
 ## Documentation
 
@@ -317,5 +514,6 @@ console.log('\n📋 Available test commands:');
 console.log('   npm test               # Run all tests');
 console.log('   npm run test:sample    # Basic test (headless)');
 console.log('   npm run test:website   # NPM website UI test (shows browser)');
+console.log('   npm run test:api       # API testing example');
 console.log('   npm run test:headed    # Run with visible browser');
 console.log('   npm run test:watch     # Watch mode for development');
