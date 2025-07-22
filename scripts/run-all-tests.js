@@ -58,7 +58,7 @@ async function runTestSuite(suite) {
 
   // Build vitest command with exclusions
   const vitestArgs = ['vitest', 'run', suite.path, '--reporter=verbose'];
-  
+
   // Skip ui-workflow.test.js during CI/publishing
   if (process.env.CI || process.env.NODE_ENV === 'production') {
     console.log('⚠️ CI/Production mode detected - excluding ui-workflow.test.js');
@@ -138,7 +138,7 @@ ${results.filter(r => !r.success).map(r => `- ${r.name}`).join('\n')}
 
   fs.writeFileSync('TEST_REPORT.md', report);
   console.log('\n📄 Markdown report saved to TEST_REPORT.md');
-  
+
   // Generate HTML report
   const htmlReportPath = saveHTMLTestReport(results, 'test-report.html');
   console.log(`🌐 HTML report saved to: ${htmlReportPath}`);
@@ -147,7 +147,7 @@ ${results.filter(r => !r.success).map(r => `- ${r.name}`).join('\n')}
 async function main() {
   console.log('🎪 Super Pancake Framework - Comprehensive Test Suite');
   console.log('='.repeat(60));
-  
+
   const results = [];
   let overallSuccess = true;
 

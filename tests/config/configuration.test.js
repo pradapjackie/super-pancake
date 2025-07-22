@@ -1,13 +1,13 @@
 // Tests for configuration system
 import { describe, it, expect, beforeEach } from 'vitest';
-import { 
-  config, 
-  getConfig, 
-  updateConfig, 
-  isDevelopment, 
-  isProduction, 
-  isCI, 
-  validateConfig 
+import {
+  config,
+  getConfig,
+  updateConfig,
+  isDevelopment,
+  isProduction,
+  isCI,
+  validateConfig
 } from '../../config.js';
 
 describe('Configuration System Tests', () => {
@@ -31,10 +31,10 @@ describe('Configuration System Tests', () => {
   it('should update configuration values', () => {
     const originalTimeout = getConfig('timeouts.testTimeout');
     updateConfig('timeouts.testTimeout', 30000);
-    
+
     const newTimeout = getConfig('timeouts.testTimeout');
     expect(newTimeout).toBe(30000);
-    
+
     // Restore original value
     updateConfig('timeouts.testTimeout', originalTimeout);
   });
@@ -49,7 +49,7 @@ describe('Configuration System Tests', () => {
   it('should validate configuration', () => {
     const errors = validateConfig();
     expect(Array.isArray(errors)).toBe(true);
-    
+
     // Valid config should have no errors
     if (errors.length > 0) {
       console.warn('Configuration validation errors:', errors);

@@ -49,7 +49,7 @@ export function getSessionInfo() {
   if (!currentSession) {
     return { hasSession: false, id: null };
   }
-  
+
   return {
     hasSession: true,
     id: currentSession.id,

@@ -128,7 +128,7 @@ export const launchChrome = withErrorRecovery(async (options = {}) => {
 
 function getChromePaths() {
   const os = platform();
-  
+
   switch (os) {
     case 'darwin': // macOS
       return [

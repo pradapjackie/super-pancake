@@ -8,12 +8,12 @@ describe.skip('HTML Reporter Tests (disabled to prevent file deletion during mai
   beforeEach(() => {
     // Use a test-specific directory to avoid deleting production test results
     const testReportDir = 'test-report-test';
-    
+
     // Clean up test directory only
     if (fs.existsSync(testReportDir)) {
       fs.rmSync(testReportDir, { recursive: true, force: true });
     }
-    
+
     // Create minimal test directory structure without calling initializeReportDirectory
     // to avoid deleting production results during test execution
     fs.mkdirSync(path.join(testReportDir, 'results'), { recursive: true });
@@ -74,7 +74,7 @@ describe.skip('HTML Reporter Tests (disabled to prevent file deletion during mai
     writeReport();
 
     expect(fs.existsSync('automationTestReport.html')).toBe(true);
-    
+
     const htmlContent = fs.readFileSync('automationTestReport.html', 'utf-8');
     expect(htmlContent).toContain('Super Pancake Test Report');
     expect(htmlContent).toContain('DOCTYPE html');

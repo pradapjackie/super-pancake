@@ -41,9 +41,9 @@ class QueryCache {
       /\.loading|\.spinner/i, // Loading states
       /\.count|\.total|\.progress/i, // Counters
       /#\w*list|#\w*table/i, // Dynamic lists/tables
-      /\.live|\.real-time/i, // Real-time content
+      /\.live|\.real-time/i // Real-time content
     ];
-    
+
     return dynamicPatterns.some(pattern => pattern.test(selector));
   }
 
@@ -115,7 +115,7 @@ class QueryCache {
     };
 
     this.cache.set(key, entry);
-    
+
     // Set up event-driven invalidation for dynamic content
     if (isDynamic) {
       this._setupInvalidationListener(session, selector, key);
@@ -125,7 +125,7 @@ class QueryCache {
   _setupInvalidationListener(session, selector, cacheKey) {
     // Register for automatic invalidation on DOM mutations
     const listenerId = `${cacheKey}_listener`;
-    
+
     if (!this.invalidationListeners.has(listenerId)) {
       const listener = {
         selector,
@@ -133,7 +133,7 @@ class QueryCache {
         sessionId: this.sessionRegistry.get(session),
         timestamp: Date.now()
       };
-      
+
       this.invalidationListeners.set(listenerId, listener);
     }
   }
@@ -142,7 +142,7 @@ class QueryCache {
     if (session && selector) {
       const key = this._generateKey(session, selector);
       this.cache.delete(key);
-      
+
       // Clean up associated listeners
       const listenerId = `${key}_listener`;
       this.invalidationListeners.delete(listenerId);
@@ -152,51 +152,51 @@ class QueryCache {
   // Event-driven invalidation methods
   invalidateByPattern(session, selectorPattern) {
     const sessionId = this.sessionRegistry.get(session);
-    if (!sessionId) return;
-    
+    if (!sessionId) {return;}
+
     const keysToDelete = [];
     for (const [key, entry] of this.cache) {
       if (key.startsWith(`${sessionId}:`) && selectorPattern.test(entry.selector)) {
         keysToDelete.push(key);
       }
     }
-    
+
     keysToDelete.forEach(key => {
       this.cache.delete(key);
       const listenerId = `${key}_listener`;
       this.invalidationListeners.delete(listenerId);
     });
-    
+
     console.log(`📋 Invalidated ${keysToDelete.length} cache entries matching pattern`);
   }
 
   invalidateSession(session) {
     const sessionId = this.sessionRegistry.get(session);
-    if (!sessionId) return;
-    
+    if (!sessionId) {return;}
+
     const keysToDelete = [];
     for (const [key] of this.cache) {
       if (key.startsWith(`${sessionId}:`)) {
         keysToDelete.push(key);
       }
     }
-    
+
     keysToDelete.forEach(key => {
       this.cache.delete(key);
       const listenerId = `${key}_listener`;
       this.invalidationListeners.delete(listenerId);
     });
-    
+
     console.log(`🔄 Invalidated ${keysToDelete.length} cache entries for session`);
   }
 
   // Triggered by DOM mutations
   onDOMModification(session, mutatedSelectors = []) {
     console.log('🔄 DOM modification detected, invalidating affected cache entries...');
-    
+
     // Invalidate all dynamic content
     this.invalidateByPattern(session, /./); // Invalidate all for this session for now
-    
+
     // In the future, we could be more selective based on mutatedSelectors
     // mutatedSelectors.forEach(selector => {
     //   this.invalidate(session, selector);
@@ -213,7 +213,7 @@ class QueryCache {
   getStats() {
     const dynamicEntries = Array.from(this.cache.values()).filter(entry => entry.isDynamic).length;
     const staticEntries = this.cache.size - dynamicEntries;
-    
+
     return {
       size: this.cache.size,
       dynamicEntries,
@@ -306,22 +306,22 @@ export function invalidateCacheForSelector(session, selector) {
 // Configure cache settings
 export function configureCaching(options = {}) {
   const { maxSize, ttl } = options;
-  
+
   if (maxSize !== undefined) {
     globalCache.maxSize = maxSize;
   }
-  
+
   if (ttl !== undefined) {
     globalCache.ttl = ttl;
   }
-  
+
   return globalCache.getStats();
 }
 
 // Enhanced batch invalidation for form changes
 export function invalidateCacheForForm(session, formSelector) {
   console.log(`📋 Invalidating cache for form: ${formSelector}`);
-  
+
   // Invalidate form-related selectors
   const formPatterns = [
     new RegExp(formSelector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), // Exact form
@@ -329,7 +329,7 @@ export function invalidateCacheForForm(session, formSelector) {
     /\.error|\.warning|\.message/, // Status messages
     /\[data-/i // Dynamic attributes
   ];
-  
+
   formPatterns.forEach(pattern => {
     globalCache.invalidateByPattern(session, pattern);
   });
@@ -351,19 +351,19 @@ export function onDOMModification(session, mutatedSelectors) {
 // Configure enhanced caching
 export function configureEnhancedCaching(options = {}) {
   const { maxSize, dynamicTTL, staticTTL } = options;
-  
+
   if (maxSize !== undefined) {
     globalCache.maxSize = maxSize;
   }
-  
+
   if (dynamicTTL !== undefined) {
     globalCache.dynamicTTL = dynamicTTL;
   }
-  
+
   if (staticTTL !== undefined) {
     globalCache.staticTTL = staticTTL;
   }
-  
+
   console.log(`🔧 Cache configured: Dynamic TTL=${globalCache.dynamicTTL}ms, Static TTL=${globalCache.staticTTL}ms`);
   return globalCache.getStats();
 }

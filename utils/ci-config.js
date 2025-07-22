@@ -15,8 +15,8 @@ const __dirname = dirname(__filename);
  */
 export function isCI() {
   return !!(
-    process.env.CI || 
-    process.env.GITHUB_ACTIONS || 
+    process.env.CI ||
+    process.env.GITHUB_ACTIONS ||
     process.env.JENKINS_URL ||
     process.env.BUILDKITE ||
     process.env.CIRCLECI
@@ -36,7 +36,7 @@ export function isGitHubActions() {
 export function getFormPath() {
   const projectRoot = resolve(__dirname, '..');
   const formPath = join(projectRoot, 'public', 'form-comprehensive.html');
-  
+
   // Always use file:// protocol
   return `file://${formPath}`;
 }
@@ -80,7 +80,7 @@ export function getChromeConfig(overrides = {}) {
       '--disable-features=VizDisplayCompositor',
       ...(baseConfig.args || [])
     ];
-    
+
     // Longer timeout for CI
     baseConfig.timeout = 45000;
     baseConfig.maxRetries = 2;
@@ -96,13 +96,13 @@ export function getTestTimeouts() {
   if (isCI()) {
     return {
       short: 10000,   // 10 seconds
-      medium: 20000,  // 20 seconds  
+      medium: 20000,  // 20 seconds
       long: 45000,    // 45 seconds
       navigation: 30000, // 30 seconds
       screenshot: 15000  // 15 seconds
     };
   }
-  
+
   return {
     short: 5000,    // 5 seconds
     medium: 10000,  // 10 seconds

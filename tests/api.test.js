@@ -46,9 +46,9 @@ describe('API Utility Tests', () => {
     });
 
     it('buildUrlWithParams should build URL with query parameters', () => {
-      const url = buildUrlWithParams('https://api.example.com/test', { 
-        param1: 'value1', 
-        param2: 'value2' 
+      const url = buildUrlWithParams('https://api.example.com/test', {
+        param1: 'value1',
+        param2: 'value2'
       });
       expect(url).toBe('https://api.example.com/test?param1=value1&param2=value2');
     });
@@ -86,9 +86,9 @@ describe('API Utility Tests', () => {
 
     it('sendGet should make GET request', async () => {
       mockedAxios.get.mockResolvedValue(mockResponse);
-      
+
       const result = await sendGet('https://api.example.com/test');
-      
+
       expect(mockedAxios.get).toHaveBeenCalledWith('https://api.example.com/test', {
         headers: {}
       });
@@ -97,10 +97,10 @@ describe('API Utility Tests', () => {
 
     it('sendPost should make POST request', async () => {
       mockedAxios.post.mockResolvedValue(mockResponse);
-      
+
       const body = { name: 'test' };
       const result = await sendPost('https://api.example.com/test', body);
-      
+
       expect(mockedAxios.post).toHaveBeenCalledWith('https://api.example.com/test', body, {
         headers: {}
       });
@@ -109,10 +109,10 @@ describe('API Utility Tests', () => {
 
     it('sendPut should make PUT request', async () => {
       mockedAxios.put.mockResolvedValue(mockResponse);
-      
+
       const body = { update: true };
       const result = await sendPut('https://api.example.com/test', body);
-      
+
       expect(mockedAxios.put).toHaveBeenCalledWith('https://api.example.com/test', body, {
         headers: {}
       });
@@ -121,10 +121,10 @@ describe('API Utility Tests', () => {
 
     it('sendPatch should make PATCH request', async () => {
       mockedAxios.patch.mockResolvedValue(mockResponse);
-      
+
       const body = { partial: true };
       const result = await sendPatch('https://api.example.com/test', body);
-      
+
       expect(mockedAxios.patch).toHaveBeenCalledWith('https://api.example.com/test', body, {
         headers: {}
       });
@@ -133,9 +133,9 @@ describe('API Utility Tests', () => {
 
     it('sendDelete should make DELETE request', async () => {
       mockedAxios.delete.mockResolvedValue(mockResponse);
-      
+
       const result = await sendDelete('https://api.example.com/test');
-      
+
       expect(mockedAxios.delete).toHaveBeenCalledWith('https://api.example.com/test', {
         headers: {}
       });
@@ -144,9 +144,9 @@ describe('API Utility Tests', () => {
 
     it('sendOptions should make OPTIONS request', async () => {
       mockedAxios.options.mockResolvedValue(mockResponse);
-      
+
       const result = await sendOptions('https://api.example.com/test');
-      
+
       expect(mockedAxios.options).toHaveBeenCalledWith('https://api.example.com/test', {
         headers: {}
       });
@@ -155,9 +155,9 @@ describe('API Utility Tests', () => {
 
     it('sendHead should make HEAD request', async () => {
       mockedAxios.head.mockResolvedValue(mockResponse);
-      
+
       const result = await sendHead('https://api.example.com/test');
-      
+
       expect(mockedAxios.head).toHaveBeenCalledWith('https://api.example.com/test', {
         headers: {}
       });
@@ -232,7 +232,7 @@ describe('API Utility Tests', () => {
         },
         required: ['name', 'age']
       };
-      
+
       expect(() => validateSchema(data, schema)).not.toThrow();
     });
 
@@ -246,7 +246,7 @@ describe('API Utility Tests', () => {
         },
         required: ['name', 'age']
       };
-      
+
       expect(() => validateSchema(data, schema)).toThrow('Schema validation failed');
     });
   });
@@ -270,12 +270,12 @@ describe('API Utility Tests', () => {
         status: 200
       };
       mockedAxios.post.mockResolvedValue(mockResponse);
-      
+
       const query = 'query { hello }';
       const variables = { id: 1 };
-      
+
       const result = await sendGraphQL('https://api.example.com/graphql', query, variables);
-      
+
       expect(mockedAxios.post).toHaveBeenCalledWith(
         'https://api.example.com/graphql',
         { query, variables },
@@ -296,9 +296,9 @@ describe('API Utility Tests', () => {
         status: 200
       };
       mockedAxios.post.mockResolvedValue(mockResponse);
-      
+
       const token = await getOAuth2Token('https://auth.example.com/token', 'client-id', 'client-secret');
-      
+
       expect(mockedAxios.post).toHaveBeenCalledWith(
         'https://auth.example.com/token',
         expect.any(URLSearchParams),
@@ -313,7 +313,7 @@ describe('API Utility Tests', () => {
 
     it('getOAuth2Token should throw on failure', async () => {
       mockedAxios.post.mockRejectedValue(new Error('Unauthorized'));
-      
+
       await expect(getOAuth2Token('https://auth.example.com/token', 'client-id', 'client-secret'))
         .rejects.toThrow('OAuth2 token fetch failed');
     });
@@ -322,9 +322,9 @@ describe('API Utility Tests', () => {
   describe('Retry Logic', () => {
     it('retryRequest should succeed on first attempt', async () => {
       const mockFn = vi.fn().mockResolvedValue('success');
-      
+
       const result = await retryRequest(mockFn);
-      
+
       expect(mockFn).toHaveBeenCalledTimes(1);
       expect(result).toBe('success');
     });
@@ -333,16 +333,16 @@ describe('API Utility Tests', () => {
       const mockFn = vi.fn()
         .mockRejectedValueOnce(new Error('fail'))
         .mockResolvedValue('success');
-      
+
       const result = await retryRequest(mockFn, 3, 10);
-      
+
       expect(mockFn).toHaveBeenCalledTimes(2);
       expect(result).toBe('success');
     });
 
     it('retryRequest should fail after max retries', async () => {
       const mockFn = vi.fn().mockRejectedValue(new Error('fail'));
-      
+
       await expect(retryRequest(mockFn, 2, 10)).rejects.toThrow('fail');
       expect(mockFn).toHaveBeenCalledTimes(2);
     });
@@ -355,14 +355,14 @@ describe('API Utility Tests', () => {
         status: 200
       };
       mockedAxios.post.mockResolvedValue(mockResponse);
-      
+
       // Mock fs.createReadStream
       const mockStream = { pipe: vi.fn() };
       mockedFs.createReadStream.mockReturnValue(mockStream);
-      
+
       const filePath = '/path/to/test.txt';
       const result = await uploadFile('https://api.example.com/upload', filePath);
-      
+
       expect(mockedFs.createReadStream).toHaveBeenCalledWith(filePath);
       expect(mockedAxios.post).toHaveBeenCalled();
       expect(result.data.uploaded).toBe(true);
@@ -376,18 +376,18 @@ describe('API Utility Tests', () => {
         on: vi.fn(),
         close: vi.fn()
       };
-      
+
       // Mock WebSocket constructor
       vi.doMock('ws', () => ({
         default: vi.fn(() => mockWebSocket)
       }));
-      
+
       const onMessage = vi.fn();
       const onOpen = vi.fn();
       const onError = vi.fn();
-      
+
       const ws = createWebSocketConnection('ws://localhost:8080', onMessage, onOpen, onError);
-      
+
       expect(mockWebSocket.on).toHaveBeenCalledWith('open', expect.any(Function));
       expect(mockWebSocket.on).toHaveBeenCalledWith('message', expect.any(Function));
       expect(mockWebSocket.on).toHaveBeenCalledWith('error', expect.any(Function));
@@ -398,17 +398,17 @@ describe('API Utility Tests', () => {
   describe('Logging', () => {
     it('logResponse should log response data', () => {
       const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-      
+
       const response = {
         status: 200,
         headers: { 'content-type': 'application/json' },
         data: { test: 'data' }
       };
-      
+
       logResponse(response);
-      
+
       expect(consoleSpy).toHaveBeenCalledWith('🔍 Response:', expect.stringContaining('200'));
-      
+
       consoleSpy.mockRestore();
     });
   });
@@ -416,9 +416,9 @@ describe('API Utility Tests', () => {
   describe('Timed Requests', () => {
     it('timedRequest should add duration to response', async () => {
       const mockFn = vi.fn().mockResolvedValue({ data: 'test' });
-      
+
       const result = await timedRequest(mockFn);
-      
+
       expect(result.duration).toBeDefined();
       expect(typeof result.duration).toBe('number');
       expect(result.data).toBe('test');

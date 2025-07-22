@@ -23,12 +23,12 @@ export async function startTestChrome() {
   }
 
   // Start Chrome with debugging enabled
-  const chromePath = process.platform === 'win32' 
+  const chromePath = process.platform === 'win32'
     ? 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'
     : process.platform === 'darwin'
-    ? '/opt/homebrew/bin/google-chrome'
-    : 'google-chrome';
-  
+      ? '/opt/homebrew/bin/google-chrome'
+      : 'google-chrome';
+
   chromeProcess = spawn(chromePath, [
     '--headless=new',
     '--disable-gpu',
@@ -41,7 +41,7 @@ export async function startTestChrome() {
     '--disable-background-timer-throttling',
     '--disable-backgrounding-occluded-windows',
     '--disable-renderer-backgrounding',
-    process.platform === 'win32' 
+    process.platform === 'win32'
       ? '--user-data-dir=' + os.tmpdir() + '\\chrome-test-' + Date.now()
       : '--user-data-dir=/tmp/chrome-test-' + Date.now()
   ], {
@@ -98,25 +98,25 @@ export async function connectToTestChrome() {
   try {
     const response = await fetch('http://localhost:9222/json');
     const targets = await response.json();
-    
+
     if (!targets || targets.length === 0) {
       throw new Error('No Chrome targets available');
     }
 
     const wsUrl = targets[0].webSocketDebuggerUrl;
     const ws = new WebSocket(wsUrl);
-    
+
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
         ws.close();
         reject(new Error('WebSocket connection timeout'));
       }, 5000);
-      
+
       ws.once('open', () => {
         clearTimeout(timeout);
         resolve(ws);
       });
-      
+
       ws.once('error', (error) => {
         clearTimeout(timeout);
         reject(error);

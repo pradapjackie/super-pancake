@@ -104,9 +104,9 @@ describe('Error Recovery', () => {
     it('should succeed on first attempt', async () => {
       const mockFn = vi.fn().mockResolvedValue('success');
       const retryFn = withRetry(mockFn);
-      
+
       const result = await retryFn('arg1', 'arg2');
-      
+
       expect(result).toBe('success');
       expect(mockFn).toHaveBeenCalledTimes(1);
       expect(mockFn).toHaveBeenCalledWith('arg1', 'arg2');
@@ -117,10 +117,10 @@ describe('Error Recovery', () => {
         .mockRejectedValueOnce(new Error('fail1'))
         .mockRejectedValueOnce(new Error('fail2'))
         .mockResolvedValue('success');
-      
+
       const retryFn = withRetry(mockFn, { maxRetries: 3, delay: 10 });
       const result = await retryFn();
-      
+
       expect(result).toBe('success');
       expect(mockFn).toHaveBeenCalledTimes(3);
     });
@@ -128,7 +128,7 @@ describe('Error Recovery', () => {
     it('should fail after max retries', async () => {
       const mockFn = vi.fn().mockRejectedValue(new Error('persistent failure'));
       const retryFn = withRetry(mockFn, { maxRetries: 2, delay: 10 });
-      
+
       await expect(retryFn()).rejects.toThrow('Recovery failed for unknown operation after 2 attempts');
       expect(mockFn).toHaveBeenCalledTimes(2);
     });
@@ -136,7 +136,7 @@ describe('Error Recovery', () => {
     it('should not retry validation errors', async () => {
       const mockFn = vi.fn().mockRejectedValue(new ValidationError('param', 'string', 123));
       const retryFn = withRetry(mockFn, { maxRetries: 3, delay: 10 });
-      
+
       await expect(retryFn()).rejects.toThrow(ValidationError);
       expect(mockFn).toHaveBeenCalledTimes(1);
     });
@@ -144,7 +144,7 @@ describe('Error Recovery', () => {
     it('should not retry security errors', async () => {
       const mockFn = vi.fn().mockRejectedValue(new SecurityError('Malicious input'));
       const retryFn = withRetry(mockFn, { maxRetries: 3, delay: 10 });
-      
+
       await expect(retryFn()).rejects.toThrow(SecurityError);
       expect(mockFn).toHaveBeenCalledTimes(1);
     });

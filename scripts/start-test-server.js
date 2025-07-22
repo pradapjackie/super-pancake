@@ -18,7 +18,7 @@ app.use(express.static(path.join(__dirname, '..', 'test-app')));
 
 // API endpoint for testing
 app.get('/api/test', (req, res) => {
-  res.json({ 
+  res.json({
     message: 'Test API endpoint working',
     timestamp: new Date().toISOString(),
     version: '1.0.0'
@@ -33,13 +33,13 @@ app.get('/health', (req, res) => {
 // Start server with automatic port finding
 async function startServer() {
   const port = await ensurePortAvailable(defaultPort, true);
-  
+
   const server = app.listen(port, () => {
     console.log(`🧪 Test Application Server running at http://localhost:${port}`);
     console.log(`📄 Test app available at: http://localhost:${port}/index.html`);
     console.log(`🔍 API endpoint: http://localhost:${port}/api/test`);
   });
-  
+
   return { server, port };
 }
 

@@ -419,64 +419,64 @@ describe('Super Pancake API Tests', () => {
 `;
 
 if (!fs.existsSync(testDir)) {
-    fs.mkdirSync(testDir, { recursive: true });
+  fs.mkdirSync(testDir, { recursive: true });
 }
 
 // Create package.json if it doesn't exist
 const packageJsonPath = path.join(process.cwd(), 'package.json');
 if (!fs.existsSync(packageJsonPath)) {
-    const packageContent = {
-        "name": "my-super-pancake-tests",
-        "version": "1.0.0",
-        "type": "module",
-        "scripts": {
-            "test": "vitest run",
-            "test:watch": "vitest watch",
-            "test:ui": "vitest --ui",
-            "test:sample": "vitest run tests/sample.test.js",
-            "test:website": "vitest run tests/ui-website.test.js",
-            "test:api": "vitest run tests/api.test.js",
-            "test:headed": "HEADED=true vitest run",
-            "test:debug": "DEBUG=true vitest run"
-        },
-        "dependencies": {
-            "super-pancake-automation": "^" + packageJson.version,
-            "vitest": "^3.2.4"
-        }
-    };
-    
-    fs.writeFileSync(packageJsonPath, JSON.stringify(packageContent, null, 2));
-    console.log('✅ Package.json created');
+  const packageContent = {
+    'name': 'my-super-pancake-tests',
+    'version': '1.0.0',
+    'type': 'module',
+    'scripts': {
+      'test': 'vitest run',
+      'test:watch': 'vitest watch',
+      'test:ui': 'vitest --ui',
+      'test:sample': 'vitest run tests/sample.test.js',
+      'test:website': 'vitest run tests/ui-website.test.js',
+      'test:api': 'vitest run tests/api.test.js',
+      'test:headed': 'HEADED=true vitest run',
+      'test:debug': 'DEBUG=true vitest run'
+    },
+    'dependencies': {
+      'super-pancake-automation': '^' + packageJson.version,
+      'vitest': '^3.2.4'
+    }
+  };
+
+  fs.writeFileSync(packageJsonPath, JSON.stringify(packageContent, null, 2));
+  console.log('✅ Package.json created');
 }
 
 // Create the basic sample test file
 if (!fs.existsSync(testFile)) {
-    fs.writeFileSync(testFile, sampleContent, 'utf-8');
-    console.log('✅ Sample test file created at:', testFile);
+  fs.writeFileSync(testFile, sampleContent, 'utf-8');
+  console.log('✅ Sample test file created at:', testFile);
 } else {
-    console.log('⚠️ Sample test file already exists at:', testFile);
+  console.log('⚠️ Sample test file already exists at:', testFile);
 }
 
 // Create the UI website test file
 if (!fs.existsSync(uiTestFile)) {
-    fs.writeFileSync(uiTestFile, uiTestContent, 'utf-8');
-    console.log('✅ UI website test file created at:', uiTestFile);
+  fs.writeFileSync(uiTestFile, uiTestContent, 'utf-8');
+  console.log('✅ UI website test file created at:', uiTestFile);
 } else {
-    console.log('⚠️ UI website test file already exists at:', uiTestFile);
+  console.log('⚠️ UI website test file already exists at:', uiTestFile);
 }
 
 // Create the API test file
 if (!fs.existsSync(apiTestFile)) {
-    fs.writeFileSync(apiTestFile, apiTestContent, 'utf-8');
-    console.log('✅ API test file created at:', apiTestFile);
+  fs.writeFileSync(apiTestFile, apiTestContent, 'utf-8');
+  console.log('✅ API test file created at:', apiTestFile);
 } else {
-    console.log('⚠️ API test file already exists at:', apiTestFile);
+  console.log('⚠️ API test file already exists at:', apiTestFile);
 }
 
 // Create a README with instructions
 const readmePath = path.join(process.cwd(), 'README.md');
 if (!fs.existsSync(readmePath)) {
-    const readmeContent = `# Super Pancake Automation Tests
+  const readmeContent = `# Super Pancake Automation Tests
 
 Generated test suite using Super Pancake Framework.
 
@@ -503,8 +503,8 @@ Run all tests: npm test
 Visit Super Pancake Framework for full documentation.
 `;
 
-    fs.writeFileSync(readmePath, readmeContent);
-    console.log('✅ README.md created with setup instructions');
+  fs.writeFileSync(readmePath, readmeContent);
+  console.log('✅ README.md created with setup instructions');
 }
 
 console.log('\n🎉 Setup complete! Run the following commands:');

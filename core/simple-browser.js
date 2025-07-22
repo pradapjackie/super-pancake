@@ -8,10 +8,10 @@ export const connectToChrome = withRetry(async (port = 9222, maxRetries = 3) => 
   // Get available tabs
   const response = await fetch(`http://127.0.0.1:${port}/json`);
   const tabs = await response.json();
-  
+
   // Find a suitable tab (usually the first one)
   const tab = tabs.find(t => t.type === 'page') || tabs[0];
-  
+
   if (!tab || !tab.webSocketDebuggerUrl) {
     throw new Error('No suitable tab with WebSocket URL found');
   }

@@ -25,29 +25,29 @@ mkdirSync(projectPath, { recursive: true });
 
 // Create package.json
 const packageJson = {
-  "name": projectName,
-  "version": "1.0.0",
-  "description": "Super Pancake automation testing project",
-  "main": "index.js",
-  "type": "module",
-  "scripts": {
-    "test": "vitest",
-    "test:run": "vitest run",
-    "test:ui": "vitest --ui",
-    "test:generate": "super-pancake-generate",
-    "start": "vitest"
+  'name': projectName,
+  'version': '1.0.0',
+  'description': 'Super Pancake automation testing project',
+  'main': 'index.js',
+  'type': 'module',
+  'scripts': {
+    'test': 'vitest',
+    'test:run': 'vitest run',
+    'test:ui': 'vitest --ui',
+    'test:generate': 'super-pancake-generate',
+    'start': 'vitest'
   },
-  "dependencies": {
-    "super-pancake-automation": "latest",
-    "vitest": "^3.2.4"
+  'dependencies': {
+    'super-pancake-automation': 'latest',
+    'vitest': '^3.2.4'
   },
-  "keywords": [
-    "automation",
-    "testing",
-    "super-pancake"
+  'keywords': [
+    'automation',
+    'testing',
+    'super-pancake'
   ],
-  "author": "",
-  "license": "MIT"
+  'author': '',
+  'license': 'MIT'
 };
 
 writeFileSync(

@@ -7,7 +7,7 @@ export class SuperPancakeError extends Error {
     this.code = code;
     this.context = context;
     this.timestamp = new Date().toISOString();
-    
+
     // Maintain proper stack trace
     if (Error.captureStackTrace) {
       Error.captureStackTrace(this, SuperPancakeError);
@@ -77,7 +77,7 @@ export class StackTraceError extends SuperPancakeError {
       operation,
       ...context
     });
-    
+
     // Preserve original stack trace if available
     if (originalError?.stack) {
       this.originalStack = originalError.stack;
@@ -118,31 +118,31 @@ export function withRetry(fn, options = {}) {
   return async function retryWrapper(...args) {
     let lastError;
     let currentDelay = delay;
-    
+
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         const result = await fn(...args);
-        
+
         // Log successful recovery if this wasn't the first attempt
         if (attempt > 1) {
           console.log(`✅ Operation "${operation}" succeeded on attempt ${attempt}`);
         }
-        
+
         return result;
-        
+
       } catch (error) {
         lastError = error;
-        
+
         // Don't retry on certain error types
-        if (error instanceof ValidationError || 
+        if (error instanceof ValidationError ||
             error instanceof SecurityError ||
             error instanceof CircuitBreakerError) {
           throw error;
         }
-        
+
         // Enhanced error logging
         console.warn(`⚠️ Attempt ${attempt}/${maxRetries} failed for "${operation}": ${error.message}`);
-        
+
         if (attempt < maxRetries) {
           console.log(`🔄 Retrying in ${currentDelay}ms...`);
           await new Promise(resolve => setTimeout(resolve, currentDelay));
@@ -150,7 +150,7 @@ export function withRetry(fn, options = {}) {
         }
       }
     }
-    
+
     // All retries failed - create comprehensive error
     throw new RecoveryError(operation, maxRetries, {
       originalError: lastError?.message,
@@ -174,7 +174,7 @@ export function withErrorRecovery(fn, operation = 'unknown operation') {
           functionName: fn.name || 'anonymous'
         });
       }
-      
+
       // Enhance error context for better debugging
       if (error instanceof SuperPancakeError) {
         error.context = {
@@ -185,7 +185,7 @@ export function withErrorRecovery(fn, operation = 'unknown operation') {
         };
         throw error;
       }
-      
+
       // Wrap unknown errors
       throw new SuperPancakeError(
         `Unexpected error in ${operation}: ${error.message}`,
@@ -208,7 +208,7 @@ export function safeExecute(fn, fallback = null, operation = 'unknown operation'
       return await withErrorRecovery(fn, operation)(...args);
     } catch (error) {
       console.error(`🚨 Critical error in ${operation}:`, error.message);
-      
+
       if (fallback && typeof fallback === 'function') {
         console.log(`🔄 Executing fallback for ${operation}...`);
         try {
@@ -226,7 +226,7 @@ export function safeExecute(fn, fallback = null, operation = 'unknown operation'
           );
         }
       }
-      
+
       throw error;
     }
   };
@@ -243,7 +243,7 @@ export function validateSelector(selector) {
   if (!selector || typeof selector !== 'string' || selector.trim().length === 0) {
     throw new ValidationError('selector', 'non-empty string', typeof selector);
   }
-  
+
   // Basic CSS selector validation
   if (selector.includes('<script') || selector.includes('javascript:')) {
     throw new SecurityError('Selector contains potentially malicious content', { selector });
@@ -260,7 +260,7 @@ export function validateText(text, paramName = 'text') {
   if (text === null || text === undefined) {
     throw new ValidationError(paramName, 'string or number', typeof text);
   }
-  
+
   // Check for potential code injection
   const textStr = String(text);
   if (textStr.includes('<script') || textStr.includes('javascript:') || textStr.includes('data:text/html')) {
@@ -272,7 +272,7 @@ export function validateFilePath(filePath) {
   if (!filePath || typeof filePath !== 'string') {
     throw new ValidationError('filePath', 'non-empty string', typeof filePath);
   }
-  
+
   // Prevent directory traversal
   if (filePath.includes('..') || filePath.includes('~')) {
     throw new SecurityError('File path contains directory traversal patterns', { filePath });
@@ -300,27 +300,27 @@ export class CircuitBreaker {
     this.failureThreshold = options.failureThreshold || 5;
     this.recoveryTimeout = options.recoveryTimeout || 30000; // 30 seconds
     this.monitoringWindow = options.monitoringWindow || 60000; // 1 minute
-    
+
     // Circuit states: 'closed', 'open', 'half-open'
     this.state = 'closed';
     this.failures = 0;
     this.successes = 0;
     this.lastFailureTime = null;
     this.lastSuccessTime = null;
-    
+
     // Request tracking
     this.requests = [];
-    
+
     console.log(`🔧 Circuit breaker "${this.name}" initialized (threshold: ${this.failureThreshold})`);
   }
-  
+
   async execute(fn, ...args) {
     // Check if circuit should transition from open to half-open
     if (this.state === 'open' && this.shouldAttemptRecovery()) {
       this.state = 'half-open';
       console.log(`🔄 Circuit breaker "${this.name}" transitioning to half-open`);
     }
-    
+
     // Reject immediately if circuit is open
     if (this.state === 'open') {
       throw new CircuitBreakerError(this.name, this.failures, {
@@ -329,7 +329,7 @@ export class CircuitBreaker {
         timeUntilRetry: this.recoveryTimeout - (Date.now() - this.lastFailureTime)
       });
     }
-    
+
     try {
       const result = await fn(...args);
       this.onSuccess();
@@ -339,67 +339,67 @@ export class CircuitBreaker {
       throw error;
     }
   }
-  
+
   onSuccess() {
     this.successes++;
     this.lastSuccessTime = Date.now();
-    
+
     // Record successful request
     this.requests.push({
       timestamp: Date.now(),
       success: true
     });
-    
+
     // If in half-open state, close the circuit after successful execution
     if (this.state === 'half-open') {
       this.state = 'closed';
       this.failures = 0;
       console.log(`✅ Circuit breaker "${this.name}" closed after successful recovery`);
     }
-    
+
     this.cleanupOldRequests();
   }
-  
+
   onFailure(error) {
     this.failures++;
     this.lastFailureTime = Date.now();
-    
+
     // Record failed request
     this.requests.push({
       timestamp: Date.now(),
       success: false,
       error: error.message
     });
-    
+
     console.warn(`⚠️ Circuit breaker "${this.name}" failure ${this.failures}/${this.failureThreshold}: ${error.message}`);
-    
+
     // Open circuit if failure threshold exceeded
     if (this.failures >= this.failureThreshold) {
       this.state = 'open';
       console.error(`🚨 Circuit breaker "${this.name}" opened after ${this.failures} failures`);
     }
-    
+
     this.cleanupOldRequests();
   }
-  
+
   shouldAttemptRecovery() {
-    return this.lastFailureTime && 
+    return this.lastFailureTime &&
            (Date.now() - this.lastFailureTime) > this.recoveryTimeout;
   }
-  
+
   cleanupOldRequests() {
     const cutoff = Date.now() - this.monitoringWindow;
     this.requests = this.requests.filter(req => req.timestamp > cutoff);
   }
-  
+
   getStats() {
     this.cleanupOldRequests();
-    
+
     const recentRequests = this.requests.length;
     const recentFailures = this.requests.filter(req => !req.success).length;
     const recentSuccesses = this.requests.filter(req => req.success).length;
     const failureRate = recentRequests > 0 ? (recentFailures / recentRequests) * 100 : 0;
-    
+
     return {
       name: this.name,
       state: this.state,
@@ -415,7 +415,7 @@ export class CircuitBreaker {
       isHealthy: this.state === 'closed' && failureRate < 50
     };
   }
-  
+
   reset() {
     this.state = 'closed';
     this.failures = 0;
@@ -443,7 +443,7 @@ export function getAllCircuitBreakers() {
 // Enhanced operation wrapper with circuit breaker
 export function withCircuitBreaker(fn, breakerName, options = {}) {
   const breaker = getCircuitBreaker(breakerName, options);
-  
+
   return async function circuitBreakerWrapper(...args) {
     return await breaker.execute(fn, ...args);
   };

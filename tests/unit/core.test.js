@@ -30,8 +30,8 @@ describe('Core DOM Methods Unit Tests', () => {
     } catch (error) {
       console.error('Failed to setup test environment:', error);
       // Try cleanup on failure
-      if (ws) ws.close();
-      if (chrome) await chrome.kill();
+      if (ws) {ws.close();}
+      if (chrome) {await chrome.kill();}
       throw error;
     }
   }, 45000); // 45 second timeout

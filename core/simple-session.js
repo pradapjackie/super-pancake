@@ -22,7 +22,7 @@ export function createSession(ws) {
 
         const id = ++msgId;
         const message = { id, method, params };
-        
+
         // Set up timeout
         const timeoutId = setTimeout(() => {
           ws.off('message', listener);
@@ -36,7 +36,7 @@ export function createSession(ws) {
             if (data.id === id) {
               clearTimeout(timeoutId);
               ws.off('message', listener);
-              
+
               if (data.error) {
                 reject(new SessionError(`CDP method ${method} failed: ${data.error.message || 'Unknown error'}`));
               } else {
@@ -53,9 +53,9 @@ export function createSession(ws) {
         // Send message
         ws.send(JSON.stringify(message));
         ws.on('message', listener);
-        
+
         console.log(`📤 Sent ${method} (ID: ${id})`);
-        
+
       } catch (error) {
         reject(error);
       }
@@ -67,7 +67,7 @@ export function createSession(ws) {
     id: sessionId,
     send,
     _ws: ws, // Expose WebSocket for DOM operations
-    
+
     // Simple health check
     async isHealthy() {
       try {

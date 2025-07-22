@@ -56,40 +56,40 @@ function askChoice(question, options, defaultOption = 0) {
 // Collect user preferences
 async function collectUserPreferences() {
   console.log('📝 Let\'s configure your project preferences:\n');
-  
+
   // 1. Browser headless mode
   const headlessChoice = await askChoice(
-    '1. Browser Mode:', 
+    '1. Browser Mode:',
     ['Headless (faster, no GUI)', 'Headed (visible browser window)'],
     1
   );
-  
+
   // 2. Screenshot capture
   const screenshotChoice = await askChoice(
-    '2. Screenshot Capture:', 
+    '2. Screenshot Capture:',
     ['Enabled (capture on failure and success)', 'Only on failure', 'Disabled'],
     0
   );
-  
+
   // 3. Sample tests (always generate proven working examples)
   console.log('3. Sample Tests: Will generate proven working examples (sample.test.js + ui-website.test.js)');
-  
+
   // 4. Test runner UI
   const uiChoice = await askChoice(
-    '4. Test Runner UI:', 
+    '4. Test Runner UI:',
     ['Interactive UI enabled', 'Command line only'],
     0
   );
-  
+
   // 5. Report generation
   const reportChoice = await askChoice(
-    '5. Test Reports:', 
+    '5. Test Reports:',
     ['HTML reports with screenshots', 'JSON reports', 'Console output only'],
     0
   );
-  
+
   console.log('\n✨ Creating project with your preferences...\n');
-  
+
   return {
     headless: headlessChoice === 0,
     screenshots: screenshotChoice,
@@ -102,7 +102,7 @@ async function collectUserPreferences() {
 function installDependencies(projectPath) {
   return new Promise((resolve, reject) => {
     console.log('   Running npm install...');
-    
+
     const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
     const install = spawn(npmCommand, ['install'], {
       cwd: projectPath,
@@ -124,7 +124,7 @@ function installDependencies(projectPath) {
 
     install.on('close', (code) => {
       console.log(''); // New line after progress dots
-      
+
       if (code === 0) {
         console.log('✅ Dependencies installed successfully!');
         resolve();
@@ -500,7 +500,7 @@ writeFileSync(join(projectPath, 'utils', 'test-setup.js'), testSetupContent);
 
 // Generate sample tests - using proven working templates
 function generateSampleTests(projectName, preferences) {
-  
+
   // Basic sample test (proven working)
   const sampleTestContent = `
 import { describe, it, beforeAll, afterAll } from 'vitest';

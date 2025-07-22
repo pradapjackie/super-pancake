@@ -26,7 +26,7 @@ function withAuth(headers) {
 export function buildHeaders(additionalHeaders = {}) {
   return {
     'Content-Type': 'application/json',
-    ...additionalHeaders,
+    ...additionalHeaders
   };
 }
 
@@ -35,18 +35,18 @@ export function buildUrlWithParams(url, params = {}) {
   if (!url || typeof url !== 'string') {
     throw new ValidationError('url', 'non-empty string', typeof url);
   }
-  
+
   // Basic URL validation
   try {
     new URL(url);
   } catch {
     throw new ValidationError('url', 'valid URL', url);
   }
-  
+
   if (params && typeof params !== 'object') {
     throw new ValidationError('params', 'object', typeof params);
   }
-  
+
   const query = new URLSearchParams(params).toString();
   return query ? `${url}?${query}` : url;
 }
@@ -56,12 +56,12 @@ export async function timedRequest(fn) {
   const start = Date.now();
   const response = await fn();
   const duration = Date.now() - start;
-  
+
   // Only add duration if response is an object
   if (response && typeof response === 'object' && !Array.isArray(response)) {
     response.duration = duration;
   }
-  
+
   console.log(`🕒 ${fn.name || 'anonymous'} duration: ${duration}ms`);
   return response;
 }
@@ -72,7 +72,7 @@ export async function retryRequest(requestFn, retries = 3, delay = 1000) {
     try {
       return await requestFn();
     } catch (err) {
-      if (attempt === retries) throw err;
+      if (attempt === retries) {throw err;}
       await new Promise(res => setTimeout(res, delay));
     }
   }
@@ -207,7 +207,7 @@ export async function uploadFile(url, filePath, fieldName = 'file', headers = {}
     axios.post(url, form, {
       headers: finalHeaders,
       maxContentLength: Infinity,
-      maxBodyLength: Infinity,
+      maxBodyLength: Infinity
     })
   );
 }
@@ -219,8 +219,8 @@ export async function sendGraphQL(url, query, variables = {}, headers = {}) {
     axios.post(url, body, {
       headers: withAuth({
         'Content-Type': 'application/json',
-        ...headers,
-      }),
+        ...headers
+      })
     })
   );
 }
@@ -272,7 +272,7 @@ axios.interceptors.response.use(
 );
 // Dynamic base URL
 export const apiConfig = {
-  baseUrl: process.env.API_BASE_URL || 'https://default.api.com',
+  baseUrl: process.env.API_BASE_URL || 'https://default.api.com'
 };
 
 // Prepend base URL to relative paths
@@ -280,7 +280,7 @@ export function withBaseUrl(path) {
   if (!path || typeof path !== 'string') {
     throw new ValidationError('path', 'non-empty string', typeof path);
   }
-  
+
   return path.startsWith('http') ? path : `${apiConfig.baseUrl}${path}`;
 }
 
@@ -290,13 +290,13 @@ export async function getOAuth2Token(tokenUrl, clientId, clientSecret, scope = '
   params.append('grant_type', 'client_credentials');
   params.append('client_id', clientId);
   params.append('client_secret', clientSecret);
-  if (scope) params.append('scope', scope);
+  if (scope) {params.append('scope', scope);}
 
   try {
     const response = await axios.post(tokenUrl, params, {
       headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
+        'Content-Type': 'application/x-www-form-urlencoded'
+      }
     });
     const token = response.data.access_token;
     setAuthToken(token);
@@ -314,17 +314,17 @@ export function createWebSocketConnection(url, onMessage, onOpen = null, onError
 
   ws.on('open', () => {
     console.log('🔌 WebSocket connected');
-    if (onOpen) onOpen(ws);
+    if (onOpen) {onOpen(ws);}
   });
 
   ws.on('message', data => {
     console.log('📨 WebSocket message received:', data.toString());
-    if (onMessage) onMessage(data.toString(), ws);
+    if (onMessage) {onMessage(data.toString(), ws);}
   });
 
   ws.on('error', err => {
     console.error('❌ WebSocket error:', err);
-    if (onError) onError(err, ws);
+    if (onError) {onError(err, ws);}
   });
 
   ws.on('close', () => {

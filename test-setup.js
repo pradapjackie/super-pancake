@@ -35,7 +35,7 @@ let currentAnswer = 0;
 child.stdout.on('data', (data) => {
   const output = data.toString();
   process.stdout.write(output);
-  
+
   // Send next answer when prompted
   if (output.includes(':') && currentAnswer < answers.length) {
     setTimeout(() => {
@@ -51,7 +51,7 @@ child.stderr.on('data', (data) => {
 
 child.on('close', (code) => {
   console.log(`\n🏁 Setup command finished with code ${code}`);
-  
+
   if (code === 0) {
     console.log('✅ Setup completed successfully!');
     console.log('📁 Check the test-project directory for generated files');

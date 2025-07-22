@@ -18,52 +18,52 @@ async function setup() {
     // Basic configuration questions
     const projectName = await question('Project name (default: my-super-pancake-project): ') || 'my-super-pancake-project';
     const author = await question('Author name (optional): ') || '';
-    
+
     console.log('\n🔧 Browser Configuration');
     const headless = await question('Run tests in headless mode? (y/N): ');
     const slowMo = await question('Slow motion delay in ms (default: 100): ') || '100';
     const devtools = await question('Open DevTools automatically? (y/N): ');
-    
+
     console.log('\n📸 Screenshot Configuration');
     const screenshots = await question('Enable screenshots? (Y/n): ');
     const screenshotOnFailure = await question('Take screenshot on test failure? (Y/n): ');
     const screenshotPath = await question('Screenshots directory (default: ./screenshots): ') || './screenshots';
-    
+
     console.log('\n📊 Reporting Configuration');
     const htmlReport = await question('Generate HTML test reports? (Y/n): ');
     const reportPath = await question('Report file path (default: ./test-report.html): ') || './test-report.html';
     const openReport = await question('Auto-open report after tests? (y/N): ');
-    
+
     console.log('\n⚡ Performance Configuration');
     const timeout = await question('Test timeout in ms (default: 30000): ') || '30000';
     const retries = await question('Test retry count (default: 1): ') || '1';
     const parallel = await question('Run tests in parallel? (y/N): ');
-    
+
     console.log('\n🔍 Advanced Options');
     const videoRecording = await question('Enable video recording? (y/N): ');
     const networkLogs = await question('Capture network logs? (y/N): ');
     const consoleLogs = await question('Capture console logs? (Y/n): ');
-    
+
     rl.close();
-    
+
     // Create project directory
     const projectPath = join(process.cwd(), projectName);
-    
+
     if (existsSync(projectPath)) {
       console.log(`\n❌ Directory '${projectName}' already exists!`);
       console.log('Please choose a different project name or remove the existing directory.');
       process.exit(1);
     }
-    
+
     console.log(`\n🚀 Setting up project: ${projectName}`);
     mkdirSync(projectPath, { recursive: true });
-    
+
     // Create directories
     mkdirSync(join(projectPath, 'tests'), { recursive: true });
     if (screenshots.toLowerCase() !== 'n') {
       mkdirSync(join(projectPath, screenshotPath.replace('./', '')), { recursive: true });
     }
-    
+
     // Generate package.json
     const packageJson = {
       name: projectName,
@@ -87,9 +87,9 @@ async function setup() {
       author: author,
       license: 'MIT'
     };
-    
+
     writeFileSync(join(projectPath, 'package.json'), JSON.stringify(packageJson, null, 2));
-    
+
     // Generate comprehensive config
     const config = {
       browser: {
@@ -131,10 +131,10 @@ async function setup() {
         elementTimeout: 10000
       }
     };
-    
+
     const configContent = `export default ${JSON.stringify(config, null, 2)};`;
     writeFileSync(join(projectPath, 'super-pancake.config.js'), configContent);
-    
+
     // Generate comprehensive sample test
     const sampleTest = `import { describe, it, beforeAll, afterAll } from 'vitest';
 import { launchChrome, connectToChrome, createSession } from 'super-pancake-automation';
@@ -217,9 +217,9 @@ describe('${projectName} - Sample Test Suite', () => {
   });
 });
 `;
-    
+
     writeFileSync(join(projectPath, 'tests', 'sample.test.js'), sampleTest);
-    
+
     // Generate README
     const readme = `# ${projectName}
 
@@ -277,7 +277,7 @@ Edit \`super-pancake.config.js\` to customize:
 ${projectName}/
 ├── tests/              # Test files
 ├── ${config.screenshot.path.replace('./', '')}/           # Screenshots${config.screenshot.enabled ? '' : ' (disabled)'}
-${config.video.enabled ? `├── videos/             # Video recordings` : ''}
+${config.video.enabled ? '├── videos/             # Video recordings' : ''}
 ├── super-pancake.config.js  # Configuration
 ├── package.json
 └── README.md
@@ -287,9 +287,9 @@ ${config.video.enabled ? `├── videos/             # Video recordings` : ''
 
 Visit [Super Pancake Documentation](https://github.com/pradapjackie/super-pancake#readme) for more information.
 `;
-    
+
     writeFileSync(join(projectPath, 'README.md'), readme);
-    
+
     // Generate .gitignore
     const gitignore = `node_modules/
 ${reportPath}
@@ -300,9 +300,9 @@ ${config.video.enabled ? 'videos/' : ''}
 .env
 .env.local
 `;
-    
+
     writeFileSync(join(projectPath, '.gitignore'), gitignore);
-    
+
     // Generate environment template
     const envTemplate = `# Super Pancake Environment Configuration
 # Copy this file to .env and customize as needed
@@ -325,9 +325,9 @@ SCREENSHOT_PATH=${config.screenshot.path}
 HTML_REPORT=${config.report.enabled}
 AUTO_OPEN_REPORT=${config.report.autoOpen}
 `;
-    
+
     writeFileSync(join(projectPath, '.env.example'), envTemplate);
-    
+
     console.log('✅ Project setup complete!\n');
     console.log('📋 Summary:');
     console.log(`   Project: ${projectName}`);
@@ -341,7 +341,7 @@ AUTO_OPEN_REPORT=${config.report.autoOpen}
     console.log('   npm install');
     console.log('   npm test');
     console.log('\nHappy testing! 🥞');
-    
+
   } catch (error) {
     console.error('❌ Setup failed:', error.message);
     process.exit(1);

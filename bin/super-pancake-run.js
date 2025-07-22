@@ -28,7 +28,7 @@ if (fs.existsSync(resultsDir)) {
 
 console.log('\n🚀 Starting Vitest run...\n');
 
-const vitest = spawn(npxCommand, ['vitest', 'run'], { 
+const vitest = spawn(npxCommand, ['vitest', 'run'], {
   stdio: ['ignore', 'pipe', 'pipe'],
   shell: isWindows // Use shell on Windows for better compatibility
 });
@@ -55,9 +55,9 @@ vitest.on('close', (code) => {
   const testLinePassedSkipped = stdoutData.match(/Tests\s+(\d+)\s+passed\s+\|\s+(\d+)\s+skipped/);
   const testLinePassedOnly = stdoutData.match(/Tests\s+(\d+)\s+passed\s+\((\d+)\)/);
   const testLineMatch = testLinePassedSkipped || testLinePassedOnly;
-  
+
   let passed, failed, skipped, broken, total;
-  
+
   if (testLineMatch) {
     passed = parseInt(testLineMatch[1]) || 0;
     if (testLinePassedSkipped) {

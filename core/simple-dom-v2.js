@@ -43,24 +43,24 @@ function getOptions(options = {}, defaultTimeout = defaultTimeouts.element) {
 export const enableDOM = withErrorRecovery(async (sessionParam = null) => {
   const session = sessionParam || getSession();
   console.log('🎯 Enabling DOM operations');
-  
+
   try {
     // First create a new page target
     const targetResult = await session.send('Target.createTarget', { url: 'about:blank' }, 10000);
     console.log('🎯 Created target:', targetResult.targetId);
-    
+
     // Attach to the target
-    const sessionResult = await session.send('Target.attachToTarget', { 
+    const sessionResult = await session.send('Target.attachToTarget', {
       targetId: targetResult.targetId,
-      flatten: true 
+      flatten: true
     }, 10000);
     console.log('🎯 Attached to target');
-    
+
     // Now enable domains
     await session.send('Page.enable', {}, 10000);
     await session.send('Runtime.enable', {}, 10000);
     await session.send('DOM.enable', {}, 10000);
-    
+
     console.log('✅ DOM operations enabled');
   } catch (error) {
     console.log('⚠️ Target creation failed, trying direct approach...');
@@ -76,9 +76,9 @@ export const navigateTo = withErrorRecovery(async (url, options = {}) => {
   const opts = getOptions(options, defaultTimeouts.navigation);
   const session = opts.session || getSession();
   console.log(`🌐 Navigating to: ${url} (timeout: ${opts.timeout}ms)`);
-  
+
   await session.send('Page.navigate', { url });
-  
+
   // Wait for load event
   await new Promise((resolve, reject) => {
     const timeout = setTimeout(() => {
@@ -129,7 +129,7 @@ export const navigateTo = withErrorRecovery(async (url, options = {}) => {
     `,
     awaitPromise: true
   });
-  
+
   console.log('✅ DOM and JavaScript fully ready');
 }, 'navigateTo');
 
@@ -137,26 +137,26 @@ export const querySelector = withErrorRecovery(async (selector, options = {}) =>
   const opts = getOptions(options);
   const session = opts.session || getSession();
   console.log(`🔍 Finding element: ${selector} (timeout: ${opts.timeout}ms)`);
-  
+
   const { root } = await session.send('DOM.getDocument');
   const { nodeId } = await session.send('DOM.querySelector', {
     nodeId: root.nodeId,
     selector
   });
-  
+
   if (!nodeId) {
     throw new Error(`Element not found: ${selector}`);
   }
-  
+
   return nodeId;
 }, 'querySelector');
 
 export const waitForSelector = withErrorRecovery(async (selector, timeout = 10000, sessionParam = null) => {
   const session = sessionParam || getSession();
   console.log(`⏳ Waiting for element: ${selector}`);
-  
+
   const startTime = Date.now();
-  
+
   while (Date.now() - startTime < timeout) {
     try {
       const nodeId = await querySelector(selector, session);
@@ -167,7 +167,7 @@ export const waitForSelector = withErrorRecovery(async (selector, timeout = 1000
       await new Promise(resolve => setTimeout(resolve, 500));
     }
   }
-  
+
   throw new Error(`Element not found within ${timeout}ms: ${selector}`);
 }, 'waitForSelector');
 
@@ -175,7 +175,7 @@ export const click = withErrorRecovery(async (selectorOrNodeId, options = {}) =>
   const opts = getOptions(options);
   const session = opts.session || getSession();
   console.log(`🖱️ Clicking: ${selectorOrNodeId} (timeout: ${opts.timeout}ms, force: ${opts.force})`);
-  
+
   // Handle object IDs from smart locators
   if (typeof selectorOrNodeId === 'string' && selectorOrNodeId.match(/^-?\d+\.\d+\.\d+$/)) {
     // This is an object ID, use Runtime.callFunctionOn directly
@@ -211,13 +211,13 @@ export const click = withErrorRecovery(async (selectorOrNodeId, options = {}) =>
       }`,
       returnByValue: true
     });
-    
-    console.log(`✅ Clicked object ID successfully`);
+
+    console.log('✅ Clicked object ID successfully');
     return;
   }
-  
+
   const selector = typeof selectorOrNodeId === 'string' ? selectorOrNodeId : `[data-node-id="${selectorOrNodeId}"]`;
-  
+
   // Enhanced click with JavaScript event triggering
   await session.send('Runtime.evaluate', {
     expression: `
@@ -254,18 +254,18 @@ export const click = withErrorRecovery(async (selectorOrNodeId, options = {}) =>
     `,
     returnByValue: true
   });
-  
+
   // Small delay to allow JavaScript to process
   await new Promise(resolve => setTimeout(resolve, 100));
-  
-  console.log(`✅ Clicked successfully with JavaScript events`);
+
+  console.log('✅ Clicked successfully with JavaScript events');
 }, 'click');
 
 // Enhanced click specifically for JavaScript-heavy elements
 export const clickJS = withErrorRecovery(async (selector, sessionParam = null) => {
   const session = sessionParam || getSession();
   console.log(`🖱️ JavaScript Click: ${selector}`);
-  
+
   await session.send('Runtime.evaluate', {
     expression: `
       (() => {
@@ -295,23 +295,23 @@ export const clickJS = withErrorRecovery(async (selector, sessionParam = null) =
     `,
     returnByValue: true
   });
-  
+
   // Wait for any animations or state changes
   await new Promise(resolve => setTimeout(resolve, 200));
-  
-  console.log(`✅ JavaScript click completed`);
+
+  console.log('✅ JavaScript click completed');
 }, 'clickJS');
 
 export const fillInput = withErrorRecovery(async (selectorOrNodeId, value, options = {}) => {
   const opts = getOptions(options);
   const session = opts.session || getSession();
   console.log(`✏️ Filling input: ${selectorOrNodeId} = "${value}" (timeout: ${opts.timeout}ms, force: ${opts.force})`);
-  
+
   // Handle object IDs returned from smart locators
   if (typeof selectorOrNodeId === 'string' && selectorOrNodeId.match(/^-?\d+\.\d+\.\d+$/)) {
     // This is an object ID from smart locator, use Runtime.callFunctionOn directly
     console.log(`🔄 Using object ID directly: ${selectorOrNodeId}`);
-    
+
     // Focus and clear the element, then type the value
     await session.send('Runtime.callFunctionOn', {
       objectId: selectorOrNodeId,
@@ -327,12 +327,12 @@ export const fillInput = withErrorRecovery(async (selectorOrNodeId, value, optio
       arguments: [{ value: value }],
       returnByValue: true
     });
-    
-    console.log(`✅ Input filled using object ID successfully`);
+
+    console.log('✅ Input filled using object ID successfully');
     return;
   }
-  
-  // Handle CSS selectors  
+
+  // Handle CSS selectors
   let nodeId;
   if (typeof selectorOrNodeId === 'string') {
     // This is a CSS selector
@@ -341,10 +341,10 @@ export const fillInput = withErrorRecovery(async (selectorOrNodeId, value, optio
     // This is already a node ID
     nodeId = selectorOrNodeId;
   }
-  
+
   // Focus the element
   await session.send('DOM.focus', { nodeId });
-  
+
   // Clear existing value by selecting all and deleting
   await session.send('Input.dispatchKeyEvent', {
     type: 'keyDown',
@@ -362,7 +362,7 @@ export const fillInput = withErrorRecovery(async (selectorOrNodeId, value, optio
     type: 'keyUp',
     key: 'Control'
   });
-  
+
   // Delete selected content
   await session.send('Input.dispatchKeyEvent', {
     type: 'keyDown',
@@ -372,7 +372,7 @@ export const fillInput = withErrorRecovery(async (selectorOrNodeId, value, optio
     type: 'keyUp',
     key: 'Backspace'
   });
-  
+
   // Type new value
   for (const char of value) {
     await session.send('Input.dispatchKeyEvent', {
@@ -380,30 +380,30 @@ export const fillInput = withErrorRecovery(async (selectorOrNodeId, value, optio
       text: char
     });
   }
-  
-  console.log(`✅ Input filled successfully`);
+
+  console.log('✅ Input filled successfully');
 }, 'fillInput');
 
 export const takeScreenshot = withErrorRecovery(async (filePath, options = {}) => {
   const opts = getOptions(options, defaultTimeouts.screenshot);
   const session = opts.session || getSession();
   console.log(`📸 Taking screenshot: ${filePath} (timeout: ${opts.timeout}ms)`);
-  
+
   // Ensure directory exists
   const dir = path.dirname(filePath);
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   }
-  
+
   const { data } = await session.send('Page.captureScreenshot', {
     format: 'png',
     quality: 90
   });
-  
+
   // Save screenshot
   const buffer = Buffer.from(data, 'base64');
   fs.writeFileSync(filePath, buffer);
-  
+
   console.log(`✅ Screenshot saved: ${filePath}`);
 }, 'takeScreenshot');
 
@@ -411,21 +411,21 @@ export const getText = withErrorRecovery(async (selectorOrNodeId, options = {}) 
   const opts = getOptions(options);
   const session = opts.session || getSession();
   console.log(`📝 Getting text from: ${selectorOrNodeId} (timeout: ${opts.timeout}ms)`);
-  
+
   let nodeId;
   if (typeof selectorOrNodeId === 'string') {
     nodeId = await querySelector(selectorOrNodeId, opts);
   } else {
     nodeId = selectorOrNodeId;
   }
-  
+
   const { object } = await session.send('DOM.resolveNode', { nodeId });
   const { result } = await session.send('Runtime.callFunctionOn', {
     objectId: object.objectId,
     functionDeclaration: 'function() { return this.textContent; }',
     returnByValue: true
   });
-  
+
   return result.value;
 }, 'getText');
 
@@ -433,9 +433,9 @@ export const getAttribute = withErrorRecovery(async (selectorOrNodeId, attribute
   const opts = getOptions(options);
   const session = opts.session || getSession();
   console.log(`📋 Getting attribute ${attributeName} from: ${selectorOrNodeId} (timeout: ${opts.timeout}ms)`);
-  
+
   const selector = typeof selectorOrNodeId === 'string' ? selectorOrNodeId : `[data-node-id="${selectorOrNodeId}"]`;
-  
+
   // Use JavaScript to get attribute for better HTML5 support
   const result = await session.send('Runtime.evaluate', {
     expression: `
@@ -472,7 +472,7 @@ export const getAttribute = withErrorRecovery(async (selectorOrNodeId, attribute
     `,
     returnByValue: true
   });
-  
+
   return result.result.value;
 }, 'getAttribute');
 
@@ -481,7 +481,7 @@ export const getValue = withErrorRecovery(async (selectorOrNodeId, options = {})
   const opts = getOptions(options);
   const session = opts.session || getSession();
   console.log(`📋 Getting value from: ${selectorOrNodeId} (timeout: ${opts.timeout}ms)`);
-  
+
   // Check if it's an object ID (smart locator format with dots and negative numbers)
   if (typeof selectorOrNodeId === 'string' && selectorOrNodeId.match(/^-?\d+\.\d+\.\d+$/)) {
     // This is an object ID from smart locator
@@ -492,7 +492,7 @@ export const getValue = withErrorRecovery(async (selectorOrNodeId, options = {})
     });
     return result.result.value;
   }
-  
+
   // It's a CSS selector string
   const result = await session.send('Runtime.evaluate', {
     expression: `
@@ -504,7 +504,7 @@ export const getValue = withErrorRecovery(async (selectorOrNodeId, options = {})
     `,
     returnByValue: true
   });
-  
+
   return result.result.value;
 }, 'getValue');
 
@@ -512,9 +512,9 @@ export const getValue = withErrorRecovery(async (selectorOrNodeId, options = {})
 export const waitForAttribute = withErrorRecovery(async (selector, attributeName, expectedValue, timeout = 5000, sessionParam = null) => {
   const session = sessionParam || getSession();
   console.log(`⏳ Waiting for ${selector} attribute ${attributeName} to be ${expectedValue}`);
-  
+
   const startTime = Date.now();
-  
+
   while (Date.now() - startTime < timeout) {
     try {
       const currentValue = await getAttribute(selector, attributeName, session);
@@ -525,10 +525,10 @@ export const waitForAttribute = withErrorRecovery(async (selector, attributeName
     } catch (error) {
       // Element might not exist yet, continue waiting
     }
-    
+
     await new Promise(resolve => setTimeout(resolve, 100));
   }
-  
+
   throw new Error(`Timeout waiting for ${selector} attribute ${attributeName} to be ${expectedValue}`);
 }, 'waitForAttribute');
 
@@ -536,9 +536,9 @@ export const waitForAttribute = withErrorRecovery(async (selector, attributeName
 export const waitForVisible = withErrorRecovery(async (selector, timeout = 5000, sessionParam = null) => {
   const session = sessionParam || getSession();
   console.log(`👁️ Waiting for ${selector} to be visible`);
-  
+
   const startTime = Date.now();
-  
+
   while (Date.now() - startTime < timeout) {
     try {
       const visible = await session.send('Runtime.evaluate', {
@@ -557,7 +557,7 @@ export const waitForVisible = withErrorRecovery(async (selector, timeout = 5000,
         `,
         returnByValue: true
       });
-      
+
       if (visible.result.value) {
         console.log(`✅ Element ${selector} is now visible`);
         return true;
@@ -565,10 +565,10 @@ export const waitForVisible = withErrorRecovery(async (selector, timeout = 5000,
     } catch (error) {
       // Continue waiting
     }
-    
+
     await new Promise(resolve => setTimeout(resolve, 100));
   }
-  
+
   throw new Error(`Timeout waiting for ${selector} to be visible`);
 }, 'waitForVisible');
 
@@ -587,13 +587,13 @@ export const getByRole = withErrorRecovery(async (role, options = {}) => {
   const opts = getOptions(options);
   const session = opts.session || getSession();
   const { name } = opts;
-  
+
   console.log(`🎭 Finding element by role: ${role}${name ? ` with name: ${name}` : ''} (timeout: ${opts.timeout}ms)`);
-  
-  const selector = name 
+
+  const selector = name
     ? `[role="${role}"][aria-label*="${name}"], [role="${role}"]:has-text("${name}")`
     : `[role="${role}"]`;
-    
+
   const result = await session.send('Runtime.evaluate', {
     expression: `
       (() => {
@@ -639,11 +639,11 @@ export const getByRole = withErrorRecovery(async (role, options = {}) => {
     `,
     returnByValue: false
   });
-  
+
   if (result.result.objectId) {
     return result.result.objectId;
   }
-  
+
   throw new Error(`Element not found with role: ${role}${name ? ` and name: ${name}` : ''}`);
 }, 'getByRole');
 
@@ -652,9 +652,9 @@ export const getByText = withErrorRecovery(async (text, options = {}) => {
   const opts = getOptions(options);
   const session = opts.session || getSession();
   const { exact = false } = opts;
-  
+
   console.log(`📝 Finding element by text: "${text}" (exact: ${exact}, timeout: ${opts.timeout}ms)`);
-  
+
   const result = await session.send('Runtime.evaluate', {
     expression: `
       (() => {
@@ -700,11 +700,11 @@ export const getByText = withErrorRecovery(async (text, options = {}) => {
     `,
     returnByValue: false
   });
-  
+
   if (result.result.objectId) {
     return result.result.objectId;
   }
-  
+
   throw new Error(`Element not found with text: ${text}`);
 }, 'getByText');
 
@@ -712,9 +712,9 @@ export const getByText = withErrorRecovery(async (text, options = {}) => {
 export const getByLabel = withErrorRecovery(async (labelText, options = {}) => {
   const opts = getOptions(options);
   const session = opts.session || getSession();
-  
+
   console.log(`🏷️ Finding element by label: "${labelText}" (timeout: ${opts.timeout}ms)`);
-  
+
   const result = await session.send('Runtime.evaluate', {
     expression: `
       (() => {
@@ -759,7 +759,7 @@ export const getByLabel = withErrorRecovery(async (labelText, options = {}) => {
     `,
     returnByValue: false
   });
-  
+
   if (result.result.objectId) {
     // Check if the returned object is an Error
     const typeCheck = await session.send('Runtime.callFunctionOn', {
@@ -767,14 +767,14 @@ export const getByLabel = withErrorRecovery(async (labelText, options = {}) => {
       functionDeclaration: 'function() { return this instanceof Error ? "ERROR" : this.tagName || "UNKNOWN"; }',
       returnByValue: true
     });
-    
-    if (typeCheck.result.value === "ERROR") {
+
+    if (typeCheck.result.value === 'ERROR') {
       throw new Error(`Element not found with label: ${labelText}`);
     }
-    
+
     return result.result.objectId;
   }
-  
+
   throw new Error(`Element not found with label: ${labelText}`);
 }, 'getByLabel');
 
@@ -786,16 +786,16 @@ export const getByLabel = withErrorRecovery(async (labelText, options = {}) => {
 export const check = withErrorRecovery(async (selectorOrNodeId, options = {}) => {
   const opts = getOptions(options);
   const session = opts.session || getSession();
-  
+
   console.log(`☑️ Checking: ${selectorOrNodeId} (timeout: ${opts.timeout}ms, force: ${opts.force})`);
-  
+
   let nodeId;
   if (typeof selectorOrNodeId === 'string') {
     nodeId = await querySelector(selectorOrNodeId, opts);
   } else {
     nodeId = selectorOrNodeId;
   }
-  
+
   // Check the element using JavaScript
   await session.send('Runtime.evaluate', {
     expression: `
@@ -819,7 +819,7 @@ export const check = withErrorRecovery(async (selectorOrNodeId, options = {}) =>
       })()
     `
   });
-  
+
   console.log('✅ Element checked successfully');
 }, 'check');
 
@@ -827,16 +827,16 @@ export const check = withErrorRecovery(async (selectorOrNodeId, options = {}) =>
 export const uncheck = withErrorRecovery(async (selectorOrNodeId, options = {}) => {
   const opts = getOptions(options);
   const session = opts.session || getSession();
-  
+
   console.log(`☐ Unchecking: ${selectorOrNodeId} (timeout: ${opts.timeout}ms, force: ${opts.force})`);
-  
+
   let nodeId;
   if (typeof selectorOrNodeId === 'string') {
     nodeId = await querySelector(selectorOrNodeId, opts);
   } else {
     nodeId = selectorOrNodeId;
   }
-  
+
   // Uncheck the element using JavaScript
   await session.send('Runtime.evaluate', {
     expression: `
@@ -860,7 +860,7 @@ export const uncheck = withErrorRecovery(async (selectorOrNodeId, options = {}) 
       })()
     `
   });
-  
+
   console.log('✅ Element unchecked successfully');
 }, 'uncheck');
 
@@ -868,16 +868,16 @@ export const uncheck = withErrorRecovery(async (selectorOrNodeId, options = {}) 
 export const selectOption = withErrorRecovery(async (selectorOrNodeId, value, options = {}) => {
   const opts = getOptions(options);
   const session = opts.session || getSession();
-  
+
   console.log(`🔽 Selecting option: ${selectorOrNodeId} = "${value}" (timeout: ${opts.timeout}ms, force: ${opts.force})`);
-  
+
   let nodeId;
   if (typeof selectorOrNodeId === 'string') {
     nodeId = await querySelector(selectorOrNodeId, opts);
   } else {
     nodeId = selectorOrNodeId;
   }
-  
+
   // Select the option using JavaScript
   await session.send('Runtime.evaluate', {
     expression: `
@@ -912,7 +912,7 @@ export const selectOption = withErrorRecovery(async (selectorOrNodeId, value, op
       })()
     `
   });
-  
+
   console.log('✅ Option selected successfully');
 }, 'selectOption');
 
@@ -924,9 +924,9 @@ export const selectOption = withErrorRecovery(async (selectorOrNodeId, value, op
 export const isVisible = withErrorRecovery(async (selectorOrNodeId, options = {}) => {
   const opts = getOptions(options);
   const session = opts.session || getSession();
-  
+
   console.log(`👁️ Checking visibility: ${selectorOrNodeId} (timeout: ${opts.timeout}ms)`);
-  
+
   const result = await session.send('Runtime.evaluate', {
     expression: `
       (() => {
@@ -945,7 +945,7 @@ export const isVisible = withErrorRecovery(async (selectorOrNodeId, options = {}
     `,
     returnByValue: true
   });
-  
+
   return result.result.value;
 }, 'isVisible');
 
@@ -953,9 +953,9 @@ export const isVisible = withErrorRecovery(async (selectorOrNodeId, options = {}
 export const isEnabled = withErrorRecovery(async (selectorOrNodeId, options = {}) => {
   const opts = getOptions(options);
   const session = opts.session || getSession();
-  
+
   console.log(`🔓 Checking enabled state: ${selectorOrNodeId} (timeout: ${opts.timeout}ms)`);
-  
+
   const result = await session.send('Runtime.evaluate', {
     expression: `
       (() => {
@@ -969,7 +969,7 @@ export const isEnabled = withErrorRecovery(async (selectorOrNodeId, options = {}
     `,
     returnByValue: true
   });
-  
+
   return result.result.value;
 }, 'isEnabled');
 
@@ -984,9 +984,9 @@ export const isDisabled = withErrorRecovery(async (selectorOrNodeId, options = {
 export const isChecked = withErrorRecovery(async (selectorOrNodeId, options = {}) => {
   const opts = getOptions(options);
   const session = opts.session || getSession();
-  
+
   console.log(`☑️ Checking checked state: ${selectorOrNodeId} (timeout: ${opts.timeout}ms)`);
-  
+
   const result = await session.send('Runtime.evaluate', {
     expression: `
       (() => {
@@ -1002,7 +1002,7 @@ export const isChecked = withErrorRecovery(async (selectorOrNodeId, options = {}
     `,
     returnByValue: true
   });
-  
+
   return result.result.value;
 }, 'isChecked');
 
@@ -1017,9 +1017,9 @@ export const isChecked = withErrorRecovery(async (selectorOrNodeId, options = {}
 export const hover = withErrorRecovery(async (selectorOrNodeId, options = {}) => {
   const opts = getOptions(options);
   const session = opts.session || getSession();
-  
+
   console.log(`🫲 Hovering: ${selectorOrNodeId} (timeout: ${opts.timeout}ms)`);
-  
+
   await session.send('Runtime.evaluate', {
     expression: `
       (() => {
@@ -1047,7 +1047,7 @@ export const hover = withErrorRecovery(async (selectorOrNodeId, options = {}) =>
       })()
     `
   });
-  
+
   console.log('✅ Element hovered successfully');
 }, 'hover');
 
@@ -1055,9 +1055,9 @@ export const hover = withErrorRecovery(async (selectorOrNodeId, options = {}) =>
 export const doubleClick = withErrorRecovery(async (selectorOrNodeId, options = {}) => {
   const opts = getOptions(options);
   const session = opts.session || getSession();
-  
+
   console.log(`🖱️🖱️ Double clicking: ${selectorOrNodeId} (timeout: ${opts.timeout}ms, force: ${opts.force})`);
-  
+
   await session.send('Runtime.evaluate', {
     expression: `
       (() => {
@@ -1090,7 +1090,7 @@ export const doubleClick = withErrorRecovery(async (selectorOrNodeId, options = 
       })()
     `
   });
-  
+
   console.log('✅ Element double clicked successfully');
 }, 'doubleClick');
 
@@ -1098,9 +1098,9 @@ export const doubleClick = withErrorRecovery(async (selectorOrNodeId, options = 
 export const rightClick = withErrorRecovery(async (selectorOrNodeId, options = {}) => {
   const opts = getOptions(options);
   const session = opts.session || getSession();
-  
+
   console.log(`🖱️➡️ Right clicking: ${selectorOrNodeId} (timeout: ${opts.timeout}ms, force: ${opts.force})`);
-  
+
   await session.send('Runtime.evaluate', {
     expression: `
       (() => {
@@ -1127,21 +1127,21 @@ export const rightClick = withErrorRecovery(async (selectorOrNodeId, options = {
       })()
     `
   });
-  
+
   console.log('✅ Element right clicked successfully');
 }, 'rightClick');
 
 // =============================================================================
-// 5. LOCATOR CHAINING - Element collection methods  
+// 5. LOCATOR CHAINING - Element collection methods
 // =============================================================================
 
 // Get first matching element
 export const first = withErrorRecovery(async (selector, options = {}) => {
   const opts = getOptions(options);
   const session = opts.session || getSession();
-  
+
   console.log(`🥇 Getting first element: ${selector} (timeout: ${opts.timeout}ms)`);
-  
+
   const result = await session.send('Runtime.evaluate', {
     expression: `
       (() => {
@@ -1154,11 +1154,11 @@ export const first = withErrorRecovery(async (selector, options = {}) => {
     `,
     returnByValue: false
   });
-  
+
   if (result.result.objectId) {
     return result.result.objectId;
   }
-  
+
   throw new Error(`No elements found with selector: ${selector}`);
 }, 'first');
 
@@ -1166,9 +1166,9 @@ export const first = withErrorRecovery(async (selector, options = {}) => {
 export const last = withErrorRecovery(async (selector, options = {}) => {
   const opts = getOptions(options);
   const session = opts.session || getSession();
-  
+
   console.log(`🥉 Getting last element: ${selector} (timeout: ${opts.timeout}ms)`);
-  
+
   const result = await session.send('Runtime.evaluate', {
     expression: `
       (() => {
@@ -1181,11 +1181,11 @@ export const last = withErrorRecovery(async (selector, options = {}) => {
     `,
     returnByValue: false
   });
-  
+
   if (result.result.objectId) {
     return result.result.objectId;
   }
-  
+
   throw new Error(`No elements found with selector: ${selector}`);
 }, 'last');
 
@@ -1193,9 +1193,9 @@ export const last = withErrorRecovery(async (selector, options = {}) => {
 export const nth = withErrorRecovery(async (selector, index, options = {}) => {
   const opts = getOptions(options);
   const session = opts.session || getSession();
-  
+
   console.log(`🔢 Getting element at index ${index}: ${selector} (timeout: ${opts.timeout}ms)`);
-  
+
   const result = await session.send('Runtime.evaluate', {
     expression: `
       (() => {
@@ -1211,11 +1211,11 @@ export const nth = withErrorRecovery(async (selector, index, options = {}) => {
     `,
     returnByValue: false
   });
-  
+
   if (result.result.objectId) {
     return result.result.objectId;
   }
-  
+
   throw new Error(`Element at index ${index} not found with selector: ${selector}`);
 }, 'nth');
 
@@ -1225,9 +1225,9 @@ export const nth = withErrorRecovery(async (selector, index, options = {}) => {
 export const getByPlaceholder = withErrorRecovery(async (placeholderText, options = {}) => {
   const opts = getOptions(options);
   const session = opts.session || getSession();
-  
+
   console.log(`🔍 Finding element by placeholder: "${placeholderText}" (timeout: ${opts.timeout}ms)`);
-  
+
   const result = await session.send('Runtime.evaluate', {
     expression: `
       (() => {
@@ -1237,7 +1237,7 @@ export const getByPlaceholder = withErrorRecovery(async (placeholderText, option
     `,
     returnByValue: false
   });
-  
+
   if (result.result.objectId) {
     // Check if the returned object is an Error
     const typeCheck = await session.send('Runtime.callFunctionOn', {
@@ -1245,15 +1245,15 @@ export const getByPlaceholder = withErrorRecovery(async (placeholderText, option
       functionDeclaration: 'function() { return this instanceof Error ? "ERROR" : this.tagName || "UNKNOWN"; }',
       returnByValue: true
     });
-    
-    if (typeCheck.result.value === "ERROR") {
+
+    if (typeCheck.result.value === 'ERROR') {
       throw new Error(`Element with placeholder "${placeholderText}" not found`);
     }
-    
+
     console.log(`✅ Found element by placeholder: "${placeholderText}"`);
     return result.result.objectId;
   }
-  
+
   throw new Error(`Element with placeholder "${placeholderText}" not found`);
 }, 'getByPlaceholder');
 
@@ -1261,9 +1261,9 @@ export const getByPlaceholder = withErrorRecovery(async (placeholderText, option
 export const getByTestId = withErrorRecovery(async (testId, options = {}) => {
   const opts = getOptions(options);
   const session = opts.session || getSession();
-  
+
   console.log(`🧪 Finding element by test id: "${testId}" (timeout: ${opts.timeout}ms)`);
-  
+
   const result = await session.send('Runtime.evaluate', {
     expression: `
       (() => {
@@ -1273,7 +1273,7 @@ export const getByTestId = withErrorRecovery(async (testId, options = {}) => {
     `,
     returnByValue: false
   });
-  
+
   if (result.result.objectId) {
     // Check if the returned object is an Error
     const typeCheck = await session.send('Runtime.callFunctionOn', {
@@ -1281,15 +1281,15 @@ export const getByTestId = withErrorRecovery(async (testId, options = {}) => {
       functionDeclaration: 'function() { return this instanceof Error ? "ERROR" : this.tagName || "UNKNOWN"; }',
       returnByValue: true
     });
-    
-    if (typeCheck.result.value === "ERROR") {
+
+    if (typeCheck.result.value === 'ERROR') {
       throw new Error(`Element with test id "${testId}" not found`);
     }
-    
+
     console.log(`✅ Found element by test id: "${testId}"`);
     return result.result.objectId;
   }
-  
+
   throw new Error(`Element with test id "${testId}" not found`);
 }, 'getByTestId');
 
@@ -1297,9 +1297,9 @@ export const getByTestId = withErrorRecovery(async (testId, options = {}) => {
 export const getByTitle = withErrorRecovery(async (titleText, options = {}) => {
   const opts = getOptions(options);
   const session = opts.session || getSession();
-  
+
   console.log(`📝 Finding element by title: "${titleText}" (timeout: ${opts.timeout}ms)`);
-  
+
   const result = await session.send('Runtime.evaluate', {
     expression: `
       (() => {
@@ -1312,12 +1312,12 @@ export const getByTitle = withErrorRecovery(async (titleText, options = {}) => {
     `,
     returnByValue: false
   });
-  
+
   if (result.result.objectId) {
     console.log(`✅ Found element by title: "${titleText}"`);
     return result.result.objectId;
   }
-  
+
   throw new Error(`Element with title "${titleText}" not found`);
 }, 'getByTitle');
 
@@ -1325,9 +1325,9 @@ export const getByTitle = withErrorRecovery(async (titleText, options = {}) => {
 export const getByAltText = withErrorRecovery(async (altText, options = {}) => {
   const opts = getOptions(options);
   const session = opts.session || getSession();
-  
+
   console.log(`🖼️ Finding element by alt text: "${altText}" (timeout: ${opts.timeout}ms)`);
-  
+
   const result = await session.send('Runtime.evaluate', {
     expression: `
       (() => {
@@ -1340,12 +1340,12 @@ export const getByAltText = withErrorRecovery(async (altText, options = {}) => {
     `,
     returnByValue: false
   });
-  
+
   if (result.result.objectId) {
     console.log(`✅ Found image by alt text: "${altText}"`);
     return result.result.objectId;
   }
-  
+
   throw new Error(`Image with alt text "${altText}" not found`);
 }, 'getByAltText');
 
@@ -1355,18 +1355,18 @@ export const getByAltText = withErrorRecovery(async (altText, options = {}) => {
 export const waitForText = withErrorRecovery(async (text, options = {}) => {
   const opts = getOptions(options);
   const session = opts.session || getSession();
-  
+
   console.log(`⏳ Waiting for text: "${text}" (timeout: ${opts.timeout}ms)`);
-  
+
   const startTime = Date.now();
-  
+
   while (Date.now() - startTime < opts.timeout) {
     try {
       const result = await session.send('Runtime.evaluate', {
         expression: `document.body.textContent.includes('${text}')`,
         returnByValue: true
       });
-      
+
       if (result.result.value === true) {
         console.log(`✅ Text found: "${text}"`);
         return true;
@@ -1374,10 +1374,10 @@ export const waitForText = withErrorRecovery(async (text, options = {}) => {
     } catch (error) {
       // Continue waiting
     }
-    
+
     await new Promise(resolve => setTimeout(resolve, 100));
   }
-  
+
   throw new Error(`Text "${text}" not found within ${opts.timeout}ms`);
 }, 'waitForText');
 
@@ -1385,21 +1385,21 @@ export const waitForText = withErrorRecovery(async (text, options = {}) => {
 export const waitForURL = withErrorRecovery(async (urlPattern, options = {}) => {
   const opts = getOptions(options);
   const session = opts.session || getSession();
-  
+
   console.log(`⏳ Waiting for URL pattern: "${urlPattern}" (timeout: ${opts.timeout}ms)`);
-  
+
   const startTime = Date.now();
-  
+
   while (Date.now() - startTime < opts.timeout) {
     try {
       const result = await session.send('Runtime.evaluate', {
-        expression: `window.location.href`,
+        expression: 'window.location.href',
         returnByValue: true
       });
-      
+
       const currentUrl = result.result.value;
       const regex = new RegExp(urlPattern);
-      
+
       if (regex.test(currentUrl)) {
         console.log(`✅ URL matches pattern: "${urlPattern}" (current: ${currentUrl})`);
         return currentUrl;
@@ -1407,10 +1407,10 @@ export const waitForURL = withErrorRecovery(async (urlPattern, options = {}) => 
     } catch (error) {
       // Continue waiting
     }
-    
+
     await new Promise(resolve => setTimeout(resolve, 100));
   }
-  
+
   throw new Error(`URL pattern "${urlPattern}" not matched within ${opts.timeout}ms`);
 }, 'waitForURL');
 
@@ -1418,20 +1418,20 @@ export const waitForURL = withErrorRecovery(async (urlPattern, options = {}) => 
 export const waitForLoadState = withErrorRecovery(async (state = 'load', options = {}) => {
   const opts = getOptions(options);
   const session = opts.session || getSession();
-  
+
   console.log(`⏳ Waiting for load state: "${state}" (timeout: ${opts.timeout}ms)`);
-  
+
   const startTime = Date.now();
-  
+
   while (Date.now() - startTime < opts.timeout) {
     try {
       const result = await session.send('Runtime.evaluate', {
-        expression: `document.readyState`,
+        expression: 'document.readyState',
         returnByValue: true
       });
-      
+
       const currentState = result.result.value;
-      
+
       if (state === 'load' && currentState === 'complete') {
         console.log(`✅ Page load state reached: "${state}"`);
         return true;
@@ -1445,10 +1445,10 @@ export const waitForLoadState = withErrorRecovery(async (state = 'load', options
     } catch (error) {
       // Continue waiting
     }
-    
+
     await new Promise(resolve => setTimeout(resolve, 100));
   }
-  
+
   throw new Error(`Load state "${state}" not reached within ${opts.timeout}ms`);
 }, 'waitForLoadState');
 
@@ -1456,30 +1456,30 @@ export const waitForLoadState = withErrorRecovery(async (state = 'load', options
 export const waitForFunction = withErrorRecovery(async (fn, options = {}) => {
   const opts = getOptions(options);
   const session = opts.session || getSession();
-  
+
   console.log(`⏳ Waiting for function to return truthy (timeout: ${opts.timeout}ms)`);
-  
+
   const startTime = Date.now();
   const functionString = typeof fn === 'function' ? fn.toString() : fn;
-  
+
   while (Date.now() - startTime < opts.timeout) {
     try {
       const result = await session.send('Runtime.evaluate', {
         expression: `(${functionString})()`,
         returnByValue: true
       });
-      
+
       if (result.result.value) {
-        console.log(`✅ Function returned truthy value`);
+        console.log('✅ Function returned truthy value');
         return result.result.value;
       }
     } catch (error) {
       // Continue waiting
     }
-    
+
     await new Promise(resolve => setTimeout(resolve, 100));
   }
-  
+
   throw new Error(`Function did not return truthy value within ${opts.timeout}ms`);
 }, 'waitForFunction');
 
@@ -1489,9 +1489,9 @@ export const waitForFunction = withErrorRecovery(async (fn, options = {}) => {
 export const uploadFile = withErrorRecovery(async (selectorOrNodeId, filePath, options = {}) => {
   const opts = getOptions(options);
   const session = opts.session || getSession();
-  
+
   console.log(`📁 Uploading file: ${filePath} to ${selectorOrNodeId} (timeout: ${opts.timeout}ms)`);
-  
+
   // First get the element
   let nodeId;
   if (typeof selectorOrNodeId === 'string') {
@@ -1499,11 +1499,11 @@ export const uploadFile = withErrorRecovery(async (selectorOrNodeId, filePath, o
       expression: `document.querySelector('${selectorOrNodeId}')`,
       returnByValue: false
     });
-    
+
     if (!result.result.objectId) {
       throw new Error(`Element not found: ${selectorOrNodeId}`);
     }
-    
+
     const domResult = await session.send('DOM.requestNode', {
       objectId: result.result.objectId
     });
@@ -1511,13 +1511,13 @@ export const uploadFile = withErrorRecovery(async (selectorOrNodeId, filePath, o
   } else {
     nodeId = selectorOrNodeId;
   }
-  
+
   // Set file for input
   await session.send('DOM.setFileInputFiles', {
     files: [filePath],
     nodeId: nodeId
   });
-  
+
   console.log(`✅ File uploaded: ${filePath}`);
   return nodeId;
 }, 'uploadFile');
@@ -1526,20 +1526,20 @@ export const uploadFile = withErrorRecovery(async (selectorOrNodeId, filePath, o
 export const press = withErrorRecovery(async (key, options = {}) => {
   const opts = getOptions(options);
   const session = opts.session || getSession();
-  
+
   console.log(`⌨️ Pressing key: "${key}" (timeout: ${opts.timeout}ms)`);
-  
+
   // Send key down and up events
   await session.send('Input.dispatchKeyEvent', {
     type: 'keyDown',
     key: key
   });
-  
+
   await session.send('Input.dispatchKeyEvent', {
     type: 'keyUp',
     key: key
   });
-  
+
   console.log(`✅ Key pressed: "${key}"`);
 }, 'press');
 
@@ -1547,20 +1547,20 @@ export const press = withErrorRecovery(async (key, options = {}) => {
 export const type = withErrorRecovery(async (text, options = {}) => {
   const opts = getOptions(options);
   const session = opts.session || getSession();
-  
+
   console.log(`⌨️ Typing text: "${text}" (timeout: ${opts.timeout}ms)`);
-  
+
   // Type each character
   for (const char of text) {
     await session.send('Input.dispatchKeyEvent', {
       type: 'char',
       text: char
     });
-    
+
     // Small delay between characters for realism
     await new Promise(resolve => setTimeout(resolve, 30));
   }
-  
+
   console.log(`✅ Text typed: "${text}"`);
 }, 'type');
 
@@ -1575,21 +1575,21 @@ let requestInterceptionEnabled = false;
 export const enableNetworkInterception = withErrorRecovery(async (options = {}) => {
   const opts = getOptions(options);
   const session = opts.session || getSession();
-  
+
   console.log(`🌐 Enabling network interception (timeout: ${opts.timeout}ms)`);
-  
+
   await session.send('Network.enable');
   await session.send('Network.setRequestInterception', {
     patterns: [{ urlPattern: '*' }]
   });
-  
+
   // Listen for network events
   const ws = session._ws;
   if (ws) {
     ws.on('message', (msg) => {
       try {
         const data = JSON.parse(msg);
-        
+
         // Track requests
         if (data.method === 'Network.requestWillBeSent') {
           networkRequests.set(data.params.requestId, {
@@ -1600,7 +1600,7 @@ export const enableNetworkInterception = withErrorRecovery(async (options = {}) 
             timestamp: Date.now()
           });
         }
-        
+
         // Track responses
         if (data.method === 'Network.responseReceived') {
           networkResponses.set(data.params.requestId, {
@@ -1616,20 +1616,20 @@ export const enableNetworkInterception = withErrorRecovery(async (options = {}) 
       }
     });
   }
-  
+
   requestInterceptionEnabled = true;
-  console.log(`✅ Network interception enabled`);
+  console.log('✅ Network interception enabled');
 }, 'enableNetworkInterception');
 
 // Wait for network request
 export const waitForRequest = withErrorRecovery(async (urlPattern, options = {}) => {
   const opts = getOptions(options);
-  
+
   console.log(`🌐 Waiting for request: "${urlPattern}" (timeout: ${opts.timeout}ms)`);
-  
+
   const startTime = Date.now();
   const regex = new RegExp(urlPattern);
-  
+
   while (Date.now() - startTime < opts.timeout) {
     for (const [requestId, request] of networkRequests.entries()) {
       if (regex.test(request.url)) {
@@ -1637,22 +1637,22 @@ export const waitForRequest = withErrorRecovery(async (urlPattern, options = {})
         return { requestId, ...request };
       }
     }
-    
+
     await new Promise(resolve => setTimeout(resolve, 100));
   }
-  
+
   throw new Error(`Request matching "${urlPattern}" not found within ${opts.timeout}ms`);
 }, 'waitForRequest');
 
-// Wait for network response  
+// Wait for network response
 export const waitForResponse = withErrorRecovery(async (urlPattern, options = {}) => {
   const opts = getOptions(options);
-  
+
   console.log(`🌐 Waiting for response: "${urlPattern}" (timeout: ${opts.timeout}ms)`);
-  
+
   const startTime = Date.now();
   const regex = new RegExp(urlPattern);
-  
+
   while (Date.now() - startTime < opts.timeout) {
     for (const [requestId, request] of networkRequests.entries()) {
       if (regex.test(request.url) && networkResponses.has(requestId)) {
@@ -1661,63 +1661,63 @@ export const waitForResponse = withErrorRecovery(async (urlPattern, options = {}
         return { requestId, request, response };
       }
     }
-    
+
     await new Promise(resolve => setTimeout(resolve, 100));
   }
-  
+
   throw new Error(`Response matching "${urlPattern}" not found within ${opts.timeout}ms`);
 }, 'waitForResponse');
 
 // Get all network requests
 export const getNetworkRequests = withErrorRecovery(async (urlPattern = null, options = {}) => {
   console.log(`🌐 Getting network requests${urlPattern ? ` matching: "${urlPattern}"` : ''}`);
-  
+
   let requests = Array.from(networkRequests.entries()).map(([requestId, request]) => ({
     requestId,
     ...request
   }));
-  
+
   if (urlPattern) {
     const regex = new RegExp(urlPattern);
     requests = requests.filter(req => regex.test(req.url));
   }
-  
+
   console.log(`✅ Found ${requests.length} network requests`);
   return requests;
 }, 'getNetworkRequests');
 
 // Clear network request/response history
 export const clearNetworkHistory = withErrorRecovery(async (options = {}) => {
-  console.log(`🌐 Clearing network history`);
-  
+  console.log('🌐 Clearing network history');
+
   networkRequests.clear();
   networkResponses.clear();
-  
-  console.log(`✅ Network history cleared`);
+
+  console.log('✅ Network history cleared');
 }, 'clearNetworkHistory');
 
 // Mock network response
 export const mockResponse = withErrorRecovery(async (urlPattern, responseData, options = {}) => {
   const opts = getOptions(options);
   const session = opts.session || getSession();
-  
+
   console.log(`🌐 Setting up mock response for: "${urlPattern}"`);
-  
+
   if (!requestInterceptionEnabled) {
     await enableNetworkInterception(options);
   }
-  
+
   // This is a simplified mock - in production you'd need more sophisticated request matching
   const ws = session._ws;
   if (ws) {
     ws.on('message', (msg) => {
       try {
         const data = JSON.parse(msg);
-        
+
         if (data.method === 'Network.requestIntercepted') {
           const request = data.params;
           const regex = new RegExp(urlPattern);
-          
+
           if (regex.test(request.request.url)) {
             // Mock the response
             session.send('Network.continueInterceptedRequest', {
@@ -1726,7 +1726,7 @@ export const mockResponse = withErrorRecovery(async (urlPattern, responseData, o
                 `HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: ${responseData.length}\r\n\r\n${responseData}`
               ).toString('base64')
             });
-            
+
             console.log(`✅ Mocked response for: ${request.request.url}`);
           } else {
             // Continue with original request
@@ -1740,7 +1740,7 @@ export const mockResponse = withErrorRecovery(async (urlPattern, responseData, o
       }
     });
   }
-  
+
   console.log(`✅ Mock response setup for pattern: "${urlPattern}"`);
 }, 'mockResponse');
 
@@ -1750,12 +1750,12 @@ export const mockResponse = withErrorRecovery(async (urlPattern, responseData, o
 export const getAllTabs = withErrorRecovery(async (options = {}) => {
   const opts = getOptions(options);
   const session = opts.session || getSession();
-  
-  console.log(`📱 Getting all browser tabs`);
-  
+
+  console.log('📱 Getting all browser tabs');
+
   const result = await session.send('Target.getTargets');
   const tabs = result.targets.filter(target => target.type === 'page');
-  
+
   console.log(`✅ Found ${tabs.length} tabs`);
   return tabs;
 }, 'getAllTabs');
@@ -1764,13 +1764,13 @@ export const getAllTabs = withErrorRecovery(async (options = {}) => {
 export const createNewTab = withErrorRecovery(async (url = 'about:blank', options = {}) => {
   const opts = getOptions(options);
   const session = opts.session || getSession();
-  
+
   console.log(`📱 Creating new tab: ${url}`);
-  
+
   const result = await session.send('Target.createTarget', {
     url: url
   });
-  
+
   console.log(`✅ New tab created: ${result.targetId}`);
   return result.targetId;
 }, 'createNewTab');
@@ -1779,13 +1779,13 @@ export const createNewTab = withErrorRecovery(async (url = 'about:blank', option
 export const switchToTab = withErrorRecovery(async (targetId, options = {}) => {
   const opts = getOptions(options);
   const session = opts.session || getSession();
-  
+
   console.log(`📱 Switching to tab: ${targetId}`);
-  
+
   await session.send('Target.activateTarget', {
     targetId: targetId
   });
-  
+
   console.log(`✅ Switched to tab: ${targetId}`);
 }, 'switchToTab');
 
@@ -1793,13 +1793,13 @@ export const switchToTab = withErrorRecovery(async (targetId, options = {}) => {
 export const closeTab = withErrorRecovery(async (targetId, options = {}) => {
   const opts = getOptions(options);
   const session = opts.session || getSession();
-  
+
   console.log(`📱 Closing tab: ${targetId}`);
-  
+
   await session.send('Target.closeTarget', {
     targetId: targetId
   });
-  
+
   console.log(`✅ Tab closed: ${targetId}`);
 }, 'closeTab');
 
@@ -1807,38 +1807,38 @@ export const closeTab = withErrorRecovery(async (targetId, options = {}) => {
 export const switchToFrame = withErrorRecovery(async (frameSelector, options = {}) => {
   const opts = getOptions(options);
   const session = opts.session || getSession();
-  
+
   console.log(`🖼️ Switching to iframe: ${frameSelector}`);
-  
+
   // Get the iframe element
   const result = await session.send('Runtime.evaluate', {
     expression: `document.querySelector('${frameSelector}')`,
     returnByValue: false
   });
-  
+
   if (!result.result.objectId) {
     throw new Error(`Iframe not found: ${frameSelector}`);
   }
-  
+
   // Get the frame ID from the iframe element
   const frameResult = await session.send('DOM.requestNode', {
     objectId: result.result.objectId
   });
-  
+
   const nodeDetails = await session.send('DOM.describeNode', {
     nodeId: frameResult.nodeId
   });
-  
+
   if (nodeDetails.node.frameId) {
     // Switch to the frame
     await session.send('Page.setDocumentContent', {
       frameId: nodeDetails.node.frameId
     });
-    
+
     console.log(`✅ Switched to iframe: ${frameSelector}`);
     return nodeDetails.node.frameId;
   }
-  
+
   throw new Error(`Could not switch to iframe: ${frameSelector}`);
 }, 'switchToFrame');
 
@@ -1846,18 +1846,18 @@ export const switchToFrame = withErrorRecovery(async (frameSelector, options = {
 export const switchToMainFrame = withErrorRecovery(async (options = {}) => {
   const opts = getOptions(options);
   const session = opts.session || getSession();
-  
-  console.log(`🖼️ Switching back to main frame`);
-  
+
+  console.log('🖼️ Switching back to main frame');
+
   // Get main frame
   const frameTree = await session.send('Page.getFrameTree');
   const mainFrameId = frameTree.frameTree.frame.id;
-  
+
   await session.send('Page.setDocumentContent', {
     frameId: mainFrameId
   });
-  
-  console.log(`✅ Switched to main frame`);
+
+  console.log('✅ Switched to main frame');
 }, 'switchToMainFrame');
 
 // 📱 TIER 2 MOBILE & DEVICE EMULATION
@@ -1866,9 +1866,9 @@ export const switchToMainFrame = withErrorRecovery(async (options = {}) => {
 export const emulateDevice = withErrorRecovery(async (deviceName, options = {}) => {
   const opts = getOptions(options);
   const session = opts.session || getSession();
-  
+
   console.log(`📱 Emulating device: ${deviceName}`);
-  
+
   // Common device presets
   const devices = {
     'iPhone 12': {
@@ -1900,12 +1900,12 @@ export const emulateDevice = withErrorRecovery(async (deviceName, options = {}) 
       userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
     }
   };
-  
+
   const device = devices[deviceName];
   if (!device) {
     throw new Error(`Unknown device: ${deviceName}. Available: ${Object.keys(devices).join(', ')}`);
   }
-  
+
   // Set device metrics
   await session.send('Emulation.setDeviceMetricsOverride', {
     width: device.width,
@@ -1913,12 +1913,12 @@ export const emulateDevice = withErrorRecovery(async (deviceName, options = {}) 
     deviceScaleFactor: device.deviceScaleFactor,
     mobile: device.mobile
   });
-  
+
   // Set user agent
   await session.send('Network.setUserAgentOverride', {
     userAgent: device.userAgent
   });
-  
+
   console.log(`✅ Device emulation set: ${deviceName} (${device.width}x${device.height})`);
 }, 'emulateDevice');
 
@@ -1926,16 +1926,16 @@ export const emulateDevice = withErrorRecovery(async (deviceName, options = {}) 
 export const setViewport = withErrorRecovery(async (width, height, options = {}) => {
   const opts = getOptions(options);
   const session = opts.session || getSession();
-  
+
   console.log(`📱 Setting viewport: ${width}x${height}`);
-  
+
   await session.send('Emulation.setDeviceMetricsOverride', {
     width: width,
     height: height,
     deviceScaleFactor: options.deviceScaleFactor || 1,
     mobile: options.mobile || false
   });
-  
+
   console.log(`✅ Viewport set: ${width}x${height}`);
 }, 'setViewport');
 
@@ -1943,15 +1943,15 @@ export const setViewport = withErrorRecovery(async (width, height, options = {})
 export const setGeolocation = withErrorRecovery(async (latitude, longitude, accuracy = 100, options = {}) => {
   const opts = getOptions(options);
   const session = opts.session || getSession();
-  
+
   console.log(`🌍 Setting geolocation: ${latitude}, ${longitude}`);
-  
+
   await session.send('Emulation.setGeolocationOverride', {
     latitude: latitude,
     longitude: longitude,
     accuracy: accuracy
   });
-  
+
   console.log(`✅ Geolocation set: ${latitude}, ${longitude} (accuracy: ${accuracy}m)`);
 }, 'setGeolocation');
 
@@ -1959,11 +1959,11 @@ export const setGeolocation = withErrorRecovery(async (latitude, longitude, accu
 export const clearDeviceEmulation = withErrorRecovery(async (options = {}) => {
   const opts = getOptions(options);
   const session = opts.session || getSession();
-  
-  console.log(`📱 Clearing device emulation`);
-  
+
+  console.log('📱 Clearing device emulation');
+
   await session.send('Emulation.clearDeviceMetricsOverride');
   await session.send('Network.setUserAgentOverride', { userAgent: '' });
-  
-  console.log(`✅ Device emulation cleared`);
+
+  console.log('✅ Device emulation cleared');
 }, 'clearDeviceEmulation');

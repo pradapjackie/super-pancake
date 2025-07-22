@@ -35,15 +35,15 @@ export function withErrorRecovery(fn, operation) {
       if (error.name === 'STACK_TRACE_ERROR' || !error.message || error.message.trim() === '') {
         throw new StackTraceError(error, operation);
       }
-      
+
       // Re-throw with context
       if (error instanceof SuperPancakeError) {
         throw error;
       }
-      
-      throw new SuperPancakeError(error.message, 'WRAPPED_ERROR', { 
+
+      throw new SuperPancakeError(error.message, 'WRAPPED_ERROR', {
         originalError: error.constructor.name,
-        operation 
+        operation
       });
     }
   };
@@ -52,26 +52,26 @@ export function withErrorRecovery(fn, operation) {
 // Simple retry mechanism
 export function withRetry(fn, options = {}) {
   const { maxRetries = 3, baseDelay = 1000, operation = 'unknown' } = options;
-  
+
   return async (...args) => {
     let lastError;
-    
+
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         return await fn(...args);
       } catch (error) {
         lastError = error;
-        
+
         if (attempt === maxRetries) {
           break;
         }
-        
+
         const delay = baseDelay * Math.pow(2, attempt - 1);
         console.log(`Retry ${attempt}/${maxRetries} for ${operation} in ${delay}ms`);
         await new Promise(resolve => setTimeout(resolve, delay));
       }
     }
-    
+
     throw new SuperPancakeError(
       `Operation ${operation} failed after ${maxRetries} attempts: ${lastError.message}`,
       'RETRY_EXHAUSTED',

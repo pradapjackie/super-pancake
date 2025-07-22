@@ -22,7 +22,7 @@ export function generateHTMLTestReport(results) {
   };
 
   const totalIndividualTests = Object.values(testCounts).reduce((sum, count) => sum + count, 0);
-  
+
   // Calculate actual passed individual tests based on our recent test run
   const actualResults = {
     'Unit Tests - Core Components': { passed: 72, total: 78, skipped: 6 }, // 6 core tests skipped
@@ -34,7 +34,7 @@ export function generateHTMLTestReport(results) {
     'Performance Tests': { passed: 15, total: 18, skipped: 3 }, // 3 caching tests skipped
     'End-to-End Tests': { passed: 0, total: 6, skipped: 6 } // all e2e tests skipped
   };
-  
+
   const passedIndividualTests = results.filter(r => r.success)
     .reduce((sum, result) => sum + (actualResults[result.name]?.passed || 0), 0);
   const skippedTests = Object.values(actualResults).reduce((sum, result) => sum + result.skipped, 0);
@@ -445,7 +445,7 @@ function getSuiteDescription(suiteName) {
     'Performance Tests': 'Tests performance and caching',
     'End-to-End Tests': 'Tests complete workflows'
   };
-  
+
   return descriptions[suiteName] || 'Test suite validation';
 }
 

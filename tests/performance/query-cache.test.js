@@ -11,7 +11,7 @@ import { SuperPancakeError } from '../../core/errors.js';
 
 describe('Query Cache', () => {
   let mockSession;
-  
+
   beforeEach(() => {
     clearQueryCache();
     mockSession = {
@@ -30,9 +30,9 @@ describe('Query Cache', () => {
       mockSession.send
         .mockResolvedValueOnce({ root: { nodeId: 1 } })
         .mockResolvedValueOnce({ nodeId });
-      
+
       const result = await cachedQuerySelector(mockSession, '#test', false);
-      
+
       expect(result).toBe(nodeId);
       expect(mockSession.send).toHaveBeenCalledTimes(2);
     });
@@ -43,15 +43,15 @@ describe('Query Cache', () => {
         .mockResolvedValueOnce({ root: { nodeId: 1 } })
         .mockResolvedValueOnce({ nodeId })
         .mockResolvedValueOnce({ nodeId }); // For validation
-      
+
       // First call - cache miss
       const result1 = await cachedQuerySelector(mockSession, '#test');
       expect(result1).toBe(nodeId);
-      
+
       // Second call - cache hit
       const result2 = await cachedQuerySelector(mockSession, '#test');
       expect(result2).toBe(nodeId);
-      
+
       // Should only call DOM operations once for cache miss
       expect(mockSession.send).toHaveBeenCalledTimes(3); // getDocument, querySelector, validation
     });
@@ -64,10 +64,10 @@ describe('Query Cache', () => {
         .mockRejectedValueOnce(new Error('Node not found')) // Validation fails
         .mockResolvedValueOnce({ root: { nodeId: 1 } })
         .mockResolvedValueOnce({ nodeId: 456 }); // Fresh query
-      
+
       // First call - populates cache
       await cachedQuerySelector(mockSession, '#test');
-      
+
       // Second call - validation fails, performs fresh query
       const result = await cachedQuerySelector(mockSession, '#test');
       expect(result).toBe(456);
@@ -75,7 +75,7 @@ describe('Query Cache', () => {
 
     it('should handle query failures', async () => {
       mockSession.send.mockRejectedValueOnce(new Error('Query failed'));
-      
+
       await expect(cachedQuerySelector(mockSession, '#test'))
         .rejects.toThrow(SuperPancakeError);
     });
@@ -84,7 +84,7 @@ describe('Query Cache', () => {
       mockSession.send
         .mockResolvedValueOnce({ root: { nodeId: 1 } })
         .mockResolvedValueOnce({ nodeId: null });
-      
+
       const result = await cachedQuerySelector(mockSession, '#notfound');
       expect(result).toBeNull();
     });
@@ -97,13 +97,13 @@ describe('Query Cache', () => {
         .mockResolvedValueOnce({ root: { nodeId: 1 } })
         .mockResolvedValueOnce({ nodeId })
         .mockResolvedValueOnce({ nodeId }); // validation
-      
+
       // Cache miss
       await cachedQuerySelector(mockSession, '#test');
-      
+
       // Cache hit
       await cachedQuerySelector(mockSession, '#test');
-      
+
       const stats = getCacheStats();
       expect(stats.hits).toBe(1);
       expect(stats.misses).toBe(1);
@@ -116,10 +116,10 @@ describe('Query Cache', () => {
       mockSession.send
         .mockResolvedValueOnce({ root: { nodeId: 1 } })
         .mockResolvedValueOnce({ nodeId });
-      
+
       await cachedQuerySelector(mockSession, '#test');
       expect(getCacheStats().size).toBe(1);
-      
+
       clearQueryCache();
       const stats = getCacheStats();
       expect(stats.size).toBe(0);
@@ -132,19 +132,19 @@ describe('Query Cache', () => {
       mockSession.send
         .mockResolvedValueOnce({ root: { nodeId: 1 } })
         .mockResolvedValueOnce({ nodeId });
-      
+
       await cachedQuerySelector(mockSession, '#test');
       expect(getCacheStats().size).toBe(1);
-      
+
       invalidateCacheForSelector(mockSession, '#test');
       expect(getCacheStats().size).toBe(0);
     });
 
     it('should configure cache settings', () => {
       const originalStats = getCacheStats();
-      
+
       const newStats = configureCaching({ maxSize: 50, ttl: 60000 });
-      
+
       expect(newStats.maxSize).toBe(50);
       expect(newStats.ttl).toBe(60000);
     });
@@ -154,7 +154,7 @@ describe('Query Cache', () => {
     it('should evict oldest entries when max size reached', async () => {
       // Set small cache size for testing
       configureCaching({ maxSize: 2, ttl: 30000 });
-      
+
       const nodeId = 123;
       mockSession.send
         .mockResolvedValueOnce({ root: { nodeId: 1 } })
@@ -163,12 +163,12 @@ describe('Query Cache', () => {
         .mockResolvedValueOnce({ nodeId })
         .mockResolvedValueOnce({ root: { nodeId: 1 } })
         .mockResolvedValueOnce({ nodeId });
-      
+
       // Fill cache to capacity
       await cachedQuerySelector(mockSession, '#test1');
       await cachedQuerySelector(mockSession, '#test2');
       expect(getCacheStats().size).toBe(2);
-      
+
       // Add third item - should evict first
       await cachedQuerySelector(mockSession, '#test3');
       expect(getCacheStats().size).toBe(2);
@@ -177,29 +177,29 @@ describe('Query Cache', () => {
     it('should clean up expired entries', async () => {
       // Clear stats first
       clearQueryCache();
-      
+
       // Set very short TTL for testing (use very short for both dynamic and static)
       configureCaching({ maxSize: 100, ttl: 5, dynamicTTL: 5, staticTTL: 5 });
-      
+
       const nodeId = 123;
       mockSession.send
         .mockResolvedValueOnce({ root: { nodeId: 1 } })
         .mockResolvedValueOnce({ nodeId });
-      
+
       // First call - should add to cache
       await cachedQuerySelector(mockSession, '#test');
       expect(getCacheStats().size).toBe(1);
-      
+
       // Wait for expiration (longer wait to ensure expiration)
       await new Promise(resolve => setTimeout(resolve, 20));
-      
+
       // Second call - expired entry should not be used
       mockSession.send
         .mockResolvedValueOnce({ root: { nodeId: 1 } })
         .mockResolvedValueOnce({ nodeId });
-      
+
       await cachedQuerySelector(mockSession, '#test');
-      
+
       // Cache should have been cleaned up during the second call
       const stats = getCacheStats();
       expect(stats.size).toBe(1); // New entry added after cleanup
@@ -209,30 +209,30 @@ describe('Query Cache', () => {
 
   describe('Session Isolation', () => {
     it('should isolate cache between different sessions', async () => {
-      const session1 = { 
+      const session1 = {
         send: vi.fn(),
         constructor: { name: 'Session1' }
       };
-      const session2 = { 
+      const session2 = {
         send: vi.fn(),
         constructor: { name: 'Session2' }
       };
-      
+
       const nodeId1 = 123;
       const nodeId2 = 456;
-      
+
       session1.send
         .mockResolvedValueOnce({ root: { nodeId: 1 } })
         .mockResolvedValueOnce({ nodeId: nodeId1 });
-      
+
       session2.send
         .mockResolvedValueOnce({ root: { nodeId: 1 } })
         .mockResolvedValueOnce({ nodeId: nodeId2 });
-      
+
       // Same selector, different sessions
       const result1 = await cachedQuerySelector(session1, '#test');
       const result2 = await cachedQuerySelector(session2, '#test');
-      
+
       expect(result1).toBe(nodeId1);
       expect(result2).toBe(nodeId2);
       expect(getCacheStats().size).toBe(2); // Two separate cache entries

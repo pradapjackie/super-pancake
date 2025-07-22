@@ -30,7 +30,7 @@ console.log('\n🚀 Starting Vitest run...\n');
 
 try {
   // Use exec instead of spawn for better Windows compatibility
-  const { stdout, stderr } = await execAsync('npx vitest run', { 
+  const { stdout, stderr } = await execAsync('npx vitest run', {
     encoding: 'utf8',
     maxBuffer: 1024 * 1024 * 10 // 10MB buffer
   });
@@ -47,9 +47,9 @@ try {
   const testLinePassedSkipped = stdout.match(/Tests\s+(\d+)\s+passed\s+\|\s+(\d+)\s+skipped/);
   const testLinePassedOnly = stdout.match(/Tests\s+(\d+)\s+passed\s+\((\d+)\)/);
   const testLineMatch = testLinePassedSkipped || testLinePassedOnly;
-  
+
   let passed, failed, skipped, broken, total;
-  
+
   if (testLineMatch) {
     passed = parseInt(testLineMatch[1]) || 0;
     if (testLinePassedSkipped) {
@@ -84,7 +84,7 @@ try {
 └──────────────┴────────┘
   `.trim();
 
-  console.log(`\n📄 --- Test Summary ---`);
+  console.log('\n📄 --- Test Summary ---');
   console.log(`\n${summaryTable}\n`);
 
   if (failed > 0 || broken > 0) {
@@ -98,7 +98,7 @@ try {
 } catch (error) {
   console.error('\n❌ Error running tests:');
   console.error(error.message);
-  
+
   if (error.code === 'ENOENT') {
     console.error('\n🔧 Troubleshooting:');
     console.error('1. Make sure Node.js and npm are installed');
@@ -106,16 +106,16 @@ try {
     console.error('3. Verify vitest is available: npx vitest --version');
     console.error('4. Check if you have test files in your project');
   }
-  
+
   if (error.stdout) {
     console.log('\n📤 Standard Output:');
     console.log(error.stdout);
   }
-  
+
   if (error.stderr) {
     console.error('\n📥 Standard Error:');
     console.error(error.stderr);
   }
-  
+
   process.exit(1);
 }

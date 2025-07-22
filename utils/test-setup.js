@@ -24,36 +24,36 @@ export async function createTestEnvironment(options = {}) {
 
   console.log(`🚀 Starting ${testName}...`);
   const timeouts = getTestTimeouts();
-  
+
   try {
     // Launch Chrome with CI-specific configuration
     const chromeConfig = getChromeConfig({ headed, port });
     const chrome = await launchChrome(chromeConfig);
     console.log('✅ Chrome launched');
-    
+
     // Wait for Chrome to fully start (longer in CI)
     const startupDelay = timeouts.short;
     await new Promise(resolve => setTimeout(resolve, startupDelay));
-    
+
     // Connect to Chrome
     const ws = await connectToChrome(port);
     console.log('✅ WebSocket connected');
-    
+
     // Create session
     const session = createSession(ws);
     console.log('✅ Session created');
-    
+
     // Set session context for simplified API
     setSession(session);
     console.log('✅ Session context set');
-    
+
     // Skip DOM enabling for now - we'll enable it in individual tests
     console.log('⚠️ Skipping DOM enable to avoid timeout issues');
-    
+
     console.log(`🎯 ${testName} setup completed successfully`);
-    
+
     return { chrome, ws, session };
-    
+
   } catch (error) {
     console.error(`❌ ${testName} setup failed:`, error);
     throw error;
@@ -67,12 +67,12 @@ export async function createTestEnvironment(options = {}) {
  */
 export async function cleanupTestEnvironment(environment, testName = 'Test') {
   console.log(`🧹 Cleaning up ${testName}...`);
-  
+
   try {
     // Clear session context first
     clearSession();
     console.log('✅ Session context cleared');
-    
+
     if (environment.session) {
       environment.session.destroy();
       console.log('✅ Session destroyed');
@@ -99,10 +99,10 @@ export async function cleanupTestEnvironment(environment, testName = 'Test') {
 export function withTestEnvironment(options = {}) {
   return function(testFn) {
     const testName = options.testName || 'Test';
-    
+
     return async function(...args) {
       const environment = await createTestEnvironment(options);
-      
+
       try {
         return await testFn(environment, ...args);
       } finally {
@@ -126,7 +126,7 @@ export function createFormTestEnvironment(testName = 'Form Test') {
 }
 
 /**
- * Setup for comprehensive tests  
+ * Setup for comprehensive tests
  * @param {string} testName - Name for logging
  * @returns {Promise<Object>} Test environment with chrome, ws, session
  */

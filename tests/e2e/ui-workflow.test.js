@@ -36,21 +36,21 @@ describe('End-to-End UI Workflow Tests', () => {
   }, 30000);
 
   afterAll(async () => {
-    if (ws) ws.close();
-    if (chrome) await chrome.kill();
+    if (ws) {ws.close();}
+    if (chrome) {await chrome.kill();}
   });
 
   it('should load the test application', async () => {
     await navigateTo(session, TEST_APP_URL);
-    
+
     // Wait for the page to load
     await waitForSelector(session, 'h1', 10000);
-    
+
     // Check page title
     const h1NodeId = await querySelector(session, 'h1');
     const title = await getText(session, h1NodeId);
     expect(title).toContain('Super Pancake Test Application');
-    
+
     // Check form exists
     const form = await querySelector(session, '#testForm');
     expect(form).toBeDefined();
@@ -59,20 +59,20 @@ describe('End-to-End UI Workflow Tests', () => {
   it('should interact with form elements', async () => {
     await navigateTo(session, TEST_APP_URL);
     await waitForSelector(session, '#testForm', 10000);
-    
+
     // Fill form fields
     await fillInput(session, '#name', 'John Doe');
     await fillInput(session, '#email', 'john@example.com');
-    
+
     // Select from dropdown
     await selectOption(session, '#country', 'us');
-    
+
     // Check checkbox
     await check(session, '#newsletter', true);
-    
+
     // Submit form
     await click(session, '#submitBtn');
-    
+
     // Wait for success message
     await waitForSelector(session, '#successMessage', 5000);
     const successMsgNodeId = await querySelector(session, '#successMessage');
@@ -82,10 +82,10 @@ describe('End-to-End UI Workflow Tests', () => {
 
   it('should load the UI server and display test files', async () => {
     await navigateTo(session, UI_SERVER_URL);
-    
-    // Wait for the page to load  
+
+    // Wait for the page to load
     await waitForSelector(session, 'body', 10000);
-    
+
     // Check if this is the test runner page
     const bodyNodeId = await querySelector(session, 'body');
     const bodyText = await getText(session, bodyNodeId);
@@ -95,15 +95,15 @@ describe('End-to-End UI Workflow Tests', () => {
   it('should interact with test data table', async () => {
     await navigateTo(session, TEST_APP_URL);
     await waitForSelector(session, '#dataTable', 10000);
-    
+
     // Check table data
     const tableData = await getTableData(session, '#dataTable');
     expect(tableData.length).toBeGreaterThan(0);
-    
+
     // Check specific table content
     const firstRowData = await getTableRow(session, '#dataTable', 1); // Skip header
     expect(firstRowData).toContain('Alice Johnson');
-    
+
     // Check table cell
     const emailCell = await getTableCell(session, '#dataTable', 1, 2);
     expect(emailCell).toBe('alice@example.com');
@@ -112,13 +112,13 @@ describe('End-to-End UI Workflow Tests', () => {
   it('should handle dynamic content updates', async () => {
     await navigateTo(session, TEST_APP_URL);
     await waitForSelector(session, '#dynamicContent', 10000);
-    
+
     // Click update button
     await click(session, '#dynamicContent button');
-    
+
     // Wait for content to update
     await new Promise(resolve => setTimeout(resolve, 500));
-    
+
     // Check if content was updated
     const dynamicContentNodeId = await querySelector(session, '#dynamicContent');
     const updatedContent = await getText(session, dynamicContentNodeId);
@@ -127,15 +127,15 @@ describe('End-to-End UI Workflow Tests', () => {
 
   it('should test visibility and state changes', async () => {
     await navigateTo(session, TEST_APP_URL);
-    
+
     // Initially hidden button should become visible
     await waitForSelector(session, '#hiddenButton', 15000);
     const hiddenBtn = await isVisible(session, '#hiddenButton');
     expect(hiddenBtn).toBe(true);
-    
+
     // Initially disabled button should become enabled
-    await waitForCondition(session, 
-      () => isEnabled(session, '#disabledButton'), 
+    await waitForCondition(session,
+      () => isEnabled(session, '#disabledButton'),
       15000
     );
     const enabledBtn = await isEnabled(session, '#disabledButton');

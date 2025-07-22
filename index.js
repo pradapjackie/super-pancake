@@ -1,4 +1,4 @@
-console.log('Happy developing ✨')
+console.log('Happy developing ✨');
 // index.js
 export * from './core/assert.js';
 export * from './core/browser.js';
@@ -23,27 +23,27 @@ export * from './core/api.js';
 export { setSession, clearSession, getSession } from './core/session-context.js';
 
 // Test setup utilities (needed by generators)
-export { 
-  createTestEnvironment, 
+export {
+  createTestEnvironment,
   cleanupTestEnvironment,
   withTestEnvironment,
   createFormTestEnvironment,
   createComprehensiveTestEnvironment,
-  createHeadedTestEnvironment 
+  createHeadedTestEnvironment
 } from './utils/test-setup.js';
 
 // Export caching utilities
-export { 
-  getCacheStats, 
-  clearQueryCache, 
-  invalidateCacheForSelector, 
-  configureCaching 
+export {
+  getCacheStats,
+  clearQueryCache,
+  invalidateCacheForSelector,
+  configureCaching
 } from './core/query-cache.js';
 
 // Export port utilities (needed for dynamic port allocation)
-export { 
-  findAvailablePort, 
-  isPortAvailable, 
+export {
+  findAvailablePort,
+  isPortAvailable,
   ensurePortAvailable,
-  killPortProcess 
+  killPortProcess
 } from './utils/port-finder.js';

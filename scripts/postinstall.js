@@ -11,7 +11,7 @@ const isUserProject = !process.cwd().includes('node_modules/super-pancake-automa
 
 if (isUserProject) {
   const configPath = path.join(process.cwd(), 'super-pancake.config.js');
-  
+
   // Only create if it doesn't exist
   if (!fs.existsSync(configPath)) {
     const defaultConfig = `// Super Pancake Framework Configuration
@@ -86,7 +86,7 @@ export default {
   } else {
     console.log('🥞 Super Pancake: Configuration file already exists, skipping creation.');
   }
-  
+
   // Create tests directory if it doesn't exist
   const testsDir = path.join(process.cwd(), 'tests');
   if (!fs.existsSync(testsDir)) {
@@ -97,7 +97,7 @@ export default {
       console.warn('🥞 Super Pancake: Could not create tests directory:', error.message);
     }
   }
-  
+
   // Create screenshots directory
   const screenshotsDir = path.join(process.cwd(), 'screenshots');
   if (!fs.existsSync(screenshotsDir)) {

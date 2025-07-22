@@ -13,11 +13,11 @@ describe('UI Server Integration Tests', () => {
   beforeAll(async () => {
     // Import port finder utilities
     const { ensurePortAvailable } = await import('../../utils/port-finder.js');
-    
+
     // Find available port for testing
     serverPort = await ensurePortAvailable(3003, true);
     baseUrl = `http://localhost:${serverPort}`;
-    
+
     // Start the UI server for testing
     serverProcess = spawn('node', ['scripts/test-ui.js'], {
       env: { ...process.env, PORT: serverPort, NODE_ENV: 'test' },

@@ -1,6 +1,6 @@
 import { config } from '../config.js';
-import path from "path";
-import fs from "fs";
+import path from 'path';
+import fs from 'fs';
 import { executeSecureFunction, resolveNodeSecurely } from './secure-execution.js';
 import { cachedQuerySelector, invalidateCacheForSelector } from './query-cache.js';
 import {
@@ -16,16 +16,16 @@ import {
 } from './errors.js';
 // Enable required domains
 export async function enableDOM(session) {
-    try {
-      await session.send('Page.enable');
-      await session.send('DOM.enable');
-      await session.send('Runtime.enable');
-    } catch (error) {
-      throw new Error(`❌ Failed to enable DOM: ${error.message}`);
-    }
+  try {
+    await session.send('Page.enable');
+    await session.send('DOM.enable');
+    await session.send('Runtime.enable');
+  } catch (error) {
+    throw new Error(`❌ Failed to enable DOM: ${error.message}`);
   }
+}
 
-  // Navigation
+// Navigation
 export async function navigateTo(session, url) {
   try {
     await session.send('Page.navigate', { url });
@@ -34,10 +34,10 @@ export async function navigateTo(session, url) {
     while (true) {
       const { result } = await session.send('Runtime.evaluate', {
         expression: 'document.readyState',
-        returnByValue: true,
+        returnByValue: true
       });
 
-      if (result.value === 'complete') break;
+      if (result.value === 'complete') {break;}
       await waitForTimeout(config.pollInterval || 100);
     }
   } catch (error) {
@@ -45,261 +45,261 @@ export async function navigateTo(session, url) {
   }
 }
 
-  // Query selectors
-  export async function querySelector(session, selector, useCache = true) {
-    validateSession(session);
-    validateSelector(selector);
-    
-    try {
-      const foundId = await cachedQuerySelector(session, selector, useCache);
-      if (!foundId) {
-        throw new ElementNotFoundError(selector);
-      }
-      return foundId;
-    } catch (error) {
-      if (error.name === 'ElementNotFoundError') {
-        throw error;
-      }
-      throw new SuperPancakeError(
-        `Failed to query selector "${selector}": ${error.message}`,
-        'QUERY_SELECTOR_FAILED',
-        { selector }
-      );
+// Query selectors
+export async function querySelector(session, selector, useCache = true) {
+  validateSession(session);
+  validateSelector(selector);
+
+  try {
+    const foundId = await cachedQuerySelector(session, selector, useCache);
+    if (!foundId) {
+      throw new ElementNotFoundError(selector);
     }
-  }
-
-  export async function querySelectorAll(session, selector) {
-    validateSession(session);
-    validateSelector(selector);
-    
-    try {
-      const { root: { nodeId } } = await session.send('DOM.getDocument');
-      const { nodeIds } = await session.send('DOM.querySelectorAll', { nodeId, selector });
-      return nodeIds || [];
-    } catch (error) {
-      throw new SuperPancakeError(
-        `Failed to query all selectors "${selector}": ${error.message}`,
-        'QUERY_SELECTOR_ALL_FAILED',
-        { selector }
-      );
+    return foundId;
+  } catch (error) {
+    if (error.name === 'ElementNotFoundError') {
+      throw error;
     }
+    throw new SuperPancakeError(
+      `Failed to query selector "${selector}": ${error.message}`,
+      'QUERY_SELECTOR_FAILED',
+      { selector }
+    );
   }
+}
 
-  // Basic actions
-  export async function click(session, selectorOrNodeId) {
-    validateSession(session);
-    
-    try {
-      const nodeId = typeof selectorOrNodeId === 'string'
-        ? await querySelector(session, selectorOrNodeId)
-        : selectorOrNodeId;
+export async function querySelectorAll(session, selector) {
+  validateSession(session);
+  validateSelector(selector);
 
-      await executeSecureFunction(session, nodeId, 'click');
-    } catch (error) {
-      throw new SuperPancakeError(
-        `Failed to click on "${selectorOrNodeId}": ${error.message}`,
-        'CLICK_FAILED',
-        { selector: selectorOrNodeId }
-      );
-    }
+  try {
+    const { root: { nodeId } } = await session.send('DOM.getDocument');
+    const { nodeIds } = await session.send('DOM.querySelectorAll', { nodeId, selector });
+    return nodeIds || [];
+  } catch (error) {
+    throw new SuperPancakeError(
+      `Failed to query all selectors "${selector}": ${error.message}`,
+      'QUERY_SELECTOR_ALL_FAILED',
+      { selector }
+    );
   }
+}
 
-  export async function type(session, selector, text) {
-    validateSession(session);
-    validateSelector(selector);
-    validateText(text);
-    
-    try {
-      const nodeId = await querySelector(session, selector);
-      await executeSecureFunction(session, nodeId, 'setValue', [text]);
-      // Invalidate cache after DOM modification
-      invalidateCacheForSelector(session, selector);
-    } catch (error) {
-      throw new SuperPancakeError(
-        `Failed to type into "${selector}": ${error.message}`,
-        'TYPE_FAILED',
-        { selector, text }
-      );
-    }
+// Basic actions
+export async function click(session, selectorOrNodeId) {
+  validateSession(session);
+
+  try {
+    const nodeId = typeof selectorOrNodeId === 'string'
+      ? await querySelector(session, selectorOrNodeId)
+      : selectorOrNodeId;
+
+    await executeSecureFunction(session, nodeId, 'click');
+  } catch (error) {
+    throw new SuperPancakeError(
+      `Failed to click on "${selectorOrNodeId}": ${error.message}`,
+      'CLICK_FAILED',
+      { selector: selectorOrNodeId }
+    );
   }
+}
 
-  export async function clearInput(session, selector) {
-    await type(session, selector, '');
-  }
+export async function type(session, selector, text) {
+  validateSession(session);
+  validateSelector(selector);
+  validateText(text);
 
-  export async function getText(session, nodeId) {
-    validateSession(session);
-    
-    try {
-      const { result } = await executeSecureFunction(session, nodeId, 'getText');
-      return result.value;
-    } catch (error) {
-      throw new SuperPancakeError(
-        `Failed to get text from nodeId "${nodeId}": ${error.message}`,
-        'GET_TEXT_FAILED',
-        { nodeId }
-      );
-    }
-  }
-
-  export async function getAttribute(session, selector, attrName) {
-    validateSession(session);
-    validateSelector(selector);
-    validateText(attrName, 'attrName');
-    
-    try {
-      const nodeId = await querySelector(session, selector);
-      const { result } = await executeSecureFunction(session, nodeId, 'getAttribute', [attrName]);
-      return result.value;
-    } catch (error) {
-      throw new SuperPancakeError(
-        `Failed to get attribute "${attrName}" from "${selector}": ${error.message}`,
-        'GET_ATTRIBUTE_FAILED',
-        { selector, attrName }
-      );
-    }
-  }
-
-  export async function setAttribute(session, selector, attrName, value) {
-    validateSession(session);
-    validateSelector(selector);
-    validateText(attrName, 'attrName');
-    validateText(value, 'value');
-    
-    try {
-      const nodeId = await querySelector(session, selector);
-      await executeSecureFunction(session, nodeId, 'setAttribute', [attrName, value]);
-    } catch (error) {
-      throw new SuperPancakeError(
-        `Failed to set attribute "${attrName}" on "${selector}": ${error.message}`,
-        'SET_ATTRIBUTE_FAILED',
-        { selector, attrName, value }
-      );
-    }
-  }
-
-  export async function isVisible(session, selector) {
-    validateSession(session);
-    validateSelector(selector);
-    
-    try {
-      const nodeId = await querySelector(session, selector);
-      const { result } = await executeSecureFunction(session, nodeId, 'isVisible');
-      return result.value;
-    } catch (error) {
-      throw new SuperPancakeError(
-        `Failed to check visibility of "${selector}": ${error.message}`,
-        'VISIBILITY_CHECK_FAILED',
-        { selector }
-      );
-    }
-  }
-
-  export async function getValue(session, selector) {
-    validateSession(session);
-    validateSelector(selector);
-    
-    try {
-      const nodeId = await querySelector(session, selector);
-      const { result } = await session.send('Runtime.callFunctionOn', {
-        objectId: (await resolveNodeSecurely(session, nodeId)).object.objectId,
-        functionDeclaration: 'function() { return this.value; }',
-        returnByValue: true,
-      });
-      return result.value;
-    } catch (error) {
-      throw new SuperPancakeError(
-        `Failed to get value from "${selector}": ${error.message}`,
-        'GET_VALUE_FAILED',
-        { selector }
-      );
-    }
-  }
-
-  export async function hover(session, selector) {
+  try {
     const nodeId = await querySelector(session, selector);
-    await session.send('Overlay.highlightNode', { nodeId });
+    await executeSecureFunction(session, nodeId, 'setValue', [text]);
+    // Invalidate cache after DOM modification
+    invalidateCacheForSelector(session, selector);
+  } catch (error) {
+    throw new SuperPancakeError(
+      `Failed to type into "${selector}": ${error.message}`,
+      'TYPE_FAILED',
+      { selector, text }
+    );
   }
+}
+
+export async function clearInput(session, selector) {
+  await type(session, selector, '');
+}
+
+export async function getText(session, nodeId) {
+  validateSession(session);
+
+  try {
+    const { result } = await executeSecureFunction(session, nodeId, 'getText');
+    return result.value;
+  } catch (error) {
+    throw new SuperPancakeError(
+      `Failed to get text from nodeId "${nodeId}": ${error.message}`,
+      'GET_TEXT_FAILED',
+      { nodeId }
+    );
+  }
+}
+
+export async function getAttribute(session, selector, attrName) {
+  validateSession(session);
+  validateSelector(selector);
+  validateText(attrName, 'attrName');
+
+  try {
+    const nodeId = await querySelector(session, selector);
+    const { result } = await executeSecureFunction(session, nodeId, 'getAttribute', [attrName]);
+    return result.value;
+  } catch (error) {
+    throw new SuperPancakeError(
+      `Failed to get attribute "${attrName}" from "${selector}": ${error.message}`,
+      'GET_ATTRIBUTE_FAILED',
+      { selector, attrName }
+    );
+  }
+}
+
+export async function setAttribute(session, selector, attrName, value) {
+  validateSession(session);
+  validateSelector(selector);
+  validateText(attrName, 'attrName');
+  validateText(value, 'value');
+
+  try {
+    const nodeId = await querySelector(session, selector);
+    await executeSecureFunction(session, nodeId, 'setAttribute', [attrName, value]);
+  } catch (error) {
+    throw new SuperPancakeError(
+      `Failed to set attribute "${attrName}" on "${selector}": ${error.message}`,
+      'SET_ATTRIBUTE_FAILED',
+      { selector, attrName, value }
+    );
+  }
+}
+
+export async function isVisible(session, selector) {
+  validateSession(session);
+  validateSelector(selector);
+
+  try {
+    const nodeId = await querySelector(session, selector);
+    const { result } = await executeSecureFunction(session, nodeId, 'isVisible');
+    return result.value;
+  } catch (error) {
+    throw new SuperPancakeError(
+      `Failed to check visibility of "${selector}": ${error.message}`,
+      'VISIBILITY_CHECK_FAILED',
+      { selector }
+    );
+  }
+}
+
+export async function getValue(session, selector) {
+  validateSession(session);
+  validateSelector(selector);
+
+  try {
+    const nodeId = await querySelector(session, selector);
+    const { result } = await session.send('Runtime.callFunctionOn', {
+      objectId: (await resolveNodeSecurely(session, nodeId)).object.objectId,
+      functionDeclaration: 'function() { return this.value; }',
+      returnByValue: true
+    });
+    return result.value;
+  } catch (error) {
+    throw new SuperPancakeError(
+      `Failed to get value from "${selector}": ${error.message}`,
+      'GET_VALUE_FAILED',
+      { selector }
+    );
+  }
+}
+
+export async function hover(session, selector) {
+  const nodeId = await querySelector(session, selector);
+  await session.send('Overlay.highlightNode', { nodeId });
+}
 
 export async function reload(session) {
   await session.send('Page.reload');
   await waitForTimeout(config.timeouts.reload || 1000);
 }
 
-  export async function goBack(session) {
-    await session.send('Page.goBack');
-  }
+export async function goBack(session) {
+  await session.send('Page.goBack');
+}
 
-  export async function goForward(session) {
-    await session.send('Page.goForward');
-  }
+export async function goForward(session) {
+  await session.send('Page.goForward');
+}
 
-  export async function paste(session, selector, text) {
-    validateSession(session);
-    validateSelector(selector);
-    validateText(text);
-    
-    try {
-      // Get current value and append
-      const currentValue = await getValue(session, selector);
-      const newValue = currentValue + text;
-      const nodeId = await querySelector(session, selector);
-      await executeSecureFunction(session, nodeId, 'setValue', [newValue]);
-    } catch (error) {
-      throw new SuperPancakeError(
-        `Failed to paste text into "${selector}": ${error.message}`,
-        'PASTE_FAILED',
-        { selector, text }
-      );
-    }
-  }
+export async function paste(session, selector, text) {
+  validateSession(session);
+  validateSelector(selector);
+  validateText(text);
 
-  export async function rightClick(session, selector) {
+  try {
+    // Get current value and append
+    const currentValue = await getValue(session, selector);
+    const newValue = currentValue + text;
     const nodeId = await querySelector(session, selector);
-    const { x, y, width, height } = await getBoundingBox(session, nodeId);
-    const cx = x + width / 2;
-    const cy = y + height / 2;
-    await session.send('Input.dispatchMouseEvent', { type: 'mousePressed', x: cx, y: cy, button: 'right', clickCount: 1 });
-    await session.send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: cx, y: cy, button: 'right', clickCount: 1 });
+    await executeSecureFunction(session, nodeId, 'setValue', [newValue]);
+  } catch (error) {
+    throw new SuperPancakeError(
+      `Failed to paste text into "${selector}": ${error.message}`,
+      'PASTE_FAILED',
+      { selector, text }
+    );
   }
+}
 
-  export async function scrollIntoView(session, selector) {
-    validateSession(session);
-    validateSelector(selector);
-    
-    try {
-      const nodeId = await querySelector(session, selector);
-      await executeSecureFunction(session, nodeId, 'scrollIntoView');
-    } catch (error) {
-      throw new SuperPancakeError(
-        `Failed to scroll into view for "${selector}": ${error.message}`,
-        'SCROLL_INTO_VIEW_FAILED',
-        { selector }
-      );
-    }
-  }
+export async function rightClick(session, selector) {
+  const nodeId = await querySelector(session, selector);
+  const { x, y, width, height } = await getBoundingBox(session, nodeId);
+  const cx = x + width / 2;
+  const cy = y + height / 2;
+  await session.send('Input.dispatchMouseEvent', { type: 'mousePressed', x: cx, y: cy, button: 'right', clickCount: 1 });
+  await session.send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: cx, y: cy, button: 'right', clickCount: 1 });
+}
 
-  export async function isEnabled(session, selector) {
-    validateSession(session);
-    validateSelector(selector);
-    
-    try {
-      const nodeId = await querySelector(session, selector);
-      const { result } = await executeSecureFunction(session, nodeId, 'isEnabled');
-      return result.value;
-    } catch (error) {
-      throw new SuperPancakeError(
-        `Failed to check if element is enabled "${selector}": ${error.message}`,
-        'ENABLED_CHECK_FAILED',
-        { selector }
-      );
-    }
-  }
+export async function scrollIntoView(session, selector) {
+  validateSession(session);
+  validateSelector(selector);
 
-  export async function takeScreenshot(session, fileName = 'screenshot.png') {
-    const { data } = await session.send('Page.captureScreenshot', { format: 'png', fromSurface: true });
-    fs.writeFileSync(fileName, Buffer.from(data, 'base64'));
+  try {
+    const nodeId = await querySelector(session, selector);
+    await executeSecureFunction(session, nodeId, 'scrollIntoView');
+  } catch (error) {
+    throw new SuperPancakeError(
+      `Failed to scroll into view for "${selector}": ${error.message}`,
+      'SCROLL_INTO_VIEW_FAILED',
+      { selector }
+    );
   }
+}
+
+export async function isEnabled(session, selector) {
+  validateSession(session);
+  validateSelector(selector);
+
+  try {
+    const nodeId = await querySelector(session, selector);
+    const { result } = await executeSecureFunction(session, nodeId, 'isEnabled');
+    return result.value;
+  } catch (error) {
+    throw new SuperPancakeError(
+      `Failed to check if element is enabled "${selector}": ${error.message}`,
+      'ENABLED_CHECK_FAILED',
+      { selector }
+    );
+  }
+}
+
+export async function takeScreenshot(session, fileName = 'screenshot.png') {
+  const { data } = await session.send('Page.captureScreenshot', { format: 'png', fromSurface: true });
+  fs.writeFileSync(fileName, Buffer.from(data, 'base64'));
+}
 
 export async function takeElementScreenshot(session, selector, fileName = 'element.png') {
   const nodeId = await querySelector(session, selector);
@@ -324,8 +324,8 @@ export async function takeElementScreenshot(session, selector, fileName = 'eleme
         y: model.content[1],
         width: model.width,
         height: model.height,
-        scale: 1,
-      },
+        scale: 1
+      }
     });
     if (!result || !result.data) {
       throw new Error('❌ Screenshot capture failed. No data returned.');
@@ -341,172 +341,172 @@ export async function takeElementScreenshot(session, selector, fileName = 'eleme
   // Return true to indicate element screenshot was taken
   return { fileName, isElementScreenshot: true };
 }
-  // Utilities
-  export async function waitForTimeout(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-  }
+// Utilities
+export async function waitForTimeout(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
 
 export async function waitForSelector(session, selector, timeout = config.timeouts.waitForSelector) {
   validateSession(session);
   validateSelector(selector);
   validateTimeout(timeout);
-  
+
   const start = Date.now();
   while (Date.now() - start < timeout) {
     try {
       const nodeId = await querySelector(session, selector);
-      if (nodeId) return nodeId;
+      if (nodeId) {return nodeId;}
     } catch {}
     await waitForTimeout(config.pollInterval || 100);
   }
   throw new TimeoutError('waitForSelector', timeout, { selector });
 }
 
-  async function getBoundingBox(session, nodeId) {
-    const { model } = await session.send('DOM.getBoxModel', { nodeId });
-    const [x, y] = model.content;
-    return { x, y, width: model.width, height: model.height };
-  }
+async function getBoundingBox(session, nodeId) {
+  const { model } = await session.send('DOM.getBoxModel', { nodeId });
+  const [x, y] = model.content;
+  return { x, y, width: model.width, height: model.height };
+}
 
-  async function resolveNode(session, nodeId) {
-    const resolved = await session.send('DOM.resolveNode', { nodeId });
-    if (!resolved || !resolved.object) throw new Error(`❌ Failed to resolve node: ${nodeId}`);
-    return resolved;
-  }
+async function resolveNode(session, nodeId) {
+  const resolved = await session.send('DOM.resolveNode', { nodeId });
+  if (!resolved || !resolved.object) {throw new Error(`❌ Failed to resolve node: ${nodeId}`);}
+  return resolved;
+}
 
-  // Form helpers
-  export async function fillInput(session, selector, value) {
-    validateSession(session);
-    validateSelector(selector);
-    validateText(value, 'value');
-    
-    try {
-      const nodeId = await querySelector(session, selector);
-      await executeSecureFunction(session, nodeId, 'setValue', [value]);
-    } catch (error) {
-      throw new SuperPancakeError(
-        `Failed to fill input "${selector}": ${error.message}`,
-        'FILL_INPUT_FAILED',
-        { selector, value }
-      );
-    }
-  }
+// Form helpers
+export async function fillInput(session, selector, value) {
+  validateSession(session);
+  validateSelector(selector);
+  validateText(value, 'value');
 
-  export async function check(session, selector, checked = true) {
-    validateSession(session);
-    validateSelector(selector);
-    
-    try {
-      const nodeId = await querySelector(session, selector);
-      await executeSecureFunction(session, nodeId, 'setChecked', [checked]);
-    } catch (error) {
-      throw new SuperPancakeError(
-        `Failed to set checked state on "${selector}": ${error.message}`,
-        'CHECK_FAILED',
-        { selector, checked }
-      );
-    }
+  try {
+    const nodeId = await querySelector(session, selector);
+    await executeSecureFunction(session, nodeId, 'setValue', [value]);
+  } catch (error) {
+    throw new SuperPancakeError(
+      `Failed to fill input "${selector}": ${error.message}`,
+      'FILL_INPUT_FAILED',
+      { selector, value }
+    );
   }
+}
 
-  export async function selectOption(session, selector, values) {
-    validateSession(session);
-    validateSelector(selector);
-    
-    if (!Array.isArray(values)) values = [values];
-    
-    try {
-      const nodeId = await querySelector(session, selector);
-      await executeSecureFunction(session, nodeId, 'selectOption', [values]);
-    } catch (error) {
-      throw new SuperPancakeError(
-        `Failed to select option on "${selector}": ${error.message}`,
-        'SELECT_OPTION_FAILED',
-        { selector, values }
-      );
-    }
+export async function check(session, selector, checked = true) {
+  validateSession(session);
+  validateSelector(selector);
+
+  try {
+    const nodeId = await querySelector(session, selector);
+    await executeSecureFunction(session, nodeId, 'setChecked', [checked]);
+  } catch (error) {
+    throw new SuperPancakeError(
+      `Failed to set checked state on "${selector}": ${error.message}`,
+      'CHECK_FAILED',
+      { selector, checked }
+    );
   }
+}
 
-  export async function triggerClick(session, selector) {
-    const { object } = await resolveNode(session, await querySelector(session, selector));
+export async function selectOption(session, selector, values) {
+  validateSession(session);
+  validateSelector(selector);
+
+  if (!Array.isArray(values)) {values = [values];}
+
+  try {
+    const nodeId = await querySelector(session, selector);
+    await executeSecureFunction(session, nodeId, 'selectOption', [values]);
+  } catch (error) {
+    throw new SuperPancakeError(
+      `Failed to select option on "${selector}": ${error.message}`,
+      'SELECT_OPTION_FAILED',
+      { selector, values }
+    );
+  }
+}
+
+export async function triggerClick(session, selector) {
+  const { object } = await resolveNode(session, await querySelector(session, selector));
+  await session.send('Runtime.callFunctionOn', {
+    objectId: object.objectId,
+    functionDeclaration: 'function() { this.click(); }'
+  });
+}
+
+export async function pressKey(session, selector, key) {
+  validateSession(session);
+  validateSelector(selector);
+  validateText(key, 'key');
+
+  try {
+    const nodeId = await querySelector(session, selector);
+    await executeSecureFunction(session, nodeId, 'pressKey', [key]);
+  } catch (error) {
+    throw new SuperPancakeError(
+      `Failed to press key "${key}" on "${selector}": ${error.message}`,
+      'PRESS_KEY_FAILED',
+      { selector, key }
+    );
+  }
+}
+
+export async function focus(session, selector) {
+  validateSession(session);
+  validateSelector(selector);
+
+  try {
+    const nodeId = await querySelector(session, selector);
+    await executeSecureFunction(session, nodeId, 'focus');
+  } catch (error) {
+    throw new SuperPancakeError(
+      `Failed to focus on "${selector}": ${error.message}`,
+      'FOCUS_FAILED',
+      { selector }
+    );
+  }
+}
+
+export async function dragDrop(session, sourceSelector, targetSelector) {
+  try {
+    const sourceId = await querySelector(session, sourceSelector);
+    const targetId = await querySelector(session, targetSelector);
+    const sourceObj = (await session.send('DOM.resolveNode', { nodeId: sourceId })).object;
+    const targetObj = (await session.send('DOM.resolveNode', { nodeId: targetId })).object;
+
     await session.send('Runtime.callFunctionOn', {
-      objectId: object.objectId,
-      functionDeclaration: `function() { this.click(); }`,
-    });
-  }
-
-  export async function pressKey(session, selector, key) {
-    validateSession(session);
-    validateSelector(selector);
-    validateText(key, 'key');
-    
-    try {
-      const nodeId = await querySelector(session, selector);
-      await executeSecureFunction(session, nodeId, 'pressKey', [key]);
-    } catch (error) {
-      throw new SuperPancakeError(
-        `Failed to press key "${key}" on "${selector}": ${error.message}`,
-        'PRESS_KEY_FAILED',
-        { selector, key }
-      );
-    }
-  }
-
-  export async function focus(session, selector) {
-    validateSession(session);
-    validateSelector(selector);
-    
-    try {
-      const nodeId = await querySelector(session, selector);
-      await executeSecureFunction(session, nodeId, 'focus');
-    } catch (error) {
-      throw new SuperPancakeError(
-        `Failed to focus on "${selector}": ${error.message}`,
-        'FOCUS_FAILED',
-        { selector }
-      );
-    }
-  }
-
-  export async function dragDrop(session, sourceSelector, targetSelector) {
-    try {
-      const sourceId = await querySelector(session, sourceSelector);
-      const targetId = await querySelector(session, targetSelector);
-      const sourceObj = (await session.send('DOM.resolveNode', { nodeId: sourceId })).object;
-      const targetObj = (await session.send('DOM.resolveNode', { nodeId: targetId })).object;
-
-      await session.send('Runtime.callFunctionOn', {
-        objectId: sourceObj.objectId,
-        functionDeclaration: `function() {
+      objectId: sourceObj.objectId,
+      functionDeclaration: `function() {
           const event = new DragEvent('dragstart', { bubbles: true });
           this.dispatchEvent(event);
-        }`,
-      });
+        }`
+    });
 
-      await session.send('Runtime.callFunctionOn', {
-        objectId: targetObj.objectId,
-        functionDeclaration: `function() {
+    await session.send('Runtime.callFunctionOn', {
+      objectId: targetObj.objectId,
+      functionDeclaration: `function() {
           const event = new DragEvent('drop', { bubbles: true });
           this.dispatchEvent(event);
-        }`,
-      });
-    } catch (error) {
-      throw new Error(`❌ Failed to dragDrop from "${sourceSelector}" to "${targetSelector}": ${error.message}`);
-    }
+        }`
+    });
+  } catch (error) {
+    throw new Error(`❌ Failed to dragDrop from "${sourceSelector}" to "${targetSelector}": ${error.message}`);
   }
+}
 
-  export async function uploadFileBuffer(session, selector, filename, content) {
-    const { object } = await resolveNode(session, await querySelector(session, selector));
-    await session.send('Runtime.callFunctionOn', {
-      objectId: object.objectId,
-      functionDeclaration: `function() {
+export async function uploadFileBuffer(session, selector, filename, content) {
+  const { object } = await resolveNode(session, await querySelector(session, selector));
+  await session.send('Runtime.callFunctionOn', {
+    objectId: object.objectId,
+    functionDeclaration: `function() {
         const file = new File([new Blob([${JSON.stringify(content)}])], '${filename}', { type: 'text/plain' });
         const dataTransfer = new DataTransfer();
         dataTransfer.items.add(file);
         this.files = dataTransfer.files;
         this.dispatchEvent(new Event('change', { bubbles: true }));
-      }`,
-    });
-  }
+      }`
+  });
+}
 
 // ========================================
 // ENHANCED WAIT STRATEGIES
@@ -639,7 +639,7 @@ export async function isChecked(session, selector) {
     const { result } = await session.send('Runtime.callFunctionOn', {
       objectId: object.objectId,
       functionDeclaration: 'function() { return this.checked || false; }',
-      returnByValue: true,
+      returnByValue: true
     });
     return result.value;
   } catch (error) {
@@ -660,7 +660,7 @@ export async function getSelectedOptions(session, selector) {
           index: option.index
         }));
       }`,
-      returnByValue: true,
+      returnByValue: true
     });
     return result.value;
   } catch (error) {
@@ -707,7 +707,7 @@ export async function getFormData(session, formSelector) {
         }
         return formData;
       }`,
-      returnByValue: true,
+      returnByValue: true
     });
     return result.value;
   } catch (error) {
@@ -717,7 +717,7 @@ export async function getFormData(session, formSelector) {
 
 export async function selectMultipleOptions(session, selector, values) {
   try {
-    if (!Array.isArray(values)) values = [values];
+    if (!Array.isArray(values)) {values = [values];}
     const { object } = await resolveNode(session, await querySelector(session, selector));
     await session.send('Runtime.callFunctionOn', {
       objectId: object.objectId,
@@ -727,7 +727,7 @@ export async function selectMultipleOptions(session, selector, values) {
           option.selected = ${JSON.stringify(values)}.includes(option.value);
         });
         this.dispatchEvent(new Event('change', { bubbles: true }));
-      }`,
+      }`
     });
   } catch (error) {
     throw new Error(`❌ Failed to select multiple options in "${selector}": ${error.message}`);
@@ -739,7 +739,7 @@ export async function submitForm(session, formSelector) {
     const { object } = await resolveNode(session, await querySelector(session, formSelector));
     await session.send('Runtime.callFunctionOn', {
       objectId: object.objectId,
-      functionDeclaration: 'function() { this.submit(); }',
+      functionDeclaration: 'function() { this.submit(); }'
     });
   } catch (error) {
     throw new Error(`❌ Failed to submit form "${formSelector}": ${error.message}`);
@@ -751,7 +751,7 @@ export async function resetForm(session, formSelector) {
     const { object } = await resolveNode(session, await querySelector(session, formSelector));
     await session.send('Runtime.callFunctionOn', {
       objectId: object.objectId,
-      functionDeclaration: 'function() { this.reset(); }',
+      functionDeclaration: 'function() { this.reset(); }'
     });
   } catch (error) {
     throw new Error(`❌ Failed to reset form "${formSelector}": ${error.message}`);
@@ -788,7 +788,7 @@ export async function getTableData(session, tableSelector) {
         
         return data;
       }`,
-      returnByValue: true,
+      returnByValue: true
     });
     return result.value;
   } catch (error) {
@@ -806,7 +806,7 @@ export async function getTableHeaders(session, tableSelector) {
         if (!headerRow) return [];
         return Array.from(headerRow.querySelectorAll('th, td')).map(cell => cell.textContent.trim());
       }`,
-      returnByValue: true,
+      returnByValue: true
     });
     return result.value;
   } catch (error) {
@@ -826,7 +826,7 @@ export async function getTableRow(session, tableSelector, rowIndex) {
         
         return Array.from(targetRow.querySelectorAll('td, th')).map(cell => cell.textContent.trim());
       }`,
-      returnByValue: true,
+      returnByValue: true
     });
     return result.value;
   } catch (error) {
@@ -848,7 +848,7 @@ export async function getTableCell(session, tableSelector, rowIndex, columnIndex
         const targetCell = cells[${columnIndex}];
         return targetCell ? targetCell.textContent.trim() : null;
       }`,
-      returnByValue: true,
+      returnByValue: true
     });
     return result.value;
   } catch (error) {
@@ -870,7 +870,7 @@ export async function getListItems(session, listSelector) {
           value: item.value || item.getAttribute('data-value') || null
         }));
       }`,
-      returnByValue: true,
+      returnByValue: true
     });
     return result.value;
   } catch (error) {
@@ -895,7 +895,7 @@ export async function getListItemByIndex(session, listSelector, index) {
           value: item.value || item.getAttribute('data-value') || null
         };
       }`,
-      returnByValue: true,
+      returnByValue: true
     });
     return result.value;
   } catch (error) {
@@ -976,7 +976,7 @@ export async function isElementInViewport(session, selector) {
           rect.right <= (window.innerWidth || document.documentElement.clientWidth)
         );
       }`,
-      returnByValue: true,
+      returnByValue: true
     });
     return result.value;
   } catch (error) {
@@ -989,7 +989,7 @@ export async function scrollToElement(session, selector) {
     const { object } = await resolveNode(session, await querySelector(session, selector));
     await session.send('Runtime.callFunctionOn', {
       objectId: object.objectId,
-      functionDeclaration: 'function() { this.scrollIntoView({ behavior: "smooth", block: "center" }); }',
+      functionDeclaration: 'function() { this.scrollIntoView({ behavior: "smooth", block: "center" }); }'
     });
     // Wait for smooth scroll to complete
     await waitForTimeout(500);
@@ -1001,7 +1001,7 @@ export async function scrollToElement(session, selector) {
 export async function scrollToTop(session) {
   try {
     await session.send('Runtime.evaluate', {
-      expression: 'window.scrollTo({ top: 0, behavior: "smooth" });',
+      expression: 'window.scrollTo({ top: 0, behavior: "smooth" });'
     });
     await waitForTimeout(500);
   } catch (error) {
@@ -1012,7 +1012,7 @@ export async function scrollToTop(session) {
 export async function scrollToBottom(session) {
   try {
     await session.send('Runtime.evaluate', {
-      expression: 'window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });',
+      expression: 'window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });'
     });
     await waitForTimeout(500);
   } catch (error) {
@@ -1024,7 +1024,7 @@ export async function getScrollPosition(session) {
   try {
     const { result } = await session.send('Runtime.evaluate', {
       expression: 'JSON.stringify({ x: window.scrollX, y: window.scrollY });',
-      returnByValue: true,
+      returnByValue: true
     });
     return JSON.parse(result.value);
   } catch (error) {
@@ -1042,20 +1042,20 @@ export async function doubleClick(session, selector) {
     const { x, y, width, height } = await getBoundingBox(session, nodeId);
     const cx = x + width / 2;
     const cy = y + height / 2;
-    
-    await session.send('Input.dispatchMouseEvent', { 
-      type: 'mousePressed', 
-      x: cx, 
-      y: cy, 
-      button: 'left', 
-      clickCount: 2 
+
+    await session.send('Input.dispatchMouseEvent', {
+      type: 'mousePressed',
+      x: cx,
+      y: cy,
+      button: 'left',
+      clickCount: 2
     });
-    await session.send('Input.dispatchMouseEvent', { 
-      type: 'mouseReleased', 
-      x: cx, 
-      y: cy, 
-      button: 'left', 
-      clickCount: 2 
+    await session.send('Input.dispatchMouseEvent', {
+      type: 'mouseReleased',
+      x: cx,
+      y: cy,
+      button: 'left',
+      clickCount: 2
     });
   } catch (error) {
     throw new Error(`❌ Failed to double click "${selector}": ${error.message}`);
@@ -1067,22 +1067,22 @@ export async function sendKeys(session, selector, keys) {
     const { object } = await resolveNode(session, await querySelector(session, selector));
     await session.send('Runtime.callFunctionOn', {
       objectId: object.objectId,
-      functionDeclaration: 'function() { this.focus(); }',
+      functionDeclaration: 'function() { this.focus(); }'
     });
-    
+
     // Send each key
     for (const key of keys) {
       await session.send('Input.dispatchKeyEvent', {
         type: 'keyDown',
         key: key,
         code: key,
-        text: key.length === 1 ? key : undefined,
+        text: key.length === 1 ? key : undefined
       });
       await session.send('Input.dispatchKeyEvent', {
         type: 'keyUp',
         key: key,
         code: key,
-        text: key.length === 1 ? key : undefined,
+        text: key.length === 1 ? key : undefined
       });
     }
   } catch (error) {
@@ -1111,7 +1111,7 @@ export async function getElementTagName(session, selector) {
     const { result } = await session.send('Runtime.callFunctionOn', {
       objectId: object.objectId,
       functionDeclaration: 'function() { return this.tagName.toLowerCase(); }',
-      returnByValue: true,
+      returnByValue: true
     });
     return result.value;
   } catch (error) {
@@ -1125,7 +1125,7 @@ export async function getElementClasses(session, selector) {
     const { result } = await session.send('Runtime.callFunctionOn', {
       objectId: object.objectId,
       functionDeclaration: 'function() { return Array.from(this.classList); }',
-      returnByValue: true,
+      returnByValue: true
     });
     return result.value;
   } catch (error) {
@@ -1139,7 +1139,7 @@ export async function hasClass(session, selector, className) {
     const { result } = await session.send('Runtime.callFunctionOn', {
       objectId: object.objectId,
       functionDeclaration: `function() { return this.classList.contains('${className}'); }`,
-      returnByValue: true,
+      returnByValue: true
     });
     return result.value;
   } catch (error) {
@@ -1161,7 +1161,7 @@ export async function getElementChildren(session, selector) {
           textContent: child.textContent.trim()
         }));
       }`,
-      returnByValue: true,
+      returnByValue: true
     });
     return result.value;
   } catch (error) {
@@ -1184,7 +1184,7 @@ export async function getElementParent(session, selector) {
           textContent: parent.textContent.trim()
         };
       }`,
-      returnByValue: true,
+      returnByValue: true
     });
     return result.value;
   } catch (error) {
@@ -1202,7 +1202,7 @@ export async function mouseDown(session, selector, button = 'left') {
     const { x, y, width, height } = await getBoundingBox(session, nodeId);
     const cx = x + width / 2;
     const cy = y + height / 2;
-    
+
     await session.send('Input.dispatchMouseEvent', {
       type: 'mousePressed',
       x: cx,
@@ -1221,7 +1221,7 @@ export async function mouseUp(session, selector, button = 'left') {
     const { x, y, width, height } = await getBoundingBox(session, nodeId);
     const cx = x + width / 2;
     const cy = y + height / 2;
-    
+
     await session.send('Input.dispatchMouseEvent', {
       type: 'mouseReleased',
       x: cx,
@@ -1250,7 +1250,7 @@ export async function selectText(session, selector, startOffset, endOffset) {
           range.moveEnd('character', ${endOffset - startOffset});
           range.select();
         }
-      }`,
+      }`
     });
   } catch (error) {
     throw new Error(`❌ Failed to select text in "${selector}" from ${startOffset} to ${endOffset}: ${error.message}`);
@@ -1262,10 +1262,10 @@ export async function uploadMultipleFiles(session, selector, filePaths) {
     if (!Array.isArray(filePaths)) {
       throw new Error('filePaths must be an array');
     }
-    
+
     const { object } = await resolveNode(session, await querySelector(session, selector));
     const fileContents = [];
-    
+
     // Read all files
     for (const filePath of filePaths) {
       if (!fs.existsSync(filePath)) {
@@ -1278,7 +1278,7 @@ export async function uploadMultipleFiles(session, selector, filePaths) {
         content: Array.from(content)
       });
     }
-    
+
     await session.send('Runtime.callFunctionOn', {
       objectId: object.objectId,
       functionDeclaration: `function() {
@@ -1291,7 +1291,7 @@ export async function uploadMultipleFiles(session, selector, filePaths) {
         files.forEach(file => dataTransfer.items.add(file));
         this.files = dataTransfer.files;
         this.dispatchEvent(new Event('change', { bubbles: true }));
-      }`,
+      }`
     });
   } catch (error) {
     throw new Error(`❌ Failed to upload multiple files to "${selector}": ${error.message}`);

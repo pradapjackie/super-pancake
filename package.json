@@ -81,7 +81,11 @@
     "start": "node scripts/test-ui.js",
     "ui": "node scripts/test-ui.js",
     "generate": "node bin/generate-test.js",
-    "lint": "echo 'No linting configured'",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "lint:check": "eslint . --max-warnings 0",
+    "lint:errors-only": "eslint . --quiet",
+    "lint:report": "eslint . --format html --output-file eslint-report.html",
     "build": "echo 'No build step required'",
     "prepare": "npm run build"
   },
@@ -142,6 +146,11 @@
     "ws": "^8.18.3"
   },
   "devDependencies": {
+    "@eslint/js": "^9.31.0",
+    "eslint": "^9.31.0",
+    "eslint-config-standard": "^17.1.0",
+    "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-n": "^17.21.0",
     "vitest": "^3.2.4"
   }
 }

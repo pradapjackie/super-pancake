@@ -4,256 +4,256 @@
 import fs from 'fs';
 import path from 'path';
 
-console.log("htmlReporter loaded and ready to record results");
+console.log('htmlReporter loaded and ready to record results');
 
 if (!global.allTestResults) {
-    global.allTestResults = new Map();
+  global.allTestResults = new Map();
 }
 
 const allResults = global.allTestResults;
 
 export function initializeReportDirectory() {
-    const reportDir = 'test-report';
-    const resultsDir = path.join(reportDir, 'results');
-    const screenshotsDir = path.join(reportDir, 'screenshots');
+  const reportDir = 'test-report';
+  const resultsDir = path.join(reportDir, 'results');
+  const screenshotsDir = path.join(reportDir, 'screenshots');
 
-    console.log(`Initializing report directory at: ${path.resolve(reportDir)}`);
+  console.log(`Initializing report directory at: ${path.resolve(reportDir)}`);
 
-    try {
-        // Clear global results
-        global.allTestResults = new Map();
+  try {
+    // Clear global results
+    global.allTestResults = new Map();
 
-        // Remove and recreate directory
-        if (fs.existsSync(reportDir)) {
-            fs.rmSync(reportDir, { recursive: true, force: true });
-            console.log("Cleared existing test-report directory");
-        }
-
-        // Always recreate these directories even if root was just cleared
-        fs.mkdirSync(path.join(reportDir, 'results'), { recursive: true });
-        fs.mkdirSync(path.join(reportDir, 'screenshots'), { recursive: true });
-        console.log("Created test-report, results, and screenshots directories");
-    } catch (err) {
-        console.error("Failed to initialize report directory:", err);
+    // Remove and recreate directory
+    if (fs.existsSync(reportDir)) {
+      fs.rmSync(reportDir, { recursive: true, force: true });
+      console.log('Cleared existing test-report directory');
     }
+
+    // Always recreate these directories even if root was just cleared
+    fs.mkdirSync(path.join(reportDir, 'results'), { recursive: true });
+    fs.mkdirSync(path.join(reportDir, 'screenshots'), { recursive: true });
+    console.log('Created test-report, results, and screenshots directories');
+  } catch (err) {
+    console.error('Failed to initialize report directory:', err);
+  }
 }
 
 export function addTestResult(result) {
-    const dir = 'test-report/results';
+  const dir = 'test-report/results';
 
-    if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+
+  // Enhance result with additional details
+  const enhancedResult = {
+    ...result,
+    // Add system information
+    systemInfo: {
+      platform: process.platform,
+      arch: process.arch,
+      nodeVersion: process.version,
+      memory: process.memoryUsage(),
+      uptime: process.uptime()
+    },
+    // Add execution context
+    executionContext: {
+      cwd: process.cwd(),
+      env: process.env.NODE_ENV || 'development',
+      timestamp: new Date().toISOString(),
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+    },
+    // Add performance metrics if available
+    performance: {
+      memoryUsed: process.memoryUsage().heapUsed,
+      executionTime: result.duration || 0,
+      cpuUsage: process.cpuUsage ? process.cpuUsage() : null
     }
+  };
 
-    // Enhance result with additional details
-    const enhancedResult = {
-        ...result,
-        // Add system information
-        systemInfo: {
-            platform: process.platform,
-            arch: process.arch,
-            nodeVersion: process.version,
-            memory: process.memoryUsage(),
-            uptime: process.uptime()
-        },
-        // Add execution context
-        executionContext: {
-            cwd: process.cwd(),
-            env: process.env.NODE_ENV || 'development',
-            timestamp: new Date().toISOString(),
-            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
-        },
-        // Add performance metrics if available
-        performance: {
-            memoryUsed: process.memoryUsage().heapUsed,
-            executionTime: result.duration || 0,
-            cpuUsage: process.cpuUsage ? process.cpuUsage() : null
-        }
-    };
+  const safeName = `${Date.now()}-${Math.random().toString(36).substring(2, 10)}`;
+  const filePath = path.join(dir, `${safeName}.json`);
 
-    const safeName = `${Date.now()}-${Math.random().toString(36).substring(2, 10)}`;
-    const filePath = path.join(dir, `${safeName}.json`);
+  fs.writeFileSync(filePath, JSON.stringify(enhancedResult, null, 2), 'utf-8');
 
-    fs.writeFileSync(filePath, JSON.stringify(enhancedResult, null, 2), 'utf-8');
-
-    const currentResults = fs.readdirSync(dir).filter(f => f.endsWith('.json'));
-    console.log(`Total test result files now: ${currentResults.length}`);
+  const currentResults = fs.readdirSync(dir).filter(f => f.endsWith('.json'));
+  console.log(`Total test result files now: ${currentResults.length}`);
 }
 
 export function writeReport() {
-    const dir = 'test-report';
-    const resultsDir = path.join(dir, 'results');
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  const dir = 'test-report';
+  const resultsDir = path.join(dir, 'results');
+  if (!fs.existsSync(dir)) {fs.mkdirSync(dir, { recursive: true });}
 
-    const aggregatedResults = new Map();
+  const aggregatedResults = new Map();
 
-    // Read all JSON files from test-report/results and merge into aggregatedResults
-    if (fs.existsSync(resultsDir)) {
-        // Recursively find all JSON files in subdirectories
-        const findJsonFiles = (dir) => {
-            const files = [];
-            const items = fs.readdirSync(dir, { withFileTypes: true });
-            
-            for (const item of items) {
-                const fullPath = path.join(dir, item.name);
-                if (item.isDirectory()) {
-                    files.push(...findJsonFiles(fullPath));
-                } else if (item.isFile() && item.name.endsWith('.json')) {
-                    files.push(fullPath);
+  // Read all JSON files from test-report/results and merge into aggregatedResults
+  if (fs.existsSync(resultsDir)) {
+    // Recursively find all JSON files in subdirectories
+    const findJsonFiles = (dir) => {
+      const files = [];
+      const items = fs.readdirSync(dir, { withFileTypes: true });
+
+      for (const item of items) {
+        const fullPath = path.join(dir, item.name);
+        if (item.isDirectory()) {
+          files.push(...findJsonFiles(fullPath));
+        } else if (item.isFile() && item.name.endsWith('.json')) {
+          files.push(fullPath);
+        }
+      }
+      return files;
+    };
+
+    const allFiles = findJsonFiles(resultsDir);
+
+    // Filter out HTML reporter files (timestamp-based names) to avoid duplication
+    const files = allFiles.filter(file => {
+      const filename = path.basename(file);
+      // Keep only files that don't match timestamp pattern (HTML reporter files)
+      // HTML reporter files look like: 1752300813428-hr2m7vpk.json
+      return !filename.match(/^\d{13}-[a-z0-9]+\.json$/);
+    });
+
+    console.log(`Found ${allFiles.length} result files in ${resultsDir} (including subdirectories)`);
+    console.log(`Using ${files.length} files after filtering out HTML reporter duplicates`);
+
+    for (const filePath of files) {
+      try {
+        const content = fs.readFileSync(filePath, 'utf-8');
+        const result = JSON.parse(content);
+
+        // Handle different result formats (Vitest JSON vs custom format)
+        if (result.testResults && Array.isArray(result.testResults)) {
+          // Vitest JSON format
+          for (const testSuite of result.testResults) {
+            if (testSuite.assertionResults && Array.isArray(testSuite.assertionResults)) {
+              for (const assertion of testSuite.assertionResults) {
+                const keyId = `${testSuite.name}|${assertion.fullName}|${result.startTime}`;
+                // Map Vitest status to our internal format
+                let status = 'fail'; // default
+                switch (assertion.status) {
+                  case 'passed':
+                    status = 'pass';
+                    break;
+                  case 'failed':
+                    status = 'fail';
+                    break;
+                  case 'skipped':
+                  case 'pending':
+                  case 'todo':
+                    status = 'skipped';
+                    break;
+                  default:
+                    status = 'fail';
                 }
-            }
-            return files;
-        };
-        
-        const allFiles = findJsonFiles(resultsDir);
-        
-        // Filter out HTML reporter files (timestamp-based names) to avoid duplication
-        const files = allFiles.filter(file => {
-            const filename = path.basename(file);
-            // Keep only files that don't match timestamp pattern (HTML reporter files)
-            // HTML reporter files look like: 1752300813428-hr2m7vpk.json
-            return !filename.match(/^\d{13}-[a-z0-9]+\.json$/);
-        });
-        
-        console.log(`Found ${allFiles.length} result files in ${resultsDir} (including subdirectories)`);
-        console.log(`Using ${files.length} files after filtering out HTML reporter duplicates`);
 
-        for (const filePath of files) {
+                const enhancedResult = {
+                  name: assertion.title || assertion.fullName,
+                  status: status,
+                  file: testSuite.name,
+                  timestamp: result.startTime ? new Date(result.startTime).toISOString() : new Date().toISOString(),
+                  duration: assertion.duration ? `${assertion.duration.toFixed(2)}ms` : '-',
+                  error: assertion.failureMessages && assertion.failureMessages.length > 0 ? assertion.failureMessages.join('\n') : null
+                };
+                aggregatedResults.set(keyId, enhancedResult);
+              }
+            }
+          }
+        } else {
+          // Custom format (existing tests)
+          const keyId = `${result.file}|${result.name}|${result.timestamp || new Date().toISOString()}`;
+          if (aggregatedResults.has(keyId)) {
+            const existing = aggregatedResults.get(keyId);
             try {
-                const content = fs.readFileSync(filePath, 'utf-8');
-                const result = JSON.parse(content);
-                
-                // Handle different result formats (Vitest JSON vs custom format)
-                if (result.testResults && Array.isArray(result.testResults)) {
-                    // Vitest JSON format
-                    for (const testSuite of result.testResults) {
-                        if (testSuite.assertionResults && Array.isArray(testSuite.assertionResults)) {
-                            for (const assertion of testSuite.assertionResults) {
-                                const keyId = `${testSuite.name}|${assertion.fullName}|${result.startTime}`;
-                                // Map Vitest status to our internal format
-                                let status = 'fail'; // default
-                                switch (assertion.status) {
-                                    case 'passed':
-                                        status = 'pass';
-                                        break;
-                                    case 'failed':
-                                        status = 'fail';
-                                        break;
-                                    case 'skipped':
-                                    case 'pending':
-                                    case 'todo':
-                                        status = 'skipped';
-                                        break;
-                                    default:
-                                        status = 'fail';
-                                }
-                                
-                                const enhancedResult = {
-                                    name: assertion.title || assertion.fullName,
-                                    status: status,
-                                    file: testSuite.name,
-                                    timestamp: result.startTime ? new Date(result.startTime).toISOString() : new Date().toISOString(),
-                                    duration: assertion.duration ? `${assertion.duration.toFixed(2)}ms` : '-',
-                                    error: assertion.failureMessages && assertion.failureMessages.length > 0 ? assertion.failureMessages.join('\n') : null
-                                };
-                                aggregatedResults.set(keyId, enhancedResult);
-                            }
-                        }
-                    }
-                } else {
-                    // Custom format (existing tests)
-                    const keyId = `${result.file}|${result.name}|${result.timestamp || new Date().toISOString()}`;
-                    if (aggregatedResults.has(keyId)) {
-                        const existing = aggregatedResults.get(keyId);
-                        try {
-                            if (new Date(existing.timestamp) > new Date(result.timestamp)) continue;
-                        } catch (e) {
-                            // Invalid timestamp comparison, just use the new result
-                        }
-                    }
-                    // Ensure timestamp is valid
-                    if (!result.timestamp || isNaN(new Date(result.timestamp))) {
-                        result.timestamp = new Date().toISOString();
-                    }
-                    aggregatedResults.set(keyId, result);
-                }
+              if (new Date(existing.timestamp) > new Date(result.timestamp)) {continue;}
             } catch (e) {
-                console.error(`Failed to read or parse result file: ${filePath}`, e);
+              // Invalid timestamp comparison, just use the new result
             }
+          }
+          // Ensure timestamp is valid
+          if (!result.timestamp || isNaN(new Date(result.timestamp))) {
+            result.timestamp = new Date().toISOString();
+          }
+          aggregatedResults.set(keyId, result);
         }
+      } catch (e) {
+        console.error(`Failed to read or parse result file: ${filePath}`, e);
+      }
     }
+  }
 
-    const groupedByFile = new Map();
-    for (const [key, result] of aggregatedResults.entries()) {
-        let fileName = 'unknown';
-        if (result.file) {
-            fileName = path.basename(result.file);
-        } else if (result.suite) {
-            fileName = result.suite;
-        } else if (result.group) {
-            fileName = result.group;
-        } else if (result.name) {
-            fileName = 'test-' + result.name.replace(/\s+/g, '-').toLowerCase();
-        }
-        if (!groupedByFile.has(fileName)) groupedByFile.set(fileName, []);
-        groupedByFile.get(fileName).push(result);
+  const groupedByFile = new Map();
+  for (const [key, result] of aggregatedResults.entries()) {
+    let fileName = 'unknown';
+    if (result.file) {
+      fileName = path.basename(result.file);
+    } else if (result.suite) {
+      fileName = result.suite;
+    } else if (result.group) {
+      fileName = result.group;
+    } else if (result.name) {
+      fileName = 'test-' + result.name.replace(/\s+/g, '-').toLowerCase();
     }
+    if (!groupedByFile.has(fileName)) {groupedByFile.set(fileName, []);}
+    groupedByFile.get(fileName).push(result);
+  }
 
-    const timestamp = new Date().toISOString();
-    const flatResults = Array.from(groupedByFile.values()).flat();
-    const total = flatResults.length;
-    const passed = flatResults.filter(r => r.status === 'pass').length;
-    const failed = flatResults.filter(r => r.status === 'fail').length;
-    const broken = flatResults.filter(r => r.status === 'broken').length;
-    const skipped = flatResults.filter(r => r.status === 'skipped').length;
+  const timestamp = new Date().toISOString();
+  const flatResults = Array.from(groupedByFile.values()).flat();
+  const total = flatResults.length;
+  const passed = flatResults.filter(r => r.status === 'pass').length;
+  const failed = flatResults.filter(r => r.status === 'fail').length;
+  const broken = flatResults.filter(r => r.status === 'broken').length;
+  const skipped = flatResults.filter(r => r.status === 'skipped').length;
 
-    // Calculate pass rate and duration
-    const passRate = total > 0 ? ((passed / total) * 100).toFixed(1) : '0.0';
-    const failRate = total > 0 ? ((failed / total) * 100).toFixed(1) : '0.0';
-    
-    // Find min and max timestamps for duration
-    let started = null, finished = null;
-    for (const r of flatResults) {
-        if (r.timestamp) {
-            const t = new Date(r.timestamp);
-            if (!started || t < started) started = t;
-            if (!finished || t > finished) finished = t;
-        }
+  // Calculate pass rate and duration
+  const passRate = total > 0 ? ((passed / total) * 100).toFixed(1) : '0.0';
+  const failRate = total > 0 ? ((failed / total) * 100).toFixed(1) : '0.0';
+
+  // Find min and max timestamps for duration
+  let started = null, finished = null;
+  for (const r of flatResults) {
+    if (r.timestamp) {
+      const t = new Date(r.timestamp);
+      if (!started || t < started) {started = t;}
+      if (!finished || t > finished) {finished = t;}
     }
-    let duration = '-';
-    if (started && finished) {
-        const ms = finished - started;
-        const s = Math.round(ms / 1000);
-        duration = s < 60 ? `${s}s` : `${Math.floor(s/60)}m ${s%60}s`;
-    }
-    
-    // Gather environment info and system details
-    const sampleResult = flatResults[0];
-    const env = sampleResult?.executionContext?.env || 'Development';
-    const browser = flatResults.find(r => r.browser) ? flatResults.find(r => r.browser).browser : 'Chrome';
-    const build = flatResults.find(r => r.build) ? flatResults.find(r => r.build).build : 'v1.0.0';
-    const executor = flatResults.find(r => r.executor) ? flatResults.find(r => r.executor).executor : 'Super Pancake';
-    
-    // Gather system information
-    const systemInfo = sampleResult?.systemInfo || {};
-    const executionContext = sampleResult?.executionContext || {};
-    
-    // Calculate detailed metrics
-    const avgMemoryUsage = flatResults.reduce((sum, r) => sum + (r.performance?.memoryUsed || 0), 0) / flatResults.length;
-    const totalCpuTime = flatResults.reduce((sum, r) => sum + (r.performance?.cpuUsage?.user || 0), 0);
-    const failedTests = flatResults.filter(r => r.status === 'fail');
-    const passedTests = flatResults.filter(r => r.status === 'pass');
-    
-    // Test execution timeline
-    const testTimeline = flatResults.map(r => ({
-        name: r.name,
-        timestamp: r.timestamp,
-        status: r.status,
-        duration: r.duration
-    })).sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-    
-    let serialCounter = 1;
-    const html = `
+  }
+  let duration = '-';
+  if (started && finished) {
+    const ms = finished - started;
+    const s = Math.round(ms / 1000);
+    duration = s < 60 ? `${s}s` : `${Math.floor(s/60)}m ${s%60}s`;
+  }
+
+  // Gather environment info and system details
+  const sampleResult = flatResults[0];
+  const env = sampleResult?.executionContext?.env || 'Development';
+  const browser = flatResults.find(r => r.browser) ? flatResults.find(r => r.browser).browser : 'Chrome';
+  const build = flatResults.find(r => r.build) ? flatResults.find(r => r.build).build : 'v1.0.0';
+  const executor = flatResults.find(r => r.executor) ? flatResults.find(r => r.executor).executor : 'Super Pancake';
+
+  // Gather system information
+  const systemInfo = sampleResult?.systemInfo || {};
+  const executionContext = sampleResult?.executionContext || {};
+
+  // Calculate detailed metrics
+  const avgMemoryUsage = flatResults.reduce((sum, r) => sum + (r.performance?.memoryUsed || 0), 0) / flatResults.length;
+  const totalCpuTime = flatResults.reduce((sum, r) => sum + (r.performance?.cpuUsage?.user || 0), 0);
+  const failedTests = flatResults.filter(r => r.status === 'fail');
+  const passedTests = flatResults.filter(r => r.status === 'pass');
+
+  // Test execution timeline
+  const testTimeline = flatResults.map(r => ({
+    name: r.name,
+    timestamp: r.timestamp,
+    status: r.status,
+    duration: r.duration
+  })).sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+  let serialCounter = 1;
+  const html = `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1373,9 +1373,9 @@ export function writeReport() {
                         </thead>
                         <tbody>
                             ${tests.map((r, i) => {
-                                const rowId = 'details_row_' + groupIdx + '_' + i;
-                                const hasDetails = r.error || r.screenshot;
-                                return `
+    const rowId = 'details_row_' + groupIdx + '_' + i;
+    const hasDetails = r.error || r.screenshot;
+    return `
                                 <tr>
                                     <td>${serialCounter++}</td>
                                     <td>${r.name || 'Unnamed'}</td>
@@ -1402,7 +1402,7 @@ export function writeReport() {
                                 </tr>
                                 ` : ''}
                                 `;
-                            }).join('')}
+  }).join('')}
                         </tbody>
                     </table>
                 </div>
@@ -1419,16 +1419,16 @@ export function writeReport() {
 </html>
 `;
 
-    console.log("Generated HTML report content");
+  console.log('Generated HTML report content');
 
-    try {
-        // Write the unified report to automationTestReport.html (main report)
-        fs.writeFileSync('automationTestReport.html', html, 'utf-8');
-        console.log(`✅ Test report saved to: automationTestReport.html`);
-        
-    } catch (e) {
-        console.error("Failed to write HTML report:", e);
-    }
+  try {
+    // Write the unified report to automationTestReport.html (main report)
+    fs.writeFileSync('automationTestReport.html', html, 'utf-8');
+    console.log('✅ Test report saved to: automationTestReport.html');
+
+  } catch (e) {
+    console.error('Failed to write HTML report:', e);
+  }
 }
 
 
@@ -1460,7 +1460,7 @@ export function clearPreviousResults(currentFileName = '') {
 
       console.log(`Cleared old result files ${currentFileName ? `for ${currentFileName}` : `in ${dirPath}`}`);
     } catch (e) {
-      console.error("Error clearing previous results:", e);
+      console.error('Error clearing previous results:', e);
     }
   }
 }
