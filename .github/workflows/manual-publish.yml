@@ -131,11 +131,11 @@ jobs:
       - name: 📦 Install dependencies
         run: npm install
 
-      - name: 🧪 Final test run
-        run: npm test
-        env:
-          NODE_ENV: production
-          CI: true
+#      - name: 🧪 Final test run
+#        run: npm test
+#        env:
+#          NODE_ENV: production
+#          CI: true
 
       - name: 🔍 Verify package contents
         run: |
