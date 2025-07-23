@@ -48,22 +48,171 @@ const app = express();
 const defaultPort = process.env.PORT || 3000;
 const execAsync = promisify(exec);
 
+// Global execution state
+let executionCompleted = false;
+
+// Enhanced error parsing function
+function parseAndFormatError(message) {
+  try {
+    // Check if this is a test failure message
+    if (message.includes('FAIL') || message.includes('Expected') || message.includes('AssertionError')) {
+      // Parse assertion errors
+      const lines = message.split('\n');
+      let testName = '';
+      let expected = '';
+      let actual = '';
+      let errorLocation = '';
+      
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        
+        // Extract test name
+        if (line.includes('FAIL') && line.includes('.test.js')) {
+          const match = line.match(/FAIL.*?([^/]+\.test\.js).*?›\s*(.+)/);
+          if (match) {
+            testName = match[2];
+          }
+        }
+        
+        // Extract expected/actual values
+        if (line.includes('Expected:')) {
+          expected = line.replace('Expected:', '').trim();
+        }
+        if (line.includes('Actual:')) {
+          actual = line.replace('Actual:', '').trim();
+        }
+        if (line.includes('Received:')) {
+          actual = line.replace('Received:', '').trim();
+        }
+        
+        // Extract error location
+        if (line.includes('.test.js:')) {
+          const locationMatch = line.match(/([^/]+\.test\.js):(\d+):(\d+)/);
+          if (locationMatch) {
+            errorLocation = `${locationMatch[1]}:${locationMatch[2]}`;
+          }
+        }
+      }
+      
+      // Format the error nicely
+      let formattedError = `\n🚨 TEST FAILURE SUMMARY:\n`;
+      if (testName) formattedError += `📝 Test: "${testName}"\n`;
+      if (errorLocation) formattedError += `📍 Location: ${errorLocation}\n`;
+      if (expected) formattedError += `✅ Expected: ${expected}\n`;
+      if (actual) formattedError += `❌ Actual: ${actual}\n`;
+      formattedError += `\n💡 Fix: Check your test assertions and ensure the actual value matches what you expect.\n`;
+      
+      return formattedError;
+    }
+    
+    // Parse runtime errors (TypeError, ReferenceError, etc.)
+    if (message.includes('Error:') && !message.includes('FAIL')) {
+      const lines = message.split('\n');
+      let errorType = '';
+      let errorMessage = '';
+      let errorLocation = '';
+      
+      for (const line of lines) {
+        const trimmed = line.trim();
+        
+        // Extract error type and message
+        const errorMatch = trimmed.match(/(TypeError|ReferenceError|SyntaxError|Error):\s*(.+)/);
+        if (errorMatch) {
+          errorType = errorMatch[1];
+          errorMessage = errorMatch[2];
+        }
+        
+        // Extract location
+        const locationMatch = trimmed.match(/at.*?([^/]+\.(?:test\.)?js):(\d+):(\d+)/);
+        if (locationMatch) {
+          errorLocation = `${locationMatch[1]}:${locationMatch[2]}`;
+        }
+      }
+      
+      if (errorType && errorMessage) {
+        let formattedError = `\n🚨 RUNTIME ERROR:\n`;
+        formattedError += `⚠️ Type: ${errorType}\n`;
+        formattedError += `📝 Message: ${errorMessage}\n`;
+        if (errorLocation) formattedError += `📍 Location: ${errorLocation}\n`;
+        formattedError += `\n💡 Fix: Check the code at the specified location and ensure all variables/functions are properly defined.\n`;
+        
+        return formattedError;
+      }
+    }
+    
+    // If no specific parsing worked, return cleaned version
+    return message.replace(/^\s*stderr\s*\|\s*/, '').trim();
+    
+  } catch (err) {
+    console.error('Error parsing error message:', err);
+    return message; // Return original if parsing fails
+  }
+}
+
 // Middleware
 app.use(express.json());
 app.use(express.static(path.join(packageRoot, 'public'))); // Serve static files from package public directory
 
-// Extract test cases from .test.js files
+// Extract test cases from .test.js files (excluding commented tests)
 function extractTestCases(filePath) {
   try {
     const stat = fs.statSync(filePath);
     if (stat.isDirectory()) {return [];}
     const content = fs.readFileSync(filePath, 'utf-8');
-    const testRegex = /it\s*\(\s*['"`](.+?)['"`]\s*,/g;
+    
+    // Split content into lines to check for comments
+    const lines = content.split('\n');
     const tests = [];
+    
+    // Enhanced regex to capture test definitions with context
+    const testRegex = /it\s*\(\s*['"`](.+?)['"`]\s*,/g;
     let match;
+    
     while ((match = testRegex.exec(content))) {
-      tests.push(match[1]);
+      const testName = match[1];
+      const matchIndex = match.index;
+      
+      // Find which line this match is on
+      let lineNumber = 0;
+      let currentIndex = 0;
+      for (let i = 0; i < lines.length; i++) {
+        if (currentIndex + lines[i].length >= matchIndex) {
+          lineNumber = i;
+          break;
+        }
+        currentIndex += lines[i].length + 1; // +1 for newline
+      }
+      
+      const line = lines[lineNumber];
+      
+      // Check if the line is commented out
+      const trimmedLine = line.trim();
+      const isCommented = trimmedLine.startsWith('//') || 
+                         trimmedLine.startsWith('/*') ||
+                         (trimmedLine.includes('//') && 
+                          trimmedLine.indexOf('//') < trimmedLine.indexOf('it('));
+      
+      // Also check for block comments
+      let inBlockComment = false;
+      for (let i = 0; i <= lineNumber; i++) {
+        const currentLine = lines[i];
+        if (currentLine.includes('/*') && !currentLine.includes('*/')) {
+          inBlockComment = true;
+        }
+        if (currentLine.includes('*/')) {
+          inBlockComment = false;
+        }
+      }
+      
+      // Only add test if it's not commented
+      if (!isCommented && !inBlockComment) {
+        tests.push(testName);
+      } else {
+        console.log(`🚫 Skipping commented test: "${testName}"`);
+      }
     }
+    
+    console.log(`📋 Found ${tests.length} active tests in ${path.basename(filePath)}`);
     return tests;
   } catch (err) {
     console.error(`Error reading ${filePath}:`, err.message);
@@ -124,7 +273,8 @@ function extractValidTests(result) {
             name: task.name,
             status: task.result?.state || task.state || 'unknown',
             duration: task.result?.duration,
-            error: task.result?.errors?.[0]?.message
+            error: task.result?.errors?.[0]?.message,
+            mode: task.mode // This will capture 'skip' mode for explicitly skipped tests
           });
         } else if (Array.isArray(task.tasks)) {
           extracted.push(...extractFromTasks(task.tasks));
@@ -276,6 +426,9 @@ app.post('/stop', express.json(), async (req, res) => {
 
 async function executeTests(selected, headless = false) {
   try {
+    // Reset execution state for new run
+    executionCompleted = false;
+    
     const modeText = headless ? 'headless' : 'headed';
     broadcast(`🚀 Starting test execution of ${selected.length} tests in ${modeText} mode...\n`);
 
@@ -332,7 +485,7 @@ async function executeTests(selected, headless = false) {
 
       const outputFile = path.join(resultsSubDir, 'results.json');
       const absoluteOutputFile = path.resolve(outputFile);
-      const cmd = `npx vitest run "${file}" -t "${testPattern}" --outputFile="${absoluteOutputFile}" --reporter=json`;
+      const cmd = `npx vitest run "${file}" -t "${testPattern}" --outputFile="${absoluteOutputFile}" --reporter=verbose --reporter=json`;
 
       broadcast(`📁 Creating directory: ${resultsSubDir}\n`);
       broadcast(`📄 Output file will be: ${outputFile}\n`);
@@ -393,14 +546,22 @@ async function executeTests(selected, headless = false) {
           childProcess.stdout?.on('data', data => {
             try {
               const message = data.toString();
+              
+              // Check if this is a test failure message and format it
+              let processedMessage = message;
+              if (message.includes('FAIL') || message.includes('AssertionError') || 
+                  (message.includes('Expected') && message.includes('Received'))) {
+                processedMessage = parseAndFormatError(message);
+              }
+              
               // Send in smaller chunks to prevent overload
-              if (message.length > 500) {
-                const chunks = message.match(/.{1,500}/g) || [];
+              if (processedMessage.length > 500) {
+                const chunks = processedMessage.match(/.{1,500}/g) || [];
                 chunks.forEach((chunk, index) => {
                   setTimeout(() => safeBroadcast(chunk), index * 50);
                 });
               } else {
-                safeBroadcast(message);
+                safeBroadcast(processedMessage);
               }
             } catch (err) {
               console.error('Error handling stdout:', err);
@@ -412,21 +573,24 @@ async function executeTests(selected, headless = false) {
               const message = data.toString();
               stderrOutput += message;
 
-              // Send stderr in chunks
-              if (message.length > 500) {
-                const chunks = message.match(/.{1,500}/g) || [];
+              // Parse and format errors for better readability
+              const formattedMessage = parseAndFormatError(message);
+              
+              // Send formatted error in chunks if needed
+              if (formattedMessage.length > 500) {
+                const chunks = formattedMessage.match(/.{1,500}/g) || [];
                 chunks.forEach((chunk, index) => {
                   setTimeout(() => safeBroadcast(chunk), index * 50);
                 });
               } else {
-                safeBroadcast(message);
+                safeBroadcast(formattedMessage);
               }
 
-              // Check for specific error types
+              // Check for specific error types and provide enhanced error reporting
               if (message.includes('Error') || message.includes('Failed') || message.includes('Cannot') ||
                             message.includes('TypeError') || message.includes('SyntaxError') || message.includes('ReferenceError')) {
                 hasError = true;
-                safeBroadcast(`🚨 Error detected: ${message.trim()}\n`);
+                // Don't duplicate - the formatted message already contains the error info
               }
             } catch (err) {
               console.error('Error handling stderr:', err);
@@ -596,9 +760,17 @@ async function executeTests(selected, headless = false) {
       });
     }
 
-    // Generate summary and report (same as before)
-    let totalTests = 0, passed = 0, failed = 0, skipped = 0;
+    // Generate summary and report (based on actual selection count)
+    let passed = 0, failed = 0, skipped = 0;
     const resultsDir = 'test-report/results';
+    const totalTests = selected.length; // Use actual selection count as total
+
+    // Create a set of all selected test names for filtering
+    const selectedTestNames = new Set();
+    for (const entry of selected) {
+      const [file, testName] = entry.split('::');
+      selectedTestNames.add(testName);
+    }
 
     // Fix Windows path separator issue for glob
     const globPattern = path.join(resultsDir, '**/*.json').replace(/\\/g, '/');
@@ -623,7 +795,6 @@ async function executeTests(selected, headless = false) {
         const content = fs.readFileSync(file, 'utf-8');
         const result = JSON.parse(content);
 
-
         const validTests = extractValidTests(result);
 
         if (validTests.length === 0) {
@@ -631,16 +802,65 @@ async function executeTests(selected, headless = false) {
           continue;
         }
 
-        fileTestCounts.push({ file, count: validTests.length });
-        totalTests += validTests.length;
+        // Create a map to track unique test results and their original intended status
+        const testResultMap = new Map();
+        const originallySkippedTests = new Set();
+        
         validTests.forEach(entry => {
-          const status = (entry?.status || entry?.result?.status || entry?.state || entry?.result?.state || '').toLowerCase();
-
-          // Handle Vitest state values: 'pass', 'fail', 'skip', 'todo'
-          if (status === 'pass' || status === 'passed') {passed++;} else if (status === 'fail' || status === 'failed') {failed++;} else if (status === 'skip' || status === 'skipped' || status === 'pending' || status === 'todo') {skipped++;} else {
-            broadcast(`⚠️ Unknown test status: ${status}\n`);
-            failed++; // Treat unknown status as failed
+          const testName = entry.name || entry.title || entry.fullName || '';
+          if (selectedTestNames.has(testName)) {
+            const status = (entry?.status || entry?.result?.status || entry?.state || entry?.result?.state || '').toLowerCase();
+            
+            // Track tests that were originally skipped
+            if (status === 'skipped') {
+              originallySkippedTests.add(testName);
+            }
+            
+            if (testResultMap.has(testName)) {
+              const existing = testResultMap.get(testName);
+              const existingStatus = (existing?.status || existing?.result?.status || existing?.state || existing?.result?.state || '').toLowerCase();
+              
+              // Prioritize actual execution results over skipped placeholders
+              if (existingStatus === 'skipped' && status !== 'skipped') {
+                testResultMap.set(testName, entry);
+              }
+            } else {
+              testResultMap.set(testName, entry);
+            }
           }
+        });
+
+        const selectedTests = Array.from(testResultMap.values());
+
+        if (selectedTests.length === 0) {
+          broadcast(`⚠️ No selected tests found in ${file}\n`);
+          continue;
+        }
+
+        // Use Vitest's aggregate numbers directly - they're correct!
+        const filePassed = result.numPassedTests || 0;
+        const fileFailed = result.numFailedTests || 0; 
+        const fileSkipped = result.numPendingTests || 0; // numPendingTests = skipped
+        
+        // Add to global totals
+        passed += filePassed;
+        failed += fileFailed;
+        skipped += fileSkipped;
+        
+        broadcast(`📊 File results - Passed: ${filePassed}, Failed: ${fileFailed}, Skipped: ${fileSkipped}\n`);
+
+        // Use the actual selection count from the file, not just executed tests
+        const fileSelectedCount = selectedTestNames.size > 0 ? 
+          Array.from(selectedTestNames).filter(testName => 
+            selectedTests.some(test => (test.name || test.title || test.fullName || '') === testName)
+          ).length : selectedTests.length;
+        
+        fileTestCounts.push({ 
+          file, 
+          count: fileSelectedCount,
+          passed: filePassed,
+          failed: fileFailed, 
+          skipped: fileSkipped
         });
       } catch (err) {
         broadcast(`❌ Failed to read result file ${file}: ${err.message}\n`);
@@ -687,6 +907,10 @@ async function executeTests(selected, headless = false) {
     } catch (error) {
       broadcast(`❌ Failed to generate HTML report: ${error.message}\n`);
     }
+
+    // Final completion message
+    executionCompleted = true;
+    broadcast('\n✅ Test execution completed\n');
 
   } catch (error) {
     console.error('❌ Fatal error in executeTests:', error);
@@ -743,6 +967,11 @@ wss.on('error', (error) => {
 });
 
 function broadcast(message) {
+  // Stop broadcasting if execution is completed (except for specific completion messages)
+  if (executionCompleted && !message.includes('Test execution completed')) {
+    return;
+  }
+
   if (connectedClients.size === 0) {
     console.log('[No WebSocket clients]:', message.toString().trim());
     return;

@@ -490,12 +490,43 @@ function setupWebSocket() {
         const message = event.data;
 
         let className = 'log-info';
-        if (message.includes('✓') || message.includes('✅') || message.includes('PASS')) {
-            className = 'log-pass';
-        } else if (message.includes('✗') || message.includes('❌') || message.includes('FAIL')) {
+        
+        // Test failures and errors (highest priority - red)
+        if (message.includes('✗') || message.includes('❌') || message.includes('FAIL') || 
+            message.includes('Failed Tests') || message.includes('TEST FAILURE') || 
+            message.includes('RUNTIME ERROR') || message.includes('Error:') ||
+            message.includes('stderr:') || message.includes('Chrome stderr:')) {
             className = 'log-fail';
-        } else if (message.includes('⚠️') || message.includes('WARN')) {
+        }
+        // Warnings (orange/yellow)  
+        else if (message.includes('⚠️') || message.includes('WARN') || message.includes('Warning:') ||
+                message.includes('Could not clean up') || message.includes('Popup blocked')) {
             className = 'log-warning';
+        }
+        // Test passes and success messages (green)
+        else if (message.includes('✓') || message.includes('✅') || message.includes('PASS') ||
+                message.includes('Test Files') || message.includes('passed') || 
+                message.includes('All tests finished') || message.includes('completed')) {
+            className = 'log-pass';
+        }
+        // Console output, debug info, and test actions (bright green)
+        else if (message.includes('🚀') || message.includes('🔍') || message.includes('🌐') || 
+                message.includes('📄') || message.includes('📸') || message.includes('📤') ||
+                message.includes('📊') || message.includes('📁') || message.includes('🔗') ||
+                message.includes('console.log') || message.match(/^\s*stdout \|/) || 
+                message.includes('Testing') || message.includes('Page title:') ||
+                message.includes('Setting up') || message.includes('Using dynamic port') ||
+                message.includes('Response:') || message.includes('Built URL:') ||
+                message.includes('Creating session') || message.includes('Session context') ||
+                message.includes('WebSocket connected') || message.includes('Chrome launched')) {
+            className = 'log-console';
+        }
+        // Execution info and timing (blue)
+        else if (message.includes('RUN') || message.includes('Duration') || message.includes('Start at') ||
+                message.includes('Running:') || message.includes('Processing file') ||
+                message.includes('Total Tests:') || message.includes('File:') ||
+                message.includes('Test Summary') || message.includes('JSON report')) {
+            className = 'log-info';
         }
 
         appendToLog(message, className);

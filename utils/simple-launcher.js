@@ -16,8 +16,10 @@ export const launchChrome = withErrorRecovery(async (options = {}) => {
 
   console.log(`🚀 Launching Chrome on port ${port} (headed: ${headed})`);
 
-  // Clean up any existing Chrome user data directory to prevent singleton lock issues
-  const userDataPath = userDataDir || '/tmp/chrome-automation-test';
+  // Create unique Chrome user data directory to prevent singleton lock issues
+  const timestamp = Date.now();
+  const randomId = Math.random().toString(36).substr(2, 8);
+  const userDataPath = userDataDir || `/tmp/chrome-automation-${port}-${timestamp}-${randomId}`;
   if (existsSync(userDataPath)) {
     try {
       rmSync(userDataPath, { recursive: true, force: true });
@@ -27,9 +29,10 @@ export const launchChrome = withErrorRecovery(async (options = {}) => {
     }
   }
 
-  // Basic Chrome arguments - focused on avoiding profile selection
+  // Chrome arguments optimized for automation and parallel execution
   const chromeArgs = [
     `--remote-debugging-port=${port}`,
+    `--user-data-dir=${userDataPath}`,
     '--no-first-run',
     '--no-default-browser-check',
     '--disable-web-security',
@@ -46,13 +49,21 @@ export const launchChrome = withErrorRecovery(async (options = {}) => {
     '--disable-sync',
     '--disable-translate',
     '--disable-background-networking',
-    `--user-data-dir=${userDataPath}`,
     '--profile-directory=Default',
     '--force-first-run-ui=false',
     '--disable-background-mode',
     '--disable-extensions-file-access-check',
     '--disable-extensions-http-throttling',
     '--disable-component-extensions-with-background-pages',
+    '--disable-prompt-on-repost',
+    '--disable-hang-monitor',
+    '--disable-client-side-phishing-detection',
+    '--disable-popup-blocking',
+    '--disable-default-apps',
+    '--disable-zero-browsers-open-for-tests',
+    '--no-service-autorun',
+    '--password-store=basic',
+    '--use-mock-keychain',
     ...args
   ];
 
@@ -60,9 +71,7 @@ export const launchChrome = withErrorRecovery(async (options = {}) => {
     chromeArgs.push('--headless');
   }
 
-  if (userDataDir) {
-    chromeArgs.push(`--user-data-dir=${userDataDir}`);
-  }
+  // userDataDir already added above with unique path
 
   // Find Chrome executable
   const chromePaths = getChromePaths();
@@ -119,6 +128,16 @@ export const launchChrome = withErrorRecovery(async (options = {}) => {
       try {
         chrome.kill();
         console.log('🔒 Chrome process terminated');
+        
+        // Clean up the unique user data directory
+        if (existsSync(userDataPath)) {
+          try {
+            rmSync(userDataPath, { recursive: true, force: true });
+            console.log('🧹 Cleaned up Chrome user data directory');
+          } catch (cleanupError) {
+            console.warn('⚠️ Warning: Could not clean up user data dir:', cleanupError.message);
+          }
+        }
       } catch (error) {
         console.warn('⚠️ Warning during Chrome cleanup:', error.message);
       }
