@@ -1046,10 +1046,7 @@ console.log('📝 Generated proven working sample tests (sample.test.js + ui-web
 console.log('');
 console.log('🛠️ Available Commands:');
 console.log('  npm test                 # Run all tests');
-console.log('  npm run test:headed      # Run with visible browser');
-console.log('  npm run test:debug       # Run in debug mode');
-console.log('  npm run test:watch       # Watch mode for development');
-console.log('  npm run test:ui          # Vitest UI interface');
+console.log('  npx super-pancake-ui     # Super Pancake UI interface');
 
 console.log('');
 console.log('Happy testing! 🥞');
