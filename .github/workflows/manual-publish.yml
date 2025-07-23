@@ -42,13 +42,21 @@ jobs:
           node-version: 20.x
 
       - name: 📦 Install dependencies
-        run: npm install
+        run: npm install --legacy-peer-deps
 
-      - name: 🧪 Skip tests (temporarily disabled)
-        run: echo "Tests temporarily disabled during development"
-
-      - name: 📋 Skip test artifact upload (tests disabled)
-        run: echo "Test artifacts upload skipped - tests temporarily disabled"
+#      - name: 🧪 Run meaningful test suite
+#        run: npm test
+#        env:
+#          NODE_ENV: production
+#          CI: true
+#
+#      - name: 📋 Upload test screenshots
+#        uses: actions/upload-artifact@v4
+#        with:
+#          name: test-screenshots
+#          path: |
+#            screenshots/
+#          retention-days: 90
 
   bump-version:
     name: 🏷️ Bump Version
@@ -123,8 +131,11 @@ jobs:
       - name: 📦 Install dependencies
         run: npm install
 
-      - name: 🧪 Skip final test run (temporarily disabled)
-        run: echo "Tests temporarily disabled during development"
+      - name: 🧪 Final test run
+        run: npm test
+        env:
+          NODE_ENV: production
+          CI: true
 
       - name: 🔍 Verify package contents
         run: |
@@ -171,9 +182,12 @@ jobs:
             
             This release has been manually published after comprehensive testing.
             
-            ### 🚧 Development Status
-            - 🔧 Framework functionality under active development
-            - 🧪 Test suite temporarily disabled during development
+            ### ✅ Test Coverage Summary
+            - 🧪 Meaningful integration and example tests
+            - 🌐 Real web automation scenarios  
+            - 📡 API testing with live endpoints
+            - 🎯 Practical assertion examples
+            - 🔧 Framework functionality validation
             - 🌐 Cross-platform compatibility (Node.js 18.x, 20.x)
             
             ### 📦 Installation
