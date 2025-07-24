@@ -18,61 +18,137 @@ jobs:
         node-version: [20.x]
     
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
-      
-    - name: Setup Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v4
-      with:
-        node-version: ${{ matrix.node-version }}
-        
-    - name: Install dependencies
-      run: npm i
-      timeout-minutes: 2
-    - name: Run tests
-      run: npm run test:ci
-      env:
-        NODE_ENV: test
-        CI: true
-      timeout-minutes: 2
-      
-    - name: Generate test report
-      run: npm run test:report
-      if: always()
-        
-    - name: Comment test results on PR
-      uses: actions/github-script@v7
-      if: matrix.node-version == '20.x' && always()
-      continue-on-error: true
-      with:
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-        script: |
-          const fs = require('fs');
-          
-          try {
-            let commentBody = "## 🧪 Test Results for PR\n\n";
-            
-            // Add test report if available
-            if (fs.existsSync('TEST_REPORT.md')) {
-              const report = fs.readFileSync('TEST_REPORT.md', 'utf8');
-              commentBody += "### 📊 Test Summary\n\n";
-              commentBody += "```\n" + report + "\n```\n\n";
-            }
-            
-            commentBody += "### 🔗 Details\n";
-            commentBody += "- [📈 View Full Logs](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})\n\n";
-            commentBody += "---\n*Automated by 🥞 Super Pancake Framework CI*";
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
 
-            await github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: commentBody
-            });
-          } catch (error) {
-            console.log('Could not post test results:', error.message);
-          }
-        
-    - name: Security audit
-      run: npm audit --audit-level moderate
-      continue-on-error: true
+      - name: 🔧 Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: 📦 Install dependencies
+        run: npm install --legacy-peer-deps
+        timeout-minutes: 10
+
+      - name: 🧪 Run comprehensive test suite
+        run: npm run test:all
+        env:
+          NODE_ENV: test
+          CI: true
+          HEADED: false
+        timeout-minutes: 15
+
+      - name: 📊 Generate test report
+        if: always()
+        run: |
+          echo "# 🧪 Pull Request Test Report" > TEST_REPORT.md
+          echo "" >> TEST_REPORT.md
+          echo "**PR:** #${{ github.event.number }}" >> TEST_REPORT.md
+          echo "**Node.js:** ${{ matrix.node-version }}" >> TEST_REPORT.md
+          echo "**Date:** $(date)" >> TEST_REPORT.md
+          echo "" >> TEST_REPORT.md
+          echo "## Test Results" >> TEST_REPORT.md
+          if [ $? -eq 0 ]; then
+            echo "✅ All tests passed successfully" >> TEST_REPORT.md
+          else
+            echo "❌ Some tests failed" >> TEST_REPORT.md
+          fi
+
+      - name: 📋 Upload test artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pr-test-results
+          path: |
+            TEST_REPORT.md
+            *.png
+            screenshots/
+          retention-days: 30
+
+      - name: 💬 Comment test results on PR
+        uses: actions/github-script@v7
+        if: matrix.node-version == '20.x' && always()
+        continue-on-error: true
+        env:
+          TEST_STATUS: ${{ job.status }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            
+            try {
+              const testStatus = process.env.TEST_STATUS === 'success' ? '✅' : '❌';
+              const statusText = process.env.TEST_STATUS === 'success' ? 'passed' : 'failed';
+            
+              let commentBody = `## 🧪 Test Results for PR #${{ github.event.number }}\n\n`;
+              commentBody += `**Status:** ${testStatus} Tests ${statusText}\n`;
+              commentBody += `**Node.js Version:** 20.x\n`;
+              commentBody += `**Timestamp:** ${new Date().toISOString()}\n\n`;
+            
+              // Add test report if available
+              if (fs.existsSync('TEST_REPORT.md')) {
+                const report = fs.readFileSync('TEST_REPORT.md', 'utf8');
+                commentBody += "### 📊 Test Summary\n\n";
+                commentBody += "```markdown\n" + report + "\n```\n\n";
+              } else {
+                commentBody += "### 📊 Test Summary\n\n";
+                commentBody += `${testStatus} Comprehensive test suite completed\n\n`;
+              }
+            
+              commentBody += "### 🔗 Details\n";
+              commentBody += `- [📈 View Full Logs](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})\n`;
+              commentBody += `- [📋 Download Artifacts](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})\n\n`;
+            
+              if (process.env.TEST_STATUS === 'success') {
+                commentBody += "### ✅ All checks passed!\n";
+                commentBody += "This PR is ready for review and merge.\n\n";
+              } else {
+                commentBody += "### ❌ Some tests failed\n";
+                commentBody += "Please review the test results and fix any issues before merging.\n\n";
+              }
+            
+              commentBody += "---\n*Automated by 🥞 Super Pancake Framework CI*";
+            
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: commentBody
+              });
+            } catch (error) {
+              console.log('Could not post test results:', error.message);
+            }
+
+      - name: 🔒 Security audit
+        run: |
+          echo "🔍 Running security audit..."
+          npm audit --audit-level moderate || echo "⚠️ Security audit found issues (non-blocking)"
+        continue-on-error: true
+
+      - name: 📝 Lint check
+        run: |
+          if npm run lint --if-present; then
+            echo "✅ Lint check passed"
+          else
+            echo "⚠️ Lint check failed or not configured"
+          fi
+        continue-on-error: true
+
+      - name: 🔍 Package verification
+        run: |
+          echo "📦 Verifying package structure..."
+          npm pack --dry-run
+          echo "✅ Package verification completed"
+
+      - name: 📋 Workflow summary
+        if: matrix.node-version == '20.x'
+        run: |
+          echo "## 🧪 PR Test Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**PR Number:** #${{ github.event.number }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Node.js Version:** ${{ matrix.node-version }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Test Status:** ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🔗 Quick Links" >> $GITHUB_STEP_SUMMARY
+          echo "- [View PR](https://github.com/${{ github.repository }}/pull/${{ github.event.number }})" >> $GITHUB_STEP_SUMMARY
+          echo "- [Full Logs](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY

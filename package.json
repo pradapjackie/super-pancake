@@ -51,7 +51,7 @@
   "scripts": {
     "postinstall": "node scripts/postinstall.js",
     "test": "vitest run tests/",
-    "test:ci": "vitest run tests/unit/errors.test.js --reporter=verbose --testTimeout=3000",
+    "test:ci": "vitest run tests/reporter/html-reporter.test.js --reporter=verbose --testTimeout=5000",
     "test:report": "echo '# Test Report' > TEST_REPORT.md && echo 'Core tests passed for CI' >> TEST_REPORT.md",
     "test:integration": "vitest run tests/integration/",
     "test:examples": "vitest run tests/examples/",
