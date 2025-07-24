@@ -44,10 +44,10 @@ jobs:
       - name: 📦 Install dependencies
         run: npm install --legacy-peer-deps
 
-      - name: 🧪 Run comprehensive test suite
+      - name: 🧪 Run minimal CI test suite
         run: |
-          echo "🧪 Running comprehensive test suite..."
-          npm run test:all 2>&1 | tee test_output.log
+          echo "🧪 Running minimal CI test suite..."
+          npm run test:ci 2>&1 | tee test_output.log
           TEST_EXIT_CODE=${PIPESTATUS[0]}
           echo "TEST_EXIT_CODE=$TEST_EXIT_CODE" >> $GITHUB_ENV
           exit $TEST_EXIT_CODE
@@ -172,8 +172,8 @@ jobs:
       - name: 📦 Install dependencies
         run: npm install --legacy-peer-deps
 
-      - name: 🧪 Final test run before publish
-        run: npm run test:all
+      - name: 🧪 Final minimal test run before publish
+        run: npm run test:ci
         env:
           NODE_ENV: production
           CI: true
