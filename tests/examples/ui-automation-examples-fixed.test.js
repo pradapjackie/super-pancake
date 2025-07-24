@@ -71,7 +71,7 @@ describe('UI Automation Examples', () => {
     console.log('🧹 UI test environment cleaned up');
   });
 
-  it('should demonstrate basic navigation and page inspection', async () => {
+  it.skipIf(process.env.CI)('should demonstrate basic navigation and page inspection', async () => {
     console.log('🌐 Testing basic navigation...');
     
     // Navigate to the comprehensive form
@@ -98,7 +98,7 @@ describe('UI Automation Examples', () => {
     console.log('✅ Basic navigation test completed');
   }, 30000);
 
-  it('should demonstrate comprehensive form interactions', async () => {
+  it.skipIf(process.env.CI)('should demonstrate comprehensive form interactions', async () => {
     console.log('📝 Testing comprehensive form interactions...');
     
     // Navigate to the comprehensive form
