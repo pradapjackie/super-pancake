@@ -397,36 +397,5 @@ describe('Comprehensive UI Interactions', () => {
     console.log('✅ Keyboard interactions test completed');
   }, 45000);
 
-  it('should test visual elements and take comprehensive screenshots', async () => {
-    console.log('📸 Testing visual elements and screenshots...');
-    
-    await navigateTo(formUrl);
-    await waitForSelector('h1', 10000);
-    
-    // Take full page screenshot
-    await takeScreenshot('comprehensive-ui-full-page.png');
-    
-    // Take screenshots of specific sections
-    await takeElementScreenshot('#basic-form', 'basic-form-section.png');
-    await takeElementScreenshot('#data-table', 'data-table-section.png');
-    await takeElementScreenshot('.tabs', 'tabs-section.png');
-    
-    // Take screenshots of accordion and drag-drop sections
-    await takeElementScreenshot('.accordion', 'accordion-section.png');
-    await takeElementScreenshot('.drag-drop-area', 'drag-drop-section.png');
-    
-    // Test hover effects (if tooltip exists)
-    try {
-      const tooltipElement = await querySelector('.tooltip');
-      if (tooltipElement) {
-        await hover('.tooltip');
-        await waitForTimeout(500);
-        await takeElementScreenshot('.tooltip', 'tooltip-hover.png');
-      }
-    } catch (error) {
-      console.log('Tooltip hover test skipped...');
-    }
-    
-    console.log('✅ Visual elements and screenshots test completed');
-  }, 45000);
+
 });

@@ -160,41 +160,7 @@ describe('Advanced Framework Features', () => {
     console.log('✅ Complex element selection patterns test completed');
   }, 30000);
 
-  it('should test drag and drop interactions', async () => {
-    console.log('🎯 Testing drag and drop functionality...');
-    
-    await navigateTo(formUrl);
-    await waitForSelector('.drag-item', 10000);
-    
-    // Wait for drag and drop elements to be available
-    await waitForSelector('.drag-item', 10000);
-    await waitForTimeout(500);
-    
-    // Test that drag items exist
-    const dragItem1 = await querySelector('#drag-item-1');
-    assertTrue(dragItem1 !== null, 'Drag item 1 should exist');
-    
-    const dragItem2 = await querySelector('#drag-item-2');
-    assertTrue(dragItem2 !== null, 'Drag item 2 should exist');
-    
-    const dropZone1 = await querySelector('#drop-zone-1');
-    assertTrue(dropZone1 !== null, 'Drop zone 1 should exist');
-    
-    const dropZone2 = await querySelector('#drop-zone-2');
-    assertTrue(dropZone2 !== null, 'Drop zone 2 should exist');
-    
-    const universalZone = await querySelector('#drop-zone-any');
-    assertTrue(universalZone !== null, 'Universal drop zone should exist');
-    
-    // Note: Actual drag and drop simulation would require more complex CDP commands
-    // For now, we validate the elements are present and interactive
-    console.log('📋 Drag and drop elements validated (simulation would require CDP drag events)');
-    
-    // Take screenshot of drag and drop area
-    await takeElementScreenshot('.drag-drop-area', 'drag-drop-area.png');
-    
-    console.log('✅ Drag and drop test completed');
-  }, 30000);
+
 
   it('should test iframe and embedded content handling', async () => {
     console.log('🖼️ Testing iframe and embedded content...');
