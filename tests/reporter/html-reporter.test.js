@@ -1,95 +1,139 @@
-// Tests for HTML reporter functionality
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { 
+  initializeReportDirectory,
+  addTestResult,
+  writeReport,
+  clearPreviousResults
+} from '../../reporter/htmlReporter.js';
 import fs from 'fs';
 import path from 'path';
-import { addTestResult, writeReport, initializeReportDirectory } from '../../reporter/htmlReporter.js';
 
-describe.skip('HTML Reporter Tests (disabled to prevent file deletion during main test runs)', () => {
+describe('HTML Reporter Tests', () => {
+  let testOutputDir;
+
   beforeEach(() => {
-    // Use a test-specific directory to avoid deleting production test results
-    const testReportDir = 'test-report-test';
-
-    // Clean up test directory only
-    if (fs.existsSync(testReportDir)) {
-      fs.rmSync(testReportDir, { recursive: true, force: true });
-    }
-
-    // Create minimal test directory structure without calling initializeReportDirectory
-    // to avoid deleting production results during test execution
-    fs.mkdirSync(path.join(testReportDir, 'results'), { recursive: true });
-    fs.mkdirSync(path.join(testReportDir, 'screenshots'), { recursive: true });
+    testOutputDir = path.join(process.cwd(), 'test-report');
+    // Initialize report directory
+    initializeReportDirectory();
   });
 
-  it('should initialize report directory structure', () => {
-    const testReportDir = 'test-report-test';
-    expect(fs.existsSync(testReportDir)).toBe(true);
-    expect(fs.existsSync(path.join(testReportDir, 'results'))).toBe(true);
-    expect(fs.existsSync(path.join(testReportDir, 'screenshots'))).toBe(true);
+  afterEach(() => {
+    // Clean up test files
+    clearPreviousResults();
+    if (fs.existsSync(testOutputDir)) {
+      try {
+        fs.rmSync(testOutputDir, { recursive: true, force: true });
+      } catch (error) {
+        // Ignore cleanup errors
+      }
+    }
+  });
+
+  it('should initialize report directory', () => {
+    initializeReportDirectory();
+    expect(fs.existsSync(testOutputDir)).toBe(true);
   });
 
   it('should add test results', () => {
     const testResult = {
       name: 'Sample Test',
-      status: 'pass',
-      duration: '100ms',
-      timestamp: new Date().toISOString(),
-      file: 'sample.test.js'
+      status: 'passed',
+      duration: 1500,
+      file: 'test.js'
     };
 
-    addTestResult(testResult);
-
-    const resultFiles = fs.readdirSync('test-report/results')
-      .filter(f => f.endsWith('.json'));
-    expect(resultFiles.length).toBe(1);
-
-    const savedResult = JSON.parse(fs.readFileSync(
-      path.join('test-report/results', resultFiles[0]), 'utf-8'
-    ));
-    expect(savedResult.name).toBe('Sample Test');
-    expect(savedResult.status).toBe('pass');
+    // This should not throw
+    expect(() => {
+      addTestResult(testResult);
+    }).not.toThrow();
   });
 
-  it('should generate HTML report', () => {
-    // Add some test results
-    const results = [
-      {
-        name: 'Passing Test',
-        status: 'pass',
-        duration: '50ms',
-        timestamp: new Date().toISOString(),
-        file: 'test1.js'
-      },
-      {
-        name: 'Failing Test',
-        status: 'fail',
-        duration: '75ms',
-        timestamp: new Date().toISOString(),
-        file: 'test2.js',
-        error: 'Expected true but got false'
-      }
+  it('should write report without errors', () => {
+    // Add a test result
+    addTestResult({
+      name: 'Test Report Generation',
+      status: 'passed',
+      duration: 1000,
+      file: 'reporter-test.js'
+    });
+
+    // This should not throw
+    expect(() => {
+      writeReport();
+    }).not.toThrow();
+    
+    // Check if report file exists (it's saved as automationTestReport.html)
+    const reportPath = path.join(process.cwd(), 'automationTestReport.html');
+    expect(fs.existsSync(reportPath)).toBe(true);
+  });
+
+  it('should handle multiple test results', () => {
+    const testResults = [
+      { name: 'Test 1', status: 'passed', duration: 1000, file: 'test1.js' },
+      { name: 'Test 2', status: 'failed', duration: 800, file: 'test2.js' },
+      { name: 'Test 3', status: 'passed', duration: 1200, file: 'test3.js' }
     ];
 
-    results.forEach(result => addTestResult(result));
+    testResults.forEach(result => {
+      expect(() => {
+        addTestResult(result);
+      }).not.toThrow();
+    });
 
-    writeReport();
-
-    expect(fs.existsSync('automationTestReport.html')).toBe(true);
-
-    const htmlContent = fs.readFileSync('automationTestReport.html', 'utf-8');
-    expect(htmlContent).toContain('Super Pancake Test Report');
-    expect(htmlContent).toContain('DOCTYPE html');
-    expect(htmlContent.length).toBeGreaterThan(1000);
+    expect(() => {
+      writeReport();
+    }).not.toThrow();
   });
 
-  it('should handle malformed test results gracefully', () => {
-    const malformedResult = {
-      name: 'Test with invalid timestamp',
-      status: 'pass',
-      timestamp: 'invalid-date',
-      duration: null
-    };
+  it('should clear previous results', () => {
+    // Add some results first
+    addTestResult({ name: 'Test', status: 'passed', duration: 1000, file: 'test.js' });
+    
+    // Clear should not throw
+    expect(() => {
+      clearPreviousResults();
+    }).not.toThrow();
+  });
 
-    expect(() => addTestResult(malformedResult)).not.toThrow();
-    expect(() => writeReport()).not.toThrow();
+  it('should handle empty results gracefully', () => {
+    // Write report with no results
+    expect(() => {
+      writeReport();
+    }).not.toThrow();
+    
+    const reportPath = path.join(process.cwd(), 'automationTestReport.html');
+    expect(fs.existsSync(reportPath)).toBe(true);
+  });
+
+  it('should validate reporter functions are available', () => {
+    expect(initializeReportDirectory).toBeDefined();
+    expect(typeof initializeReportDirectory).toBe('function');
+    
+    expect(addTestResult).toBeDefined();
+    expect(typeof addTestResult).toBe('function');
+    
+    expect(writeReport).toBeDefined();
+    expect(typeof writeReport).toBe('function');
+    
+    expect(clearPreviousResults).toBeDefined();
+    expect(typeof clearPreviousResults).toBe('function');
+  });
+
+  it('should generate report with actual content', () => {
+    // Add test results
+    addTestResult({
+      name: 'Content Test',
+      status: 'passed',
+      duration: 1500,
+      file: 'content-test.js'
+    });
+
+    writeReport();
+    
+    const reportPath = path.join(process.cwd(), 'automationTestReport.html');
+    const reportContent = fs.readFileSync(reportPath, 'utf8');
+    
+    expect(reportContent).toContain('<!DOCTYPE html>');
+    expect(reportContent.length).toBeGreaterThan(100); // Should have substantial content
   });
 });

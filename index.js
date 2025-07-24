@@ -1,8 +1,9 @@
 console.log('Happy developing ✨');
-// index.js
+// index.js - Updated to use v2 API functions
 export * from './core/assert.js';
 export * from './core/browser.js';
-export * from './core/dom.js';
+// Export v2 DOM functions with session context support
+export * from './core/simple-dom-v2.js';
 export * from './core/runner.js';
 export * from './core/screenshot.js';
 export * from './core/session.js';
@@ -45,5 +46,7 @@ export {
   findAvailablePort,
   isPortAvailable,
   ensurePortAvailable,
-  killPortProcess
+  killPortProcess,
+  releasePort,
+  getTestPort
 } from './utils/port-finder.js';
