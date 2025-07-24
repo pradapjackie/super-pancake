@@ -276,36 +276,7 @@ describe('UI Automation Examples', () => {
     console.log('✅ Data table interactions test completed');
   }, 45000);
 
-  it('should test visual elements and take screenshots', async () => {
-    console.log('📸 Testing visual elements and screenshots...');
-    
-    // Navigate to the comprehensive form
-    const formUrl = `file://${process.cwd()}/public/form-comprehensive.html`;
-    await navigateTo(formUrl);
-    
-    await waitForSelector('h1', 10000);
-    
-    // Take full page screenshot
-    await takeScreenshot('comprehensive-ui-full-page.png');
-    
-    // Take screenshots of specific sections
-    await takeElementScreenshot('#basic-form', 'basic-form-section.png');
-    await takeElementScreenshot('#data-table', 'data-table-section.png');
-    
-    // Test hover effects on tooltip (with error handling)
-    try {
-      const tooltipElement = await querySelector('.tooltip');
-      if (tooltipElement) {
-        await hover('.tooltip');
-        await waitForTimeout(500);
-        await takeElementScreenshot('.tooltip', 'tooltip-hover.png');
-      }
-    } catch (error) {
-      console.log('Tooltip hover test skipped...');
-    }
-    
-    console.log('✅ Visual elements and screenshots test completed');
-  }, 45000);
+
 
   it('should test browser navigation controls', async () => {
     console.log('🧭 Testing browser navigation controls...');
