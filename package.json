@@ -55,7 +55,7 @@
     "test:unit": "vitest run tests/unit/ --config vitest.config.js",
     "test:ui-automation": "vitest run tests/examples/ --config vitest.config.js",
     "test:api": "vitest run tests/api/ --config vitest.config.js",
-    "test:ui-runner": "vitest run tests/ui-runner/ --config vitest.config.js",  
+    "test:ui-runner": "vitest run tests/ui-runner/ --config vitest.config.js",
     "test:reporter": "vitest run tests/reporter/ --config vitest.config.js",
     "test:integration": "vitest run tests/integration/ --config vitest.config.js",
     "test:examples": "vitest run tests/examples/ --config vitest.config.js",
