@@ -227,11 +227,17 @@ export async function reload(session) {
 }
 
 export async function goBack(session) {
-  await session.send('Page.goBack');
+  await session.send('Runtime.evaluate', {
+    expression: 'window.history.back()',
+    returnByValue: true
+  });
 }
 
 export async function goForward(session) {
-  await session.send('Page.goForward');
+  await session.send('Runtime.evaluate', {
+    expression: 'window.history.forward()',
+    returnByValue: true
+  });
 }
 
 export async function paste(session, selector, text) {

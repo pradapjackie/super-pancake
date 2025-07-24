@@ -50,9 +50,15 @@
   "homepage": "https://github.com/pradapjackie/super-pancake#readme",
   "scripts": {
     "postinstall": "node scripts/postinstall.js",
-    "test": "vitest run tests/",
-    "test:integration": "vitest run tests/integration/",
-    "test:examples": "vitest run tests/examples/",
+    "test": "vitest run --config vitest.config.js",
+    "test:all": "npm run test:unit && npm run test:ui-automation && npm run test:api && npm run test:ui-runner && npm run test:reporter && npm run test:integration",
+    "test:unit": "vitest run tests/unit/ --config vitest.config.js",
+    "test:ui-automation": "vitest run tests/examples/ --config vitest.config.js",
+    "test:api": "vitest run tests/api/ --config vitest.config.js",
+    "test:ui-runner": "vitest run tests/ui-runner/ --config vitest.config.js",  
+    "test:reporter": "vitest run tests/reporter/ --config vitest.config.js",
+    "test:integration": "vitest run tests/integration/ --config vitest.config.js",
+    "test:examples": "vitest run tests/examples/ --config vitest.config.js",
     "test:watch": "vitest watch tests/",
     "test:ui": "node scripts/test-ui.js",
     "start": "node scripts/test-ui.js",
@@ -64,7 +70,9 @@
     "lint:errors-only": "eslint . --quiet",
     "lint:report": "eslint . --format html --output-file eslint-report.html",
     "build": "echo 'No build step required'",
-    "prepare": "npm run build"
+    "prepare": "npm run build",
+    "launch-test-app": "npx http-server . -o public/form-comprehensive.html",
+    "test:comprehensive": "npm run lint && npm run test:all"
   },
   "engines": {
     "node": ">=16.0.0",

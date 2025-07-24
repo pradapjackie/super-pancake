@@ -40,23 +40,65 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20.x
+          cache: 'npm'
 
       - name: 📦 Install dependencies
         run: npm install --legacy-peer-deps
 
-#      - name: 🧪 Run meaningful test suite
-#        run: npm test
-#        env:
-#          NODE_ENV: production
-#          CI: true
-#
-#      - name: 📋 Upload test screenshots
-#        uses: actions/upload-artifact@v4
-#        with:
-#          name: test-screenshots
-#          path: |
-#            screenshots/
-#          retention-days: 90
+      - name: 🧪 Run comprehensive test suite
+        run: |
+          echo "🧪 Running comprehensive test suite..."
+          npm run test:all 2>&1 | tee test_output.log
+          TEST_EXIT_CODE=${PIPESTATUS[0]}
+          echo "TEST_EXIT_CODE=$TEST_EXIT_CODE" >> $GITHUB_ENV
+          exit $TEST_EXIT_CODE
+        env:
+          NODE_ENV: production
+          CI: true
+          HEADED: false
+
+      - name: 📊 Generate test report
+        if: always()
+        run: |
+          echo "# 🧪 Pre-Publish Test Report" > TEST_REPORT.md
+          echo "" >> TEST_REPORT.md
+          echo "**Date:** $(date)" >> TEST_REPORT.md
+          echo "**Node.js:** $(node --version)" >> TEST_REPORT.md
+          echo "**NPM:** $(npm --version)" >> TEST_REPORT.md
+          echo "**Repository:** ${{ github.repository }}" >> TEST_REPORT.md
+          echo "**Workflow:** Manual Publish" >> TEST_REPORT.md
+          echo "" >> TEST_REPORT.md
+          echo "## Test Results" >> TEST_REPORT.md
+          
+          if [ "$TEST_EXIT_CODE" == "0" ]; then
+            echo "✅ **Status:** All tests passed successfully" >> TEST_REPORT.md
+            echo "" >> TEST_REPORT.md
+            echo "All tests must pass before publishing to NPM." >> TEST_REPORT.md
+          else
+            echo "❌ **Status:** Some tests failed" >> TEST_REPORT.md
+            echo "" >> TEST_REPORT.md
+            echo "**Note:** Tests must pass before publishing can proceed." >> TEST_REPORT.md
+          fi
+          
+          echo "" >> TEST_REPORT.md
+          echo "## Test Output Summary" >> TEST_REPORT.md
+          echo "\`\`\`" >> TEST_REPORT.md
+          if [ -f "test_output.log" ]; then
+            tail -20 test_output.log >> TEST_REPORT.md
+          fi
+          echo "\`\`\`" >> TEST_REPORT.md
+
+      - name: 📋 Upload test artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pre-publish-test-results
+          path: |
+            TEST_REPORT.md
+            test_output.log
+            *.png
+            screenshots/
+          retention-days: 90
 
   bump-version:
     name: 🏷️ Bump Version
@@ -78,6 +120,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20.x
+          cache: 'npm'
 
       - name: 🔧 Configure Git
         run: |
@@ -126,16 +169,18 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20.x
+          cache: 'npm'
           registry-url: 'https://registry.npmjs.org'
 
       - name: 📦 Install dependencies
-        run: npm install
+        run: npm install --legacy-peer-deps
 
-#      - name: 🧪 Final test run
-#        run: npm test
-#        env:
-#          NODE_ENV: production
-#          CI: true
+      - name: 🧪 Final test run before publish
+        run: npm run test:all
+        env:
+          NODE_ENV: production
+          CI: true
+          HEADED: false
 
       - name: 🔍 Verify package contents
         run: |
@@ -148,6 +193,20 @@ jobs:
           npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          
+      - name: 📋 Publish summary
+        run: |
+          echo "## 🚀 Package Published Successfully!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Package:** \`super-pancake-automation\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** ${{ needs.bump-version.outputs.new-version }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Previous Version:** ${{ needs.bump-version.outputs.old-version }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Version Type:** ${{ github.event.inputs.version_type }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🔗 Quick Links" >> $GITHUB_STEP_SUMMARY
+          echo "- [NPM Package](https://www.npmjs.com/package/super-pancake-automation)" >> $GITHUB_STEP_SUMMARY
+          echo "- [GitHub Release](https://github.com/${{ github.repository }}/releases/tag/${{ needs.bump-version.outputs.new-version }})" >> $GITHUB_STEP_SUMMARY
+          echo "- [Test Report](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
 
   create-release:
     name: 🏷️ Create GitHub Release

@@ -369,6 +369,8 @@ declare module 'super-pancake-automation' {
   export function isPortAvailable(port: number): Promise<boolean>;
   export function ensurePortAvailable(preferredPort: number, killExisting?: boolean): Promise<number>;
   export function killPortProcess(port: number): Promise<boolean>;
+  export function releasePort(port: number): void;
+  export function getTestPort(testType?: "examples" | "integration" | "e2e" | "ui" | "api" | "default"): Promise<number>;
 
   // ========================================
   // CONFIGURATION EXPORT

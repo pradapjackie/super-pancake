@@ -168,7 +168,7 @@ export const waitForSelector = withErrorRecovery(async (selector, timeout = 1000
     }
   }
 
-  throw new Error(`Element not found within ${timeout}ms: ${selector}`);
+  throw new Error(`Element "${selector}" timed out after ${timeout}ms: not found`);
 }, 'waitForSelector');
 
 export const click = withErrorRecovery(async (selectorOrNodeId, options = {}) => {
@@ -1378,7 +1378,7 @@ export const waitForText = withErrorRecovery(async (text, options = {}) => {
     await new Promise(resolve => setTimeout(resolve, 100));
   }
 
-  throw new Error(`Text "${text}" not found within ${opts.timeout}ms`);
+  throw new Error(`Text "${text}" timed out after ${opts.timeout}ms: not found`);
 }, 'waitForText');
 
 // Wait for URL to match pattern
@@ -1411,7 +1411,7 @@ export const waitForURL = withErrorRecovery(async (urlPattern, options = {}) => 
     await new Promise(resolve => setTimeout(resolve, 100));
   }
 
-  throw new Error(`URL pattern "${urlPattern}" not matched within ${opts.timeout}ms`);
+  throw new Error(`URL pattern "${urlPattern}" timed out after ${opts.timeout}ms: not matched`);
 }, 'waitForURL');
 
 // Wait for page load state
@@ -1449,7 +1449,7 @@ export const waitForLoadState = withErrorRecovery(async (state = 'load', options
     await new Promise(resolve => setTimeout(resolve, 100));
   }
 
-  throw new Error(`Load state "${state}" not reached within ${opts.timeout}ms`);
+  throw new Error(`Load state "${state}" timed out after ${opts.timeout}ms: not reached`);
 }, 'waitForLoadState');
 
 // Wait for function to return truthy value
@@ -1480,7 +1480,7 @@ export const waitForFunction = withErrorRecovery(async (fn, options = {}) => {
     await new Promise(resolve => setTimeout(resolve, 100));
   }
 
-  throw new Error(`Function did not return truthy value within ${opts.timeout}ms`);
+  throw new Error(`Function timed out after ${opts.timeout}ms: did not return truthy value`);
 }, 'waitForFunction');
 
 // ⌨️ TIER 1 FILE UPLOAD & KEYBOARD ACTIONS
@@ -1641,7 +1641,7 @@ export const waitForRequest = withErrorRecovery(async (urlPattern, options = {})
     await new Promise(resolve => setTimeout(resolve, 100));
   }
 
-  throw new Error(`Request matching "${urlPattern}" not found within ${opts.timeout}ms`);
+  throw new Error(`Request matching "${urlPattern}" timed out after ${opts.timeout}ms: not found`);
 }, 'waitForRequest');
 
 // Wait for network response
@@ -1665,7 +1665,7 @@ export const waitForResponse = withErrorRecovery(async (urlPattern, options = {}
     await new Promise(resolve => setTimeout(resolve, 100));
   }
 
-  throw new Error(`Response matching "${urlPattern}" not found within ${opts.timeout}ms`);
+  throw new Error(`Response matching "${urlPattern}" timed out after ${opts.timeout}ms: not found`);
 }, 'waitForResponse');
 
 // Get all network requests
@@ -1967,3 +1967,165 @@ export const clearDeviceEmulation = withErrorRecovery(async (options = {}) => {
 
   console.log('✅ Device emulation cleared');
 }, 'clearDeviceEmulation');
+
+// Browser navigation functions
+export const goBack = withErrorRecovery(async (options = {}) => {
+  const opts = getOptions(options);
+  const session = opts.session || getSession();
+  
+  console.log('⬅️ Navigating back in browser history');
+  
+  await session.send('Runtime.evaluate', {
+    expression: 'window.history.back()',
+    returnByValue: true
+  });
+  
+  console.log('✅ Navigated back successfully');
+}, 'goBack');
+
+export const goForward = withErrorRecovery(async (options = {}) => {
+  const opts = getOptions(options);
+  const session = opts.session || getSession();
+  
+  console.log('➡️ Navigating forward in browser history');
+  
+  await session.send('Runtime.evaluate', {
+    expression: 'window.history.forward()',
+    returnByValue: true
+  });
+  
+  console.log('✅ Navigated forward successfully');
+}, 'goForward');
+
+// Missing functions from v1 API
+
+// Select multiple elements using querySelectorAll
+export const querySelectorAll = withErrorRecovery(async (selector, options = {}) => {
+  const opts = getOptions(options);
+  const session = opts.session || getSession();
+  
+  console.log(`🔍 Selecting all elements: ${selector} (timeout: ${opts.timeout}ms)`);
+  
+  try {
+    const { root: { nodeId } } = await session.send('DOM.getDocument');
+    const { nodeIds } = await session.send('DOM.querySelectorAll', { nodeId, selector });
+    
+    console.log(`✅ Found ${nodeIds.length} elements matching: ${selector}`);
+    return nodeIds || [];
+  } catch (error) {
+    throw new Error(`Failed to find elements with selector "${selector}": ${error.message}`);
+  }
+}, 'querySelectorAll');
+
+// Wait for a specified timeout (sleep)
+export const waitForTimeout = withErrorRecovery(async (ms) => {
+  console.log(`⏱️ Waiting for ${ms}ms`);
+  
+  return new Promise(resolve => setTimeout(resolve, ms));
+}, 'waitForTimeout');
+
+// Wait for element to contain specific text
+export const waitForElementToContainText = withErrorRecovery(async (selector, text, timeout = 5000, options = {}) => {
+  const opts = getOptions(options, timeout);
+  const session = opts.session || getSession();
+  
+  console.log(`🔍 Waiting for element "${selector}" to contain text "${text}" (timeout: ${timeout}ms)`);
+  
+  const start = Date.now();
+  while (Date.now() - start < timeout) {
+    try {
+      const nodeId = await querySelector(selector, opts);
+      if (nodeId) {
+        const elementText = await getText(nodeId, opts);
+        if (elementText && elementText.includes(text)) {
+          console.log(`✅ Element contains text: "${text}"`);
+          return nodeId;
+        }
+      }
+    } catch (error) {
+      // Continue waiting
+    }
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+  
+  throw new Error(`Element "${selector}" timed out after ${timeout}ms: does not contain text "${text}"`);
+}, 'waitForElementToContainText');
+
+// Take screenshot of a specific element
+export const takeElementScreenshot = withErrorRecovery(async (selector, fileName = 'element.png', options = {}) => {
+  const opts = getOptions(options, defaultTimeouts.screenshot);
+  const session = opts.session || getSession();
+  
+  console.log(`📸 Taking element screenshot: ${selector} -> ${fileName} (timeout: ${opts.timeout}ms)`);
+  
+  const nodeId = await querySelector(selector, opts);
+  
+  try {
+    const { model } = await session.send('DOM.getBoxModel', { nodeId });
+    
+    // If element has 0 width or height, log a warning and capture full page screenshot as fallback
+    if (!model || !model.content || model.content.length < 8) {
+      console.warn('⚠️ Element has no visible content, taking full page screenshot as fallback');
+      return await takeScreenshot(fileName, opts);
+    }
+    
+    const [x1, y1, x2, y2, x3, y3, x4, y4] = model.content;
+    const x = Math.min(x1, x2, x3, x4);
+    const y = Math.min(y1, y2, y3, y4);
+    const width = Math.max(x1, x2, x3, x4) - x;
+    const height = Math.max(y1, y2, y3, y4) - y;
+    
+    const { data } = await session.send('Page.captureScreenshot', {
+      clip: { x, y, width, height, scale: 1 }
+    });
+    
+    fs.writeFileSync(fileName, Buffer.from(data, 'base64'));
+    console.log(`✅ Element screenshot saved: ${fileName}`);
+    
+    return { fileName, isElementScreenshot: true };
+  } catch (error) {
+    console.warn('⚠️ Element screenshot failed, taking full page screenshot as fallback');
+    return await takeScreenshot(fileName, opts);
+  }
+}, 'takeElementScreenshot');
+
+// Clear input field content
+export const clearInput = withErrorRecovery(async (selector, options = {}) => {
+  const opts = getOptions(options);
+  
+  console.log(`🧹 Clearing input field: ${selector} (timeout: ${opts.timeout}ms)`);
+  
+  // Clear by setting empty value
+  await fillInput(selector, '', opts);
+  
+  console.log('✅ Input field cleared');
+}, 'clearInput');
+
+// Set value for range inputs and other special input types
+export const setValue = withErrorRecovery(async (selector, value, options = {}) => {
+  const opts = getOptions(options);
+  const session = opts.session || getSession();
+  
+  console.log(`🎚️ Setting value: ${selector} = "${value}" (timeout: ${opts.timeout}ms)`);
+  
+  // Use JavaScript to set the value property directly
+  await session.send('Runtime.evaluate', {
+    expression: `
+      (() => {
+        const element = document.querySelector('${selector}');
+        if (!element) throw new Error('Element not found: ${selector}');
+        
+        element.value = '${value}';
+        
+        // Trigger events to notify the page of the change
+        element.dispatchEvent(new Event('input', { bubbles: true }));
+        element.dispatchEvent(new Event('change', { bubbles: true }));
+        
+        return element.value;
+      })()
+    `,
+    returnByValue: true
+  });
+  
+  console.log(`✅ Value set successfully: ${selector} = "${value}"`);
+}, 'setValue');

@@ -126,7 +126,7 @@ export function assertArrayNotIncludes(array, item, msg = '') {
 }
 
 export function assertLength(value, expectedLength, msg = '') {
-  if (!value || typeof value.length !== 'number' || value.length !== expectedLength) {
+  if (value == null || typeof value.length !== 'number' || value.length !== expectedLength) {
     throw new Error(`❌ FAIL: ${msg}\nExpected length: ${expectedLength}, but got: ${value.length}`);
   }
   console.log(`✅ PASS: ${msg}`);
@@ -142,6 +142,50 @@ export function assertMatch(value, regex, msg = '') {
 export function assertNotMatch(value, regex, msg = '') {
   if (regex.test(value)) {
     throw new Error(`❌ FAIL: ${msg}\nExpected value NOT to match regex ${regex}\nActual: ${format(value)}`);
+  }
+  console.log(`✅ PASS: ${msg}`);
+}
+
+export function assertInRange(actual, min, max, msg = '') {
+  if (typeof actual !== 'number' || actual < min || actual > max) {
+    throw new Error(`❌ FAIL: ${msg}\nExpected value ${actual} to be between ${min} and ${max}`);
+  }
+  console.log(`✅ PASS: ${msg}`);
+}
+
+export function assertEmpty(value, msg = '') {
+  if (
+    value == null ||
+    (typeof value === 'string' && value !== '') ||
+    (Array.isArray(value) && value.length !== 0) ||
+    (typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length !== 0)
+  ) {
+    throw new Error(`❌ FAIL: ${msg}\nExpected value to be empty but got: ${format(value)}`);
+  }
+  console.log(`✅ PASS: ${msg}`);
+}
+
+export function assertNotEmpty(value, msg = '') {
+  if (
+    value == null ||
+    (typeof value === 'string' && value === '') ||
+    (Array.isArray(value) && value.length === 0) ||
+    (typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length === 0)
+  ) {
+    throw new Error(`❌ FAIL: ${msg}\nExpected non-empty value but got: ${format(value)}`);
+  }
+  console.log(`✅ PASS: ${msg}`);
+}
+
+export function assertThrows(fn, msg = '') {
+  let threw = false;
+  try {
+    fn();
+  } catch {
+    threw = true;
+  }
+  if (!threw) {
+    throw new Error(`❌ FAIL: ${msg}\nExpected function to throw an error`);
   }
   console.log(`✅ PASS: ${msg}`);
 }
