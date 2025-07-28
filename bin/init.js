@@ -546,13 +546,13 @@ describe('${projectName} Sample Test', () => {
     console.log('🌐 Testing navigation...');
     
     // Navigate to a reliable test page
-    await navigateTo(testEnv.session, 'https://example.com');
+    await navigateTo('https://example.com');
     
     // Wait for page to load
-    const h1Element = await waitForSelector(testEnv.session, 'h1', 10000);
+    const h1Element = await waitForSelector('h1', { timeout: 10000 });
     
     // Get page title
-    const title = await getText(testEnv.session, h1Element);
+    const title = await getText(h1Element);
     console.log('📄 Page title:', title);
     
     // Basic assertions
@@ -566,7 +566,7 @@ describe('${projectName} Sample Test', () => {
     console.log('📸 Testing screenshot functionality...');
     
     // Take a screenshot of the current page
-    await takeElementScreenshot(testEnv.session, 'body', './test-screenshot.png');
+    await takeElementScreenshot('body', './test-screenshot.png');
     
     console.log('📸 Screenshot saved as test-screenshot.png');
     console.log('✅ Screenshot test passed');
@@ -626,13 +626,13 @@ describe('${projectName} NPM Website Tests', () => {
     console.log('🌐 Testing NPM package page navigation...');
     
     // Navigate to the npm package page
-    await navigateTo(testEnv.session, 'https://www.npmjs.com/package/super-pancake-automation');
+    await navigateTo('https://www.npmjs.com/package/super-pancake-automation');
     
     // Wait for page title to load
-    const h1Element = await waitForSelector(testEnv.session, 'h1', 15000);
+    const h1Element = await waitForSelector('h1', { timeout: 15000 });
     
     // Take screenshot of the NPM page
-    await takeElementScreenshot(testEnv.session, 'body', './npm-page-screenshot.png');
+    await takeElementScreenshot('body', './npm-page-screenshot.png');
     console.log('📸 NPM page screenshot saved');
     
     console.log('✅ Successfully navigated to NPM package page');
@@ -643,17 +643,17 @@ describe('${projectName} NPM Website Tests', () => {
     
     try {
       // Get package name
-      const h1Element = await waitForSelector(testEnv.session, 'h1', 5000);
-      const title = await getText(testEnv.session, h1Element);
+      const h1Element = await waitForSelector('h1', { timeout: 5000 });
+      const title = await getText(h1Element);
       console.log('📦 Package title:', title);
       
       // Verify it contains our package name
       assertContainsText(title, 'Super Pancake', 'Page should show Super Pancake package');
       
       // Look for version information
-      const versionElement = await waitForSelector(testEnv.session, '[data-testid="version-number"]', 5000);
+      const versionElement = await waitForSelector('[data-testid="version-number"]', { timeout: 5000 });
       if (versionElement) {
-        const version = await getText(testEnv.session, versionElement);
+        const version = await getText(versionElement);
         console.log('📋 Current version:', version);
       }
       
@@ -667,7 +667,7 @@ describe('${projectName} NPM Website Tests', () => {
     console.log('📊 Checking package statistics...');
     
     // Simple screenshot-based check for package page content
-    await takeElementScreenshot(testEnv.session, 'body', './package-stats-screenshot.png');
+    await takeElementScreenshot('body', './package-stats-screenshot.png');
     console.log('📸 Package statistics screenshot saved');
     console.log('✅ Package statistics check completed');
   }, 10000);
@@ -676,7 +676,7 @@ describe('${projectName} NPM Website Tests', () => {
     console.log('📖 Checking README content...');
     
     // Simple screenshot-based check for README section
-    await takeElementScreenshot(testEnv.session, 'body', './readme-screenshot.png');
+    await takeElementScreenshot('body', './readme-screenshot.png');
     console.log('📸 README section screenshot saved');
     console.log('✅ README verification completed');
   }, 10000);
@@ -685,7 +685,7 @@ describe('${projectName} NPM Website Tests', () => {
     console.log('💻 Checking install command...');
     
     // Take screenshot of install section
-    await takeElementScreenshot(testEnv.session, 'body', './npm-install-section.png');
+    await takeElementScreenshot('body', './npm-install-section.png');
     
     console.log('📸 Install section screenshot saved');
     console.log('✅ Install command section verified');
@@ -695,7 +695,7 @@ describe('${projectName} NPM Website Tests', () => {
     console.log('🔗 Testing GitHub repository link...');
     
     // Take screenshot showing the full page with any GitHub links
-    await takeElementScreenshot(testEnv.session, 'body', './github-links-screenshot.png');
+    await takeElementScreenshot('body', './github-links-screenshot.png');
     console.log('📸 GitHub links screenshot saved');
     console.log('✅ GitHub repository link test completed');
   });
@@ -877,8 +877,8 @@ describe('${projectName} API Tests', () => {
     assertBodyContains(response, 'email', 'Sincere@april.biz');
     
     // Test nested object access
-    assertJsonPath(response.data, 'address.city', 'Gwenborough');
-    assertJsonPath(response.data, 'company.name', 'Romaguera-Crona');
+    await assertJsonPath(response.data, 'address.city', 'Gwenborough');
+    await assertJsonPath(response.data, 'company.name', 'Romaguera-Crona');
     
     console.log('✅ Response logging test passed');
   });

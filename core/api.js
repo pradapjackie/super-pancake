@@ -175,13 +175,20 @@ export function logResponse(response) {
   }, null, 2));
 }
 
-// JSONPath assertion
-export function assertJsonPath(responseBody, path, expectedValue) {
-  const jp = require('jsonpath');
-  const actual = jp.query(responseBody, path);
-  if (!actual.includes(expectedValue)) {
-    throw new Error(`❌ JSONPath ${path} did not contain '${expectedValue}'. Got: ${JSON.stringify(actual)}`);
+// JSONPath assertion  
+export async function assertJsonPath(responseBody, path, expectedValue) {
+  try {
+    const { createRequire } = await import('module');
+    const require = createRequire(import.meta.url);
+    const jp = require('jsonpath');
+    const actual = jp.query(responseBody, path);
+    if (!actual.includes(expectedValue)) {
+      throw new Error(`❌ JSONPath ${path} did not contain '${expectedValue}'. Got: ${JSON.stringify(actual)}`);
+    }
+  } catch (error) {
+    throw new Error('❌ jsonpath package not found. Install with: npm install jsonpath');
   }
+}
 }
 
 // Assert rate limit headers
