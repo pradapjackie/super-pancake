@@ -5,20 +5,25 @@
 
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const packageRoot = path.resolve(__dirname, '../..');
 
 export function generateSelfContainedTemplate(summary, results) {
-  // Read and embed all CSS and JavaScript files
-  const cssContent = fs.readFileSync(path.join(process.cwd(), 'reporter/styles/reportStyles.css'), 'utf8');
-  const dataProcessingJs = fs.readFileSync(path.join(process.cwd(), 'reporter/utils/dataProcessing.js'), 'utf8');
-  const tabNavigationJs = fs.readFileSync(path.join(process.cwd(), 'reporter/utils/tabNavigation.js'), 'utf8');
-  const filterUtilsJs = fs.readFileSync(path.join(process.cwd(), 'reporter/utils/filterUtils.js'), 'utf8');
-  const chartUtilsJs = fs.readFileSync(path.join(process.cwd(), 'reporter/charts/chartUtils.js'), 'utf8');
-  const overviewTabJs = fs.readFileSync(path.join(process.cwd(), 'reporter/templates/overviewTab.js'), 'utf8');
-  const performanceTabJs = fs.readFileSync(path.join(process.cwd(), 'reporter/templates/performanceTab.js'), 'utf8');
-  const flakyTabJs = fs.readFileSync(path.join(process.cwd(), 'reporter/templates/flakyTab.js'), 'utf8');
-  const coverageTabJs = fs.readFileSync(path.join(process.cwd(), 'reporter/templates/coverageTab.js'), 'utf8');
-  const memoryTabJs = fs.readFileSync(path.join(process.cwd(), 'reporter/templates/memoryTab.js'), 'utf8');
-  const parallelTabJs = fs.readFileSync(path.join(process.cwd(), 'reporter/templates/parallelTab.js'), 'utf8');
+  // Read and embed all CSS and JavaScript files from package directory
+  const cssContent = fs.readFileSync(path.join(packageRoot, 'reporter/styles/reportStyles.css'), 'utf8');
+  const dataProcessingJs = fs.readFileSync(path.join(packageRoot, 'reporter/utils/dataProcessing.js'), 'utf8');
+  const tabNavigationJs = fs.readFileSync(path.join(packageRoot, 'reporter/utils/tabNavigation.js'), 'utf8');
+  const filterUtilsJs = fs.readFileSync(path.join(packageRoot, 'reporter/utils/filterUtils.js'), 'utf8');
+  const chartUtilsJs = fs.readFileSync(path.join(packageRoot, 'reporter/charts/chartUtils.js'), 'utf8');
+  const overviewTabJs = fs.readFileSync(path.join(packageRoot, 'reporter/templates/overviewTab.js'), 'utf8');
+  const performanceTabJs = fs.readFileSync(path.join(packageRoot, 'reporter/templates/performanceTab.js'), 'utf8');
+  const flakyTabJs = fs.readFileSync(path.join(packageRoot, 'reporter/templates/flakyTab.js'), 'utf8');
+  const coverageTabJs = fs.readFileSync(path.join(packageRoot, 'reporter/templates/coverageTab.js'), 'utf8');
+  const memoryTabJs = fs.readFileSync(path.join(packageRoot, 'reporter/templates/memoryTab.js'), 'utf8');
+  const parallelTabJs = fs.readFileSync(path.join(packageRoot, 'reporter/templates/parallelTab.js'), 'utf8');
   
   // Read and embed test data JSON
   let testDataJson = '[]';
