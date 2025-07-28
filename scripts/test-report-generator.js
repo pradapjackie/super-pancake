@@ -66,12 +66,15 @@ async function generateTestReport(jsonFilePath, outputPath = 'test-report.html')
         
         // Optionally open the report
         if (process.argv.includes('--open')) {
-            const { exec } = await import('child_process');
-            exec(`open ${outputPath}`, (error) => {
-                if (error) {
-                    console.log('💡 Manually open:', outputPath);
-                }
-            });
+            try {
+                const openModule = await import('open');
+                const open = openModule.default;
+                await open(outputPath);
+                console.log('🌐 Report opened in browser');
+            } catch (error) {
+                console.log('💡 Manually open:', outputPath);
+                console.error('Failed to auto-open report:', error.message);
+            }
         }
         
     } catch (error) {
