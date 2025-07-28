@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
-import { writeFileSync, mkdirSync, existsSync } from 'fs';
-import { join, resolve } from 'path';
+import { writeFileSync, mkdirSync, existsSync, copyFileSync } from 'fs';
+import path, { join, resolve } from 'path';
 import { createInterface } from 'readline';
 import { spawn } from 'child_process';
 import { createRequire } from 'module';
@@ -198,6 +198,10 @@ const selectedScreenshot = screenshotConfig[preferences.screenshots];
 const selectedReport = reportConfig[preferences.reports];
 
 const configContent = `export default {
+  // Project configuration
+  projectName: '${projectName}',
+  headless: ${preferences.headless},
+  
   // Browser configuration
   browser: {
     headless: process.env.HEADED !== 'true',
@@ -893,8 +897,31 @@ describe('${projectName} API Tests', () => {
   writeFileSync(join(projectPath, 'tests', 'api.test.js'), apiTestContent);
 }
 
-// Generate sample tests
-generateSampleTests(projectName, preferences);
+// Copy test files from templates
+function copyTestFiles(projectName, preferences) {
+  console.log('📋 Copying test template files...');
+  
+  const templateDir = path.join(path.dirname(__dirname), 'templates', 'tests');
+  
+  // Copy test files
+  const testFiles = ['api.test.js', 'sample.test.js', 'ui-website.test.js'];
+  
+  testFiles.forEach(testFile => {
+    const sourcePath = path.join(templateDir, testFile);
+    const targetPath = path.join(projectPath, 'tests', testFile);
+    
+    try {
+      copyFileSync(sourcePath, targetPath);
+      console.log(`✅ Copied ${testFile}`);
+    } catch (error) {
+      console.error(`❌ Failed to copy ${testFile}:`, error.message);
+      // Fallback: create empty test file
+      writeFileSync(targetPath, `// Test file ${testFile} - Add your tests here\n`);
+    }
+  });
+}
+
+copyTestFiles(projectName, preferences);
 
 // Create README
 const readmeContent = `# ${projectName}

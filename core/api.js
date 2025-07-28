@@ -175,20 +175,33 @@ export function logResponse(response) {
   }, null, 2));
 }
 
-// JSONPath assertion  
+// JSONPath assertion (simplified implementation)
 export async function assertJsonPath(responseBody, path, expectedValue) {
   try {
-    const { createRequire } = await import('module');
-    const require = createRequire(import.meta.url);
-    const jp = require('jsonpath');
-    const actual = jp.query(responseBody, path);
-    if (!actual.includes(expectedValue)) {
-      throw new Error(`❌ JSONPath ${path} did not contain '${expectedValue}'. Got: ${JSON.stringify(actual)}`);
+    // Simple path traversal for basic JSONPath expressions like $.address.city
+    let actual = responseBody;
+    
+    // Remove leading $ and split by dots
+    const pathParts = path.replace(/^\$\.?/, '').split('.');
+    
+    // Traverse the object
+    for (const part of pathParts) {
+      if (actual && typeof actual === 'object' && part in actual) {
+        actual = actual[part];
+      } else {
+        throw new Error(`❌ JSONPath ${path} not found in response`);
+      }
     }
+    
+    // Check if the value matches
+    if (actual !== expectedValue) {
+      throw new Error(`❌ JSONPath ${path} expected '${expectedValue}' but got '${actual}'`);
+    }
+    
+    console.log(`✅ JSONPath ${path} assertion passed: ${actual}`);
   } catch (error) {
-    throw new Error('❌ jsonpath package not found. Install with: npm install jsonpath');
+    throw new Error(`❌ JSONPath assertion failed: ${error.message}`);
   }
-}
 }
 
 // Assert rate limit headers

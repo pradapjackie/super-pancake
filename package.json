@@ -120,6 +120,7 @@
     "helpers/",
     "public/",
     "types/",
+    "templates/",
     "config.js",
     "index.js",
     "index.d.ts",
