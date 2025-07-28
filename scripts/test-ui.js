@@ -837,10 +837,26 @@ async function executeTests(selected, headless = false) {
           continue;
         }
 
-        // Use Vitest's aggregate numbers directly - they're correct!
+        // Count actual test results, filtering out unselected tests
         const filePassed = result.numPassedTests || 0;
-        const fileFailed = result.numFailedTests || 0; 
-        const fileSkipped = result.numPendingTests || 0; // numPendingTests = skipped
+        const fileFailed = result.numFailedTests || 0;
+        
+        // Count only explicitly skipped tests (with it.skip()), not unselected tests
+        let fileSkipped = 0;
+        if (result.testResults && Array.isArray(result.testResults)) {
+          result.testResults.forEach(testFile => {
+            if (testFile.assertionResults && Array.isArray(testFile.assertionResults)) {
+              testFile.assertionResults.forEach(test => {
+                // Only count as skipped if it has actual duration (explicitly skipped with it.skip())
+                const hasActualDuration = test.duration !== undefined && test.duration > 0;
+                const isExplicitlySkipped = test.status === 'skipped' && hasActualDuration;
+                if (isExplicitlySkipped) {
+                  fileSkipped++;
+                }
+              });
+            }
+          });
+        }
         
         // Add to global totals
         passed += filePassed;

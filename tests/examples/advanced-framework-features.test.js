@@ -116,7 +116,7 @@ describe('Advanced Framework Features', () => {
     assertEqual(countryValue, 'ca', 'Country should be set to Canada');
     
     // Take screenshot of completed form
-    await takeElementScreenshot('#basic-form', 'bulk-filled-form.png');
+    await takeElementScreenshot('#basic-form', 'screenshots/bulk-filled-form.png');
     
     console.log('✅ Bulk form filling test completed');
   }, 60000);
@@ -203,7 +203,7 @@ describe('Advanced Framework Features', () => {
     await type('input[name="hidden-input"]', 'Hidden input revealed');
     
     // Take screenshot of embedded content
-    await takeElementScreenshot('section:has(#example-iframe)', 'embedded-content.png');
+    await takeElementScreenshot('section:has(#example-iframe)', 'screenshots/embedded-content.png');
     
     console.log('✅ Iframe and embedded content test completed');
   }, 45000);

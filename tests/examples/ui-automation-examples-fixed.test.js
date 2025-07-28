@@ -146,7 +146,7 @@ describe('UI Automation Examples', () => {
     assertTrue(programmingChecked, 'Programming checkbox should be checked');
     
     // Take screenshot of filled form
-    await takeElementScreenshot('#basic-form', 'ui-comprehensive-form.png');
+    await takeElementScreenshot('#basic-form', 'screenshots/ui-comprehensive-form.png');
     
     console.log('✅ Comprehensive form interaction test completed');
   }, 60000);

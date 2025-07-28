@@ -352,6 +352,11 @@ function updateSelectedCount() {
     } else {
         selectedStat.classList.remove('has-selection');
     }
+
+    // Update the global select all button appearance
+    if (typeof updateSelectAllButton === 'function') {
+        updateSelectAllButton();
+    }
 }
 
 function setButtonsLoading(loading) {

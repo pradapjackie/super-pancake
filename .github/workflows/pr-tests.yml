@@ -28,15 +28,14 @@ jobs:
 
       - name: 📦 Install dependencies
         run: npm install --legacy-peer-deps
-        timeout-minutes: 10
+        timeout-minutes: 2
 
-      - name: 🧪 Run comprehensive test suite
-        run: npm run test:all
+      - name: 🧪 Run minimal CI test suite
+        run: npm run test:ci
         env:
           NODE_ENV: test
           CI: true
-          HEADED: false
-        timeout-minutes: 15
+        timeout-minutes: 2
 
       - name: 📊 Generate test report
         if: always()

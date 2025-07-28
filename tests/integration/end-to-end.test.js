@@ -75,7 +75,7 @@ describe('Web Automation Integration Tests', () => {
     assertExists(nameInput, 'Customer name input should exist');
     
     // Take screenshot of empty form
-    await takeElementScreenshot('form', 'integration-test-empty-form.png');
+    await takeElementScreenshot('form', 'screenshots/integration-test-empty-form.png');
     console.log('📸 Empty form screenshot captured');
     
     console.log('🎉 Form interaction test completed successfully!');

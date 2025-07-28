@@ -73,11 +73,22 @@ export const enableDOM = withErrorRecovery(async (sessionParam = null) => {
 }, 'enableDOM');
 
 export const navigateTo = withErrorRecovery(async (url, options = {}) => {
+  // Validate URL parameter
+  if (!url || typeof url !== 'string' || url.trim() === '') {
+    throw new Error('Invalid URL: url must be a non-empty string');
+  }
+  
+  const trimmedUrl = url.trim();
+  // Basic URL validation
+  if (!trimmedUrl.startsWith('http://') && !trimmedUrl.startsWith('https://') && !trimmedUrl.startsWith('file://') && !trimmedUrl.startsWith('data:')) {
+    throw new Error(`Invalid URL format: ${trimmedUrl}. URL must start with http://, https://, file://, or data:`);
+  }
+  
   const opts = getOptions(options, defaultTimeouts.navigation);
   const session = opts.session || getSession();
-  console.log(`🌐 Navigating to: ${url} (timeout: ${opts.timeout}ms)`);
+  console.log(`🌐 Navigating to: ${trimmedUrl} (timeout: ${opts.timeout}ms)`);
 
-  await session.send('Page.navigate', { url });
+  await session.send('Page.navigate', { url: trimmedUrl });
 
   // Wait for load event
   await new Promise((resolve, reject) => {
@@ -134,6 +145,11 @@ export const navigateTo = withErrorRecovery(async (url, options = {}) => {
 }, 'navigateTo');
 
 export const querySelector = withErrorRecovery(async (selector, options = {}) => {
+  // Validate selector parameter
+  if (!selector || typeof selector !== 'string' || selector.trim() === '') {
+    throw new Error('Invalid selector: selector must be a non-empty string');
+  }
+  
   const opts = getOptions(options);
   const session = opts.session || getSession();
   console.log(`🔍 Finding element: ${selector} (timeout: ${opts.timeout}ms)`);
@@ -141,7 +157,7 @@ export const querySelector = withErrorRecovery(async (selector, options = {}) =>
   const { root } = await session.send('DOM.getDocument');
   const { nodeId } = await session.send('DOM.querySelector', {
     nodeId: root.nodeId,
-    selector
+    selector: selector.trim()
   });
 
   if (!nodeId) {
@@ -2001,6 +2017,11 @@ export const goForward = withErrorRecovery(async (options = {}) => {
 
 // Select multiple elements using querySelectorAll
 export const querySelectorAll = withErrorRecovery(async (selector, options = {}) => {
+  // Validate selector parameter
+  if (!selector || typeof selector !== 'string' || selector.trim() === '') {
+    throw new Error('Invalid selector: selector must be a non-empty string');
+  }
+  
   const opts = getOptions(options);
   const session = opts.session || getSession();
   
@@ -2008,7 +2029,7 @@ export const querySelectorAll = withErrorRecovery(async (selector, options = {})
   
   try {
     const { root: { nodeId } } = await session.send('DOM.getDocument');
-    const { nodeIds } = await session.send('DOM.querySelectorAll', { nodeId, selector });
+    const { nodeIds } = await session.send('DOM.querySelectorAll', { nodeId, selector: selector.trim() });
     
     console.log(`✅ Found ${nodeIds.length} elements matching: ${selector}`);
     return nodeIds || [];
