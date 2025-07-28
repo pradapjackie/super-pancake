@@ -323,4 +323,13 @@ describe('UI Runner Tests', () => {
     expect(rootContent).toContain('Super Pancake Test Runner');
     expect(directContent).toContain('Comprehensive UI Testing Playground');
   });
+
+  it('345should contain all basic form input types', async () => {
+    const response = await fetch(`http://localhost:${testPort}/form-comprehensive.html`);
+    const content = await response.text();
+
+    // Test all basic input types exist
+    expect(content).toContain('type="213123213"');
+
+  });
 });

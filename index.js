@@ -12,6 +12,14 @@ export * from './core/browserEvents.js';
 // Optional exports (add only if public API)
 export * from './utils/launcher.js';
 export * from './reporter/htmlReporter.js';
+
+// Modern HTML Reporter
+export { 
+  initializeModernReport, 
+  addModernTestResult, 
+  generateModernReport,
+  writeReport as writeModernReport 
+} from './reporter/modern-html-reporter.js';
 export * from './helpers/testWrapper.js';
 
 export * from './config.js';

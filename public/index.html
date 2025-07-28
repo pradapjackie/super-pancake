@@ -681,6 +681,45 @@
             box-shadow: var(--shadow);
         }
 
+        .select-all-button {
+            padding: 8px 16px;
+            background: var(--success-color);
+            border: 1px solid var(--success-color);
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            color: white;
+            cursor: pointer;
+            transition: var(--transition);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-right: 8px;
+        }
+
+        .select-all-button:hover {
+            background: var(--success-light);
+            border-color: var(--success-light);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow);
+        }
+
+        .select-all-button.deselect-mode {
+            background: var(--warning-color);
+            border-color: var(--warning-color);
+        }
+
+        .select-all-button.deselect-mode:hover {
+            background: var(--warning-light);
+            border-color: var(--warning-light);
+        }
+
+        .select-all-button i {
+            font-size: 10px;
+        }
+
         .test-files {
             flex: 1;
             overflow-y: auto;
@@ -1289,6 +1328,10 @@
                     </button>
                 </div>
                 <div class="filter-tabs">
+                    <button class="select-all-button" id="global-select-all" onclick="toggleAllTests()" title="Select/Deselect all tests">
+                        <i class="fas fa-check-double"></i>
+                        <span>Select All</span>
+                    </button>
                     <button class="filter-tab active" data-filter="all">All</button>
                     <button class="filter-tab" data-filter="unit">Unit</button>
                     <button class="filter-tab" data-filter="integration">Integration</button>
@@ -1497,8 +1540,26 @@
             });
         }
 
+        // Function to open the test report
         function openTestReport() {
-            window.open('/automationTestReport.html', '_blank');
+            try {
+                // Try to open the report in a new tab
+                const reportUrl = '/automationTestReport.html';
+                const newWindow = window.open(reportUrl, '_blank');
+                
+                if (newWindow) {
+                    logMessage('📊 Opening test report in new tab...', 'success');
+                } else {
+                    // If popup blocked, try to navigate
+                    logMessage('⚠️ Popup blocked. Trying to navigate to report...', 'warning');
+                    setTimeout(() => {
+                        window.location.href = reportUrl;
+                    }, 1000);
+                }
+            } catch (error) {
+                logMessage('❌ Failed to open test report: ' + error.message, 'error');
+                console.error('Error opening test report:', error);
+            }
         }
 
         // Test file management
@@ -1515,6 +1576,11 @@
                 for (const file of testFiles) {
                     await createTestFileElement(file, container);
                 }
+                
+                // Update the select all button after files are loaded
+                setTimeout(() => {
+                    updateSelectAllButton();
+                }, 100);
                 
                 logMessage(`📁 Loaded ${testFiles.length} test files successfully`, 'success');
             } catch (error) {
@@ -1888,6 +1954,71 @@
         function clearSearch() {
             document.getElementById('search-input').value = '';
             filterTestFiles();
+        }
+
+        // Global select all functionality
+        function toggleAllTests() {
+            const button = document.getElementById('global-select-all');
+            const allTestCheckboxes = document.querySelectorAll('.test-case-checkbox');
+            const allFileCheckboxes = document.querySelectorAll('.file-select-all-checkbox');
+            
+            // Determine if we should select all or deselect all
+            const checkedTestBoxes = document.querySelectorAll('.test-case-checkbox:checked');
+            const shouldSelectAll = checkedTestBoxes.length === 0 || checkedTestBoxes.length < allTestCheckboxes.length;
+            
+            // Update all test checkboxes
+            allTestCheckboxes.forEach(checkbox => {
+                const wasChecked = checkbox.checked;
+                checkbox.checked = shouldSelectAll;
+                
+                // Trigger change event to update selectedTests set and visual state
+                if (wasChecked !== shouldSelectAll) {
+                    const event = new Event('change', { bubbles: true });
+                    checkbox.dispatchEvent(event);
+                }
+            });
+            
+            // Update all file checkboxes to match
+            allFileCheckboxes.forEach(fileCheckbox => {
+                fileCheckbox.checked = shouldSelectAll;
+                fileCheckbox.indeterminate = false;
+            });
+            
+            // Update button appearance and text
+            updateSelectAllButton();
+            
+            // Log the action
+            const action = shouldSelectAll ? 'selected' : 'deselected';
+            const count = allTestCheckboxes.length;
+            logMessage(`🔘 ${action} all ${count} tests`, shouldSelectAll ? 'success' : 'info');
+        }
+
+        // Update the select all button appearance based on current selection state
+        function updateSelectAllButton() {
+            const button = document.getElementById('global-select-all');
+            const allTestCheckboxes = document.querySelectorAll('.test-case-checkbox');
+            const checkedTestBoxes = document.querySelectorAll('.test-case-checkbox:checked');
+            
+            if (!button || allTestCheckboxes.length === 0) return;
+            
+            const isAllSelected = checkedTestBoxes.length === allTestCheckboxes.length;
+            const isNoneSelected = checkedTestBoxes.length === 0;
+            const icon = button.querySelector('i');
+            const text = button.querySelector('span');
+            
+            if (isAllSelected) {
+                // All selected - show deselect mode
+                button.classList.add('deselect-mode');
+                icon.className = 'fas fa-minus-circle';
+                text.textContent = 'Deselect All';
+                button.title = 'Deselect all tests';
+            } else {
+                // Some or none selected - show select mode
+                button.classList.remove('deselect-mode');
+                icon.className = 'fas fa-check-double';
+                text.textContent = 'Select All';
+                button.title = 'Select all tests';
+            }
         }
         
         // Headless mode toggle functionality
