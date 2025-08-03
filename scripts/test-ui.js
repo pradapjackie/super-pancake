@@ -4,7 +4,7 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import fs from 'fs';
 import http from 'http';
-import { WebSocketServer } from 'ws';
+import WebSocket, { WebSocketServer } from 'ws';
 import { createRequire } from 'module';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -371,22 +371,32 @@ app.get('/automationTestReport.html', (req, res) => {
   }
 });
 
+// API endpoint to get live server configuration
+app.get('/api/config', (req, res) => {
+  res.json({
+    wsPort: liveWss ? liveWss.options.port : null,
+    httpPort: defaultPort,
+    liveEnabled: liveWss ? true : false
+  });
+});
+
 // Test execution route with enhanced error handling
 app.post('/run', express.json(), async (req, res) => {
   try {
     const selected = req.body.tests || [];
     const headless = req.body.headless || false;
+    const browser = req.body.browser || 'chrome';
     if (selected.length === 0) {
       res.status(400).json({ error: 'No tests selected' });
       return;
     }
 
-    res.status(200).json({ message: 'Test execution started', count: selected.length, headless });
+    res.status(200).json({ message: 'Test execution started', count: selected.length, headless, browser });
 
     // Execute tests in background to prevent blocking
     setImmediate(async () => {
       try {
-        await executeTests(selected, headless);
+        await executeTests(selected, headless, browser);
       } catch (error) {
         console.error('❌ Test execution error:', error);
         broadcast(`❌ Test execution failed: ${error.message}\n`);
@@ -424,13 +434,14 @@ app.post('/stop', express.json(), async (req, res) => {
   }
 });
 
-async function executeTests(selected, headless = false) {
+async function executeTests(selected, headless = false, browser = 'chrome') {
   try {
     // Reset execution state for new run
     executionCompleted = false;
     
     const modeText = headless ? 'headless' : 'headed';
-    broadcast(`🚀 Starting test execution of ${selected.length} tests in ${modeText} mode...\n`);
+    const browserName = browser === 'chrome' ? 'Chrome' : 'Firefox';
+    broadcast(`🚀 Starting test execution of ${selected.length} tests in ${browserName} ${modeText} mode...\n`);
 
     // Limit concurrent tests to prevent system overload
     if (selected.length > 20) {
@@ -526,7 +537,8 @@ async function executeTests(selected, headless = false) {
             env: {
               ...process.env,
               NODE_OPTIONS: '--max-old-space-size=512', // Limit memory to 512MB
-              SUPER_PANCAKE_HEADLESS: headless.toString() // Pass headless mode to tests
+              SUPER_PANCAKE_HEADLESS: headless.toString(), // Pass headless mode to tests
+              SUPER_PANCAKE_BROWSER: browser // Pass browser type to tests
             }
           });
 
@@ -937,50 +949,70 @@ async function executeTests(selected, headless = false) {
 
 // Create HTTP + WebSocket server
 const server = http.createServer(app);
-const wss = new WebSocketServer({ server });
+let wss;
+
+try {
+  wss = new WebSocketServer({ 
+    server,
+    perMessageDeflate: false,
+    clientTracking: true,
+    WebSocket: WebSocket
+  });
+} catch (wsError) {
+  console.error('❌ Failed to create main WebSocket server:', wsError);
+  console.log('📋 Continuing without WebSocket support...');
+}
+
+// Create separate live monitoring WebSocket server on different port
+let liveServer = null;
+let liveWss = null;
 
 // Memory leak prevention
 const connectedClients = new Set();
 
-wss.on('connection', (ws, req) => {
-  try {
-    connectedClients.add(ws);
-    console.log(`🔌 New WebSocket connection from ${req.socket.remoteAddress}`);
-
-    ws.on('close', () => {
-      try {
-        connectedClients.delete(ws);
-        console.log(`📤 WebSocket connection closed. Active connections: ${connectedClients.size}`);
-      } catch (error) {
-        console.error('Error handling WebSocket close:', error);
-      }
-    });
-
-    ws.on('error', (error) => {
-      try {
-        console.error('🚨 WebSocket error:', error);
-        connectedClients.delete(ws);
-      } catch (err) {
-        console.error('Error handling WebSocket error:', err);
-      }
-    });
-
-    // Send welcome message safely
+if (wss) {
+  wss.on('connection', (ws, req) => {
     try {
-      ws.send('🔌 Connected to Super Pancake Test Runner');
+      connectedClients.add(ws);
+      console.log(`🔌 New WebSocket connection from ${req.socket.remoteAddress}`);
+
+      ws.on('close', () => {
+        try {
+          connectedClients.delete(ws);
+          console.log(`📤 WebSocket connection closed. Active connections: ${connectedClients.size}`);
+        } catch (error) {
+          console.error('Error handling WebSocket close:', error);
+        }
+      });
+
+      ws.on('error', (error) => {
+        try {
+          console.error('🚨 WebSocket error:', error);
+          connectedClients.delete(ws);
+        } catch (err) {
+          console.error('Error handling WebSocket error:', err);
+        }
+      });
+
+      // Send welcome message safely
+      try {
+        ws.send('🔌 Connected to Super Pancake Test Runner');
+      } catch (error) {
+        console.error('Error sending welcome message:', error);
+        connectedClients.delete(ws);
+      }
     } catch (error) {
-      console.error('Error sending welcome message:', error);
-      connectedClients.delete(ws);
+      console.error('Error setting up WebSocket connection:', error);
     }
-  } catch (error) {
-    console.error('Error setting up WebSocket connection:', error);
-  }
-});
+  });
+}
 
 // Add error handling for the WebSocket server itself
-wss.on('error', (error) => {
-  console.error('🚨 WebSocket server error:', error);
-});
+if (wss) {
+  wss.on('error', (error) => {
+    console.error('🚨 WebSocket server error:', error);
+  });
+}
 
 function broadcast(message) {
   // Stop broadcasting if execution is completed (except for specific completion messages)
@@ -1049,6 +1081,15 @@ process.on('SIGINT', () => {
       }
     });
     connectedClients.clear();
+    
+    // Close live server if running
+    if (liveServer) {
+      liveServer.close();
+    }
+    if (liveWss) {
+      liveWss.close();
+    }
+    
     server.close(() => {
       process.exit(0);
     });
@@ -1058,14 +1099,205 @@ process.on('SIGINT', () => {
   }
 });
 
+// Setup live monitoring WebSocket server
+async function setupLiveServer(mainPort) {
+  try {
+    const livePort = await ensurePortAvailable(mainPort + 1, false);
+    
+    // Create a minimal HTTP server for live WebSocket
+    liveServer = http.createServer();
+    
+    // Add error handling for WebSocket server creation
+    try {
+      liveWss = new WebSocketServer({ 
+        server: liveServer,
+        perMessageDeflate: false,
+        clientTracking: true,
+        WebSocket: WebSocket
+      });
+    } catch (wsError) {
+      console.error('❌ Failed to create live WebSocket server:', wsError);
+      return null;
+    }
+    
+    const liveClients = new Set();
+    let liveTestState = {
+      status: 'idle',
+      currentTest: null,
+      progress: 0,
+      totalTests: 0,
+      results: []
+    };
+    
+    liveWss.on('connection', (ws) => {
+      console.log('🔴 Live monitoring client connected');
+      liveClients.add(ws);
+      
+      // Send current state to new client
+      ws.send(JSON.stringify({
+        type: 'state_update',
+        data: liveTestState
+      }));
+      
+      ws.on('message', (message) => {
+        try {
+          const data = JSON.parse(message);
+          handleLiveMessage(data, ws, liveTestState, liveClients);
+        } catch (error) {
+          console.error('❌ Invalid live WebSocket message:', error);
+        }
+      });
+      
+      ws.on('close', () => {
+        console.log('🔴 Live monitoring client disconnected');
+        liveClients.delete(ws);
+      });
+      
+      ws.on('error', (error) => {
+        console.error('🔴 Live WebSocket error:', error);
+        liveClients.delete(ws);
+      });
+    });
+    
+    liveServer.listen(livePort, () => {
+      console.log(`🔴 Live monitoring WebSocket server running on port ${livePort}`);
+    });
+    
+    // Store reference for config API
+    liveWss.options = { port: livePort };
+    
+    return livePort;
+  } catch (error) {
+    console.error('❌ Failed to setup live monitoring server:', error);
+    return null;
+  }
+}
+
+// Handle live monitoring messages
+function handleLiveMessage(data, ws, liveTestState, liveClients) {
+  switch (data.type) {
+    case 'run_tests':
+      // Forward to main test execution with live monitoring
+      if (data.testFiles && data.testFiles.length > 0) {
+        liveTestState.status = 'running';
+        liveTestState.startTime = new Date().toISOString();
+        liveTestState.totalTests = data.testFiles.length;
+        
+        // Broadcast state update
+        broadcastToLiveClients(liveClients, {
+          type: 'test_started',
+          data: liveTestState
+        });
+        
+        // Start test execution (this will use existing executeTests function)
+        setImmediate(async () => {
+          try {
+            await executeTestsWithLiveUpdates(data.testFiles, false, 'chrome', liveClients, liveTestState);
+          } catch (error) {
+            console.error('❌ Live test execution error:', error);
+            broadcastToLiveClients(liveClients, {
+              type: 'test_error',
+              data: { ...liveTestState, error: error.message }
+            });
+          }
+        });
+      }
+      break;
+      
+    case 'stop_tests':
+      liveTestState.status = 'stopped';
+      broadcastToLiveClients(liveClients, {
+        type: 'test_stopped',
+        data: liveTestState
+      });
+      break;
+      
+    case 'get_state':
+      ws.send(JSON.stringify({
+        type: 'state_update',
+        data: liveTestState
+      }));
+      break;
+  }
+}
+
+// Broadcast to live monitoring clients
+function broadcastToLiveClients(clients, message) {
+  const messageStr = JSON.stringify(message);
+  clients.forEach(client => {
+    if (client.readyState === 1) { // WebSocket.OPEN
+      try {
+        client.send(messageStr);
+      } catch (error) {
+        console.error('Error sending to live client:', error);
+        clients.delete(client);
+      }
+    }
+  });
+}
+
+// Enhanced executeTests with live monitoring support
+async function executeTestsWithLiveUpdates(selected, headless = false, browser = 'chrome', liveClients, liveTestState) {
+  // Use existing executeTests function but add live updates
+  const originalBroadcast = global.broadcast || broadcast;
+  
+  // Override broadcast to also send to live clients
+  global.broadcast = (message) => {
+    originalBroadcast(message);
+    
+    if (liveClients && liveClients.size > 0) {
+      broadcastToLiveClients(liveClients, {
+        type: 'console_output',
+        data: {
+          output: message,
+          timestamp: new Date().toISOString(),
+          type: 'stdout'
+        }
+      });
+    }
+  };
+  
+  try {
+    await executeTests(selected, headless, browser);
+    
+    // Update final state
+    liveTestState.status = 'completed';
+    liveTestState.endTime = new Date().toISOString();
+    
+    broadcastToLiveClients(liveClients, {
+      type: 'test_completed',
+      data: { ...liveTestState, exitCode: 0 }
+    });
+    
+  } catch (error) {
+    liveTestState.status = 'error';
+    liveTestState.error = error.message;
+    
+    broadcastToLiveClients(liveClients, {
+      type: 'test_completed',
+      data: { ...liveTestState, exitCode: 1 }
+    });
+  } finally {
+    // Restore original broadcast
+    global.broadcast = originalBroadcast;
+  }
+}
+
 // Start server with automatic port finding
 async function startServer() {
   const port = await ensurePortAvailable(defaultPort, true);
 
-  server.listen(port, () => {
+  server.listen(port, async () => {
     const url = `http://localhost:${port}`;
     console.log(`🚀 Test UI running at ${url}`);
     console.log('🔌 WebSocket server running on the same port');
+    
+    // Setup live monitoring server
+    const livePort = await setupLiveServer(port);
+    if (livePort) {
+      console.log(`🔴 Live monitoring available on WebSocket port ${livePort}`);
+    }
+    
     console.log('📱 Opening browser...');
 
     // Only open browser if not in test environment
@@ -1080,7 +1312,9 @@ async function startServer() {
       console.log(`⚠️ Port ${port} is busy, trying next available port...`);
       // Reset server and WebSocket before retry
       server.removeAllListeners();
-      wss.close();
+      if (wss) {
+        wss.close();
+      }
       startServer(); // Recursively try next port
     } else {
       console.error('❌ Server error:', error);

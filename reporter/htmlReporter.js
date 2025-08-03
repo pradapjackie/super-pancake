@@ -158,8 +158,8 @@ export function writeReport() {
     fs.writeFileSync(dataPath, JSON.stringify(sanitizedResults, null, 2));
     console.log(`📊 Test data written to: ${dataPath}`);
     
-    // Generate HTML using new modular system
-    const htmlContent = generateModularHTML(testSummary);
+    // Generate HTML using new modular system with deduplicated results
+    const htmlContent = generateModularHTML(testSummary, sanitizedResults);
     
     // Write the report
     fs.writeFileSync(reportPath, htmlContent);
@@ -172,19 +172,97 @@ export function writeReport() {
   }
 }
 
-function generateModularHTML(testSummary) {
-  // Map field names to match what the template expects
-  const mappedSummary = {
-    totalTests: testSummary.total,
-    passedTests: testSummary.passed,
-    failedTests: testSummary.failed,
-    skippedTests: testSummary.skipped,
-    totalDuration: testSummary.totalDuration,
-    successRate: testSummary.total > 0 ? Math.round((testSummary.passed / testSummary.total) * 100) : 0
-  };
+// Deduplicate tests using the same logic as the test-report-generator
+function deduplicateTestResults(tests) {
+  const testsByFileAndName = {};
   
-  // Use the new self-contained template to avoid MIME type issues
-  return generateSelfContainedTemplate(mappedSummary);
+  // First pass: collect all tests by file and test name
+  tests.forEach(test => {
+    const fileName = test.fileName || test.file || test.metadata?.testFile || 'Unknown File';
+    const testName = test.testName || test.description || test.name || 'Unknown Test';
+    
+    if (!testsByFileAndName[fileName]) {
+      testsByFileAndName[fileName] = {};
+    }
+    
+    if (!testsByFileAndName[fileName][testName]) {
+      testsByFileAndName[fileName][testName] = [];
+    }
+    
+    testsByFileAndName[fileName][testName].push(test);
+  });
+  
+  // Second pass: deduplicate by prioritizing individual test entries with logs
+  const deduplicatedTests = [];
+  
+  Object.entries(testsByFileAndName).forEach(([fileName, testsByName]) => {
+    Object.entries(testsByName).forEach(([testName, duplicateTests]) => {
+      if (duplicateTests.length === 1) {
+        // No duplicates, add the single test
+        deduplicatedTests.push(duplicateTests[0]);
+      } else {
+        // Handle duplicates by prioritizing individual test entries with logs
+        const individualTestsWithLogs = duplicateTests.filter(test => 
+          test.metadata?.individualTest && test.logs && Array.isArray(test.logs) && test.logs.length > 0
+        );
+        
+        const individualTestsWithoutLogs = duplicateTests.filter(test => 
+          test.metadata?.individualTest && (!test.logs || !Array.isArray(test.logs) || test.logs.length === 0)
+        );
+        
+        const suiteTestsWithLogs = duplicateTests.filter(test => 
+          !test.metadata?.individualTest && test.logs && Array.isArray(test.logs) && test.logs.length > 0
+        );
+        
+        const suiteTestsWithoutLogs = duplicateTests.filter(test => 
+          !test.metadata?.individualTest && (!test.logs || !Array.isArray(test.logs) || test.logs.length === 0)
+        );
+        
+        // Pick the best test entry based on priority
+        let selectedTest = null;
+        
+        if (individualTestsWithLogs.length > 0) {
+          selectedTest = individualTestsWithLogs[0];
+        } else if (individualTestsWithoutLogs.length > 0) {
+          selectedTest = individualTestsWithoutLogs[0];
+        } else if (suiteTestsWithLogs.length > 0) {
+          selectedTest = suiteTestsWithLogs[0];
+        } else if (suiteTestsWithoutLogs.length > 0) {
+          selectedTest = suiteTestsWithoutLogs[0];
+        } else {
+          // Fallback to first test if none match criteria
+          selectedTest = duplicateTests[0];
+        }
+        
+        if (selectedTest) {
+          deduplicatedTests.push(selectedTest);
+        }
+      }
+    });
+  });
+  
+  return deduplicatedTests;
+}
+
+function generateModularHTML(testSummary, testResults = []) {
+  // Apply deduplication logic (same as in test-report-generator.js)
+  const deduplicatedResults = deduplicateTestResults(testResults);
+  
+  // Recalculate summary based on deduplicated results
+  const mappedSummary = {
+    totalTests: deduplicatedResults.length,
+    passedTests: deduplicatedResults.filter(t => t.status === 'passed').length,
+    failedTests: deduplicatedResults.filter(t => t.status === 'failed').length,
+    skippedTests: deduplicatedResults.filter(t => t.status === 'skipped').length,
+    totalDuration: Math.round(deduplicatedResults.reduce((sum, test) => sum + (test.duration || 0), 0) * 100) / 100,
+    successRate: 0
+  };
+  mappedSummary.successRate = mappedSummary.totalTests > 0 ? Math.round((mappedSummary.passedTests / mappedSummary.totalTests) * 100) : 0;
+  
+  console.log(`📊 HTML Reporter deduplication: ${testResults.length} → ${deduplicatedResults.length} tests`);
+  
+  // Use the new self-contained template with deduplicated results
+  return generateSelfContainedTemplate(mappedSummary, deduplicatedResults);
 }
 
 function generateTestId() {

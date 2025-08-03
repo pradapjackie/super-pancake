@@ -25,13 +25,8 @@ export function generateSelfContainedTemplate(summary, results) {
   const memoryTabJs = fs.readFileSync(path.join(packageRoot, 'reporter/templates/memoryTab.js'), 'utf8');
   const parallelTabJs = fs.readFileSync(path.join(packageRoot, 'reporter/templates/parallelTab.js'), 'utf8');
   
-  // Read and embed test data JSON
-  let testDataJson = '[]';
-  try {
-    testDataJson = fs.readFileSync(path.join(process.cwd(), 'automationTestData.json'), 'utf8');
-  } catch (err) {
-    console.log('⚠️ Test data file not found, using empty array');
-  }
+  // Use the passed results data instead of reading the raw JSON file
+  const testDataJson = JSON.stringify(results || [], null, 2);
 
   // Format duration helper function for individual tests
   const formatDuration = (duration) => {

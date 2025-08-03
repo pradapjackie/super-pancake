@@ -3,6 +3,7 @@
 import { fileURLToPath } from 'url';
 import path from 'path';
 import fs from 'fs';
+import { displayBrowserStatus } from '../utils/browser-detection.js';
 
 // Get __dirname in ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -26,6 +27,7 @@ Usage:
 Commands:
   init <project>    Create new project
   setup             Interactive project setup
+  browsers          Detect available browsers
   --version, -v     Show version number
   --help, -h        Show help
   --url=<url>       Run test with specific URL (legacy)
@@ -43,6 +45,7 @@ Project Setup:
 Examples:
   npx super-pancake init my-project
   npx super-pancake setup
+  npx super-pancake browsers
   npx super-pancake --version
   npx super-pancake-ui
 
@@ -106,6 +109,17 @@ https://github.com/pradapjackie/super-pancake
       return;
     } catch (error) {
       console.error('❌ Error running setup command:', error.message);
+      process.exit(1);
+    }
+  }
+
+  // Handle browsers command
+  if (args[0] === 'browsers') {
+    try {
+      const hasAnyBrowser = await displayBrowserStatus();
+      process.exit(hasAnyBrowser ? 0 : 1);
+    } catch (error) {
+      console.error('❌ Error detecting browsers:', error.message);
       process.exit(1);
     }
   }

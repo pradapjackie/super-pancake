@@ -83,6 +83,8 @@ function renderTestCase(test) {
     const testId = test.id || `test-${Math.random().toString(36).substr(2, 9)}`;
     
     let errorHtml = '';
+    let logsHtml = '';
+    let screenshotsHtml = '';
     let actionsHtml = '';
     
     if (test.error && test.status === 'failed') {
@@ -108,11 +110,96 @@ function renderTestCase(test) {
         `;
     }
     
+    // Show console logs for all tests (not just failed ones)
+    if (test.logs && test.logs.length > 0) {
+        const logPreview = test.logs.slice(0, 3).join('\n'); // Show first 3 log lines
+        const truncatedLogs = logPreview.length > 300 ? logPreview.substring(0, 300) + '...' : logPreview;
+        const hasMore = test.logs.length > 3 || logPreview.length > 300;
+        
+        logsHtml = 
+            '<div class="test-logs">' +
+                '<div class="logs-header">' +
+                    '<div class="logs-title">' +
+                        '<i class="fas fa-terminal"></i>' +
+                        '<span>Console Logs (' + test.logs.length + ' entries)</span>' +
+                    '</div>' +
+                    (hasMore ? (
+                        '<button class="btn-view-all-logs" onclick="window.showAllLogs(\'' + testId + '\'); event.preventDefault(); return false;" title="View all console logs for this test">' +
+                            '<i class="fas fa-expand-alt"></i> View All Logs' +
+                        '</button>'
+                    ) : '') +
+                '</div>' +
+                '<div class="logs-preview">' +
+                    '<pre class="log-text-preview">' + escapeHtml(truncatedLogs) + '</pre>' +
+                '</div>' +
+            '</div>';
+    }
+    
+    // Show screenshots if available
+    if (test.screenshots && test.screenshots.length > 0) {
+        const screenshotPreview = test.screenshots.slice(0, 2); // Show first 2 screenshots
+        const hasMoreScreenshots = test.screenshots.length > 2;
+        
+        let screenshotThumbnails = '';
+        screenshotPreview.forEach((screenshot, index) => {
+            const screenshotPath = screenshot.path || screenshot.url || screenshot;
+            screenshotThumbnails += `
+                <div class="screenshot-thumbnail" onclick="window.showScreenshot('${testId}', ${index})" title="Click to view full screenshot">
+                    <img src="${screenshotPath}" alt="Screenshot ${index + 1}" onerror="this.style.display='none'; this.nextSibling.style.display='block';">
+                    <div class="screenshot-placeholder" style="display: none;">
+                        <i class="fas fa-image"></i>
+                        <span>Screenshot ${index + 1}</span>
+                    </div>
+                </div>
+            `;
+        });
+        
+        screenshotsHtml = `
+            <div class="test-screenshots">
+                <div class="screenshots-header">
+                    <div class="screenshots-title">
+                        <i class="fas fa-camera"></i>
+                        <span>Screenshots (${test.screenshots.length} captured)</span>
+                    </div>
+                    ${hasMoreScreenshots ? `
+                        <button class="btn-view-all-screenshots" onclick="window.showAllScreenshots('${testId}'); event.preventDefault(); return false;" title="View all screenshots">
+                            <i class="fas fa-images"></i> View All (${test.screenshots.length})
+                        </button>
+                    ` : ''}
+                </div>
+                <div class="screenshots-preview">
+                    ${screenshotThumbnails}
+                </div>
+            </div>
+        `;
+    }
+    
     // Store test data for popup access
     if (typeof window.testDetailsData === 'undefined') {
         window.testDetailsData = {};
     }
     window.testDetailsData[testId] = test;
+    
+    // Add actions to view screenshots if not already present (logs handled in preview section)
+    if (!actionsHtml) {
+        let actionButtons = '';
+        
+        if (test.screenshots && test.screenshots.length > 0) {
+            actionButtons += `
+                <button class="btn-view-screenshots" onclick="window.showAllScreenshots('${testId}')" title="View all screenshots">
+                    <i class="fas fa-images"></i> View Screenshots
+                </button>
+            `;
+        }
+        
+        if (actionButtons) {
+            actionsHtml = `
+                <div class="test-actions">
+                    ${actionButtons}
+                </div>
+            `;
+        }
+    }
     
     return `
         <div class="test-case-item ${statusClass}" data-test-id="${testId}">
@@ -122,6 +209,8 @@ function renderTestCase(test) {
                 <span class="test-duration">${duration}</span>
             </div>
             ${errorHtml}
+            ${logsHtml}
+            ${screenshotsHtml}
             ${actionsHtml}
         </div>
     `;
@@ -298,8 +387,15 @@ function showErrorDetails(testId) {
                     ` : ''}
                     ${test.logs && test.logs.length > 0 ? `
                         <div class="error-logs">
-                            <h4>Console Logs:</h4>
-                            <pre class="log-text">${escapeHtml(test.logs.join('\\n'))}</pre>
+                            <h4>Console Logs (${test.logs.length} entries):</h4>
+                            <div class="logs-preview-modal">
+                                <pre class="log-text">${escapeHtml(test.logs.slice(0, 10).join('\\n'))}${test.logs.length > 10 ? '\\n\\n... and ' + (test.logs.length - 10) + ' more entries' : ''}</pre>
+                            </div>
+                            ${test.logs.length > 10 ? `
+                                <button class="btn-view-all-logs-modal" onclick="showAllLogsInModal('${testId}')" style="margin-top: 8px;">
+                                    <i class="fas fa-terminal"></i> View All ${test.logs.length} Console Logs
+                                </button>
+                            ` : ''}
                         </div>
                     ` : ''}
                 </div>
@@ -421,6 +517,245 @@ ${typeof test.error === 'string' ? test.error : JSON.stringify(test.error, null,
     });
 }
 
+/**
+ * Show all console logs in a modal
+ */
+function showAllLogs(testId) {
+    console.log('showAllLogs called with testId:', testId);
+    
+    const test = window.testDetailsData && window.testDetailsData[testId];
+    if (!test || !test.logs || test.logs.length === 0) {
+        alert('No console logs available for this test');
+        return;
+    }
+    
+    const testName = test.testName || test.description || 'Unknown Test';
+    const allLogs = test.logs.join('\n');
+    
+    // Try modal first, fallback to simple popup
+    try {
+        // Create modal HTML
+        const modalHtml = `
+            <div class="logs-modal-overlay" onclick="window.closeLogsModal()">
+                <div class="logs-modal" onclick="event.stopPropagation()">
+                    <div class="logs-modal-header">
+                        <h3><i class="fas fa-terminal"></i> Console Logs</h3>
+                        <button class="close-btn" onclick="window.closeLogsModal()">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="logs-modal-content">
+                        <div class="test-info">
+                            <h4>Test: ${escapeHtml(testName)}</h4>
+                            <p class="test-meta">
+                                <span><i class="fas fa-clock"></i> Duration: ${formatDuration(test.duration)}</span>
+                                <span><i class="fas fa-calendar"></i> ${new Date(test.timestamp).toLocaleString()}</span>
+                                <span><i class="fas fa-list"></i> ${test.logs.length} log entries</span>
+                            </p>
+                        </div>
+                        <div class="logs-content">
+                            <h4>Complete Console Output:</h4>
+                            <pre class="full-log-text">${escapeHtml(allLogs)}</pre>
+                        </div>
+                    </div>
+                    <div class="logs-modal-footer">
+                        <button class="btn-copy-logs" onclick="window.copyLogsToClipboard('${testId}')">
+                            <i class="fas fa-copy"></i> Copy Logs
+                        </button>
+                        <button class="btn-close" onclick="window.closeLogsModal()">Close</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Remove existing modal
+        const existingModal = document.querySelector('.logs-modal-overlay');
+        if (existingModal) {
+            existingModal.remove();
+        }
+        
+        // Add modal to page
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        document.body.style.overflow = 'hidden';
+        
+    } catch (error) {
+        console.error('Modal creation failed:', error);
+        // Fallback to simple popup
+        showSimpleLogsPopup(testName, allLogs);
+    }
+}
+
+/**
+ * Simple logs popup fallback
+ */
+function showSimpleLogsPopup(testName, logs) {
+    const popup = window.open('', 'ConsoleLogsPopup', 'width=800,height=600,scrollbars=yes,resizable=yes');
+    if (popup) {
+        popup.document.write(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Console Logs - ${testName}</title>
+                <style>
+                    body { 
+                        font-family: Arial, sans-serif; 
+                        margin: 20px; 
+                        background: #f5f5f5; 
+                    }
+                    .header { 
+                        background: #6366f1; 
+                        color: white; 
+                        padding: 15px; 
+                        border-radius: 8px; 
+                        margin-bottom: 20px; 
+                    }
+                    .logs { 
+                        background: white; 
+                        padding: 20px; 
+                        border-radius: 8px;
+                        border: 1px solid #ddd;
+                        font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+                        font-size: 13px;
+                        line-height: 1.5;
+                        white-space: pre-wrap;
+                        word-wrap: break-word;
+                        max-height: 500px;
+                        overflow-y: auto;
+                    }
+                    .close-btn {
+                        margin-top: 15px;
+                        padding: 10px 20px;
+                        background: #6366f1;
+                        color: white;
+                        border: none;
+                        border-radius: 5px;
+                        cursor: pointer;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="header">
+                    <h2>🚀 Console Logs: ${testName}</h2>
+                    <p>Total log entries: ${logs.split('\\n').length}</p>
+                </div>
+                <div class="logs">${logs}</div>
+                <button class="close-btn" onclick="window.close()">Close Window</button>
+            </body>
+            </html>
+        `);
+        popup.document.close();
+    } else {
+        // Final fallback - just alert with some of the logs
+        const truncatedLogs = logs.length > 1000 ? logs.substring(0, 1000) + '...\n\n[Logs truncated - open browser console for full output]' : logs;
+        alert(`Console Logs for: ${testName}\n\n${truncatedLogs}`);
+        console.log('Full console logs for', testName, ':\n', logs);
+    }
+}
+
+/**
+ * Close logs modal
+ */
+function closeLogsModal() {
+    const modal = document.querySelector('.logs-modal-overlay');
+    if (modal) {
+        modal.remove();
+        document.body.style.overflow = 'auto';
+    }
+}
+
+/**
+ * Copy all logs to clipboard
+ */
+function copyLogsToClipboard(testId) {
+    const test = window.testDetailsData[testId];
+    if (!test || !test.logs) {
+        return;
+    }
+    
+    const logsText = `Test: ${test.testName || test.description}
+Duration: ${formatDuration(test.duration)}
+Timestamp: ${new Date(test.timestamp).toLocaleString()}
+Log Entries: ${test.logs.length}
+
+Console Logs:
+${test.logs.join('\n')}`;
+    
+    navigator.clipboard.writeText(logsText).then(() => {
+        // Show temporary success message
+        const btn = document.querySelector('.btn-copy-logs');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+        btn.style.background = 'var(--success-color)';
+        
+        setTimeout(() => {
+            btn.innerHTML = originalText;
+            btn.style.background = '';
+        }, 2000);
+    }).catch(() => {
+        alert('Failed to copy to clipboard');
+    });
+}
+
+/**
+ * Show all console logs from within error modal
+ */
+function showAllLogsInModal(testId) {
+    const test = window.testDetailsData[testId];
+    if (!test || !test.logs || test.logs.length === 0) {
+        alert('No console logs available');
+        return;
+    }
+    
+    const testName = test.testName || test.description || 'Unknown Test';
+    const allLogs = test.logs.join('\n');
+    
+    // Close existing error modal first
+    closeErrorModal();
+    
+    // Create full logs modal HTML
+    const modalHtml = `
+        <div class="logs-modal-overlay" onclick="closeLogsModal()">
+            <div class="logs-modal" onclick="event.stopPropagation()">
+                <div class="logs-modal-header">
+                    <h3><i class="fas fa-terminal"></i> Console Logs</h3>
+                    <button class="close-btn" onclick="closeLogsModal()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="logs-modal-content">
+                    <div class="test-info">
+                        <h4>Test: ${escapeHtml(testName)}</h4>
+                        <p class="test-meta">
+                            <span><i class="fas fa-clock"></i> Duration: ${formatDuration(test.duration)}</span>
+                            <span><i class="fas fa-calendar"></i> ${new Date(test.timestamp).toLocaleString()}</span>
+                            <span><i class="fas fa-list"></i> ${test.logs.length} log entries</span>
+                        </p>
+                    </div>
+                    <div class="logs-content">
+                        <h4>Complete Console Output:</h4>
+                        <pre class="full-log-text">${escapeHtml(allLogs)}</pre>
+                    </div>
+                </div>
+                <div class="logs-modal-footer">
+                    <button class="btn-copy-logs" onclick="copyLogsToClipboard('${testId}')">
+                        <i class="fas fa-copy"></i> Copy Logs
+                    </button>
+                    <button class="btn-close" onclick="closeLogsModal()">Close</button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Add modal to page
+    const existingModal = document.querySelector('.logs-modal-overlay');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    document.body.style.overflow = 'hidden'; // Prevent background scrolling
+}
+
 // Export functions globally
 window.renderTestFiles = renderTestFiles;
 window.renderTestCase = renderTestCase;
@@ -434,3 +769,202 @@ window.showFullScreenshot = showFullScreenshot;
 window.closeErrorModal = closeErrorModal;
 window.closeScreenshotModal = closeScreenshotModal;
 window.copyErrorToClipboard = copyErrorToClipboard;
+window.showAllLogs = showAllLogs;
+window.closeLogsModal = closeLogsModal;
+window.copyLogsToClipboard = copyLogsToClipboard;
+window.showAllLogsInModal = showAllLogsInModal;
+window.showSimpleLogsPopup = showSimpleLogsPopup;
+
+/**
+ * Show individual screenshot in modal
+ */
+function showScreenshot(testId, screenshotIndex) {
+    const test = window.testDetailsData && window.testDetailsData[testId];
+    if (!test || !test.screenshots || !test.screenshots[screenshotIndex]) {
+        alert('Screenshot not available');
+        return;
+    }
+    
+    const screenshot = test.screenshots[screenshotIndex];
+    const screenshotPath = screenshot.path || screenshot.url || screenshot;
+    const testName = test.testName || test.description || 'Unknown Test';
+    
+    const modalHtml = `
+        <div class="screenshot-modal-overlay" onclick="window.closeScreenshotModal()">
+            <div class="screenshot-modal" onclick="event.stopPropagation()">
+                <div class="screenshot-modal-header">
+                    <h3><i class="fas fa-image"></i> Screenshot ${screenshotIndex + 1}</h3>
+                    <button class="close-btn" onclick="window.closeScreenshotModal()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="screenshot-modal-content">
+                    <div class="test-info">
+                        <h4>Test: ${escapeHtml(testName)}</h4>
+                        <p class="test-meta">
+                            <span><i class="fas fa-clock"></i> Duration: ${formatDuration(test.duration)}</span>
+                            <span><i class="fas fa-calendar"></i> ${new Date(test.timestamp).toLocaleString()}</span>
+                        </p>
+                    </div>
+                    <div class="screenshot-container">
+                        <img src="${screenshotPath}" alt="Screenshot ${screenshotIndex + 1}" class="full-screenshot" 
+                             onerror="this.style.display='none'; this.nextSibling.style.display='flex';">
+                        <div class="screenshot-error" style="display: none;">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <span>Unable to load screenshot</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="screenshot-modal-footer">
+                    <button class="btn-download-screenshot" onclick="window.downloadScreenshot('${screenshotPath}')">
+                        <i class="fas fa-download"></i> Download
+                    </button>
+                    <button class="btn-close" onclick="window.closeScreenshotModal()">Close</button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Remove existing modal
+    const existingModal = document.querySelector('.screenshot-modal-overlay');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    // Add modal to page  
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    document.body.style.overflow = 'hidden';
+}
+
+/**
+ * Show all screenshots for a test
+ */
+function showAllScreenshots(testId) {
+    const test = window.testDetailsData && window.testDetailsData[testId];
+    if (!test || !test.screenshots || test.screenshots.length === 0) {
+        alert('No screenshots available for this test');
+        return;
+    }
+    
+    const testName = test.testName || test.description || 'Unknown Test';
+    
+    let screenshotsGrid = '';
+    test.screenshots.forEach((screenshot, index) => {
+        const screenshotPath = screenshot.path || screenshot.url || screenshot;
+        screenshotsGrid += `
+            <div class="screenshot-grid-item" onclick="window.showScreenshot('${testId}', ${index})">
+                <img src="${screenshotPath}" alt="Screenshot ${index + 1}" 
+                     onerror="this.style.display='none'; this.nextSibling.style.display='flex';">
+                <div class="screenshot-placeholder" style="display: none;">
+                    <i class="fas fa-image"></i>
+                    <span>Screenshot ${index + 1}</span>
+                </div>
+                <div class="screenshot-overlay">
+                    <i class="fas fa-search-plus"></i>
+                </div>
+            </div>
+        `;
+    });
+    
+    const modalHtml = `
+        <div class="screenshots-modal-overlay" onclick="window.closeScreenshotsModal()">
+            <div class="screenshots-modal" onclick="event.stopPropagation()">
+                <div class="screenshots-modal-header">
+                    <h3><i class="fas fa-images"></i> All Screenshots (${test.screenshots.length})</h3>
+                    <button class="close-btn" onclick="window.closeScreenshotsModal()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="screenshots-modal-content">
+                    <div class="test-info">
+                        <h4>Test: ${escapeHtml(testName)}</h4>
+                        <p class="test-meta">
+                            <span><i class="fas fa-clock"></i> Duration: ${formatDuration(test.duration)}</span>
+                            <span><i class="fas fa-calendar"></i> ${new Date(test.timestamp).toLocaleString()}</span>
+                            <span><i class="fas fa-camera"></i> ${test.screenshots.length} screenshots</span>
+                        </p>
+                    </div>
+                    <div class="screenshots-grid">
+                        ${screenshotsGrid}
+                    </div>
+                </div>
+                <div class="screenshots-modal-footer">
+                    <button class="btn-download-all" onclick="window.downloadAllScreenshots('${testId}')">
+                        <i class="fas fa-download"></i> Download All
+                    </button>
+                    <button class="btn-close" onclick="window.closeScreenshotsModal()">Close</button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Remove existing modal
+    const existingModal = document.querySelector('.screenshots-modal-overlay');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    // Add modal to page
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    document.body.style.overflow = 'hidden';
+}
+
+/**
+ * Close screenshot modal
+ */
+function closeScreenshotModal() {
+    const modal = document.querySelector('.screenshot-modal-overlay');
+    if (modal) {
+        modal.remove();
+        document.body.style.overflow = '';
+    }
+}
+
+/**
+ * Close screenshots modal
+ */
+function closeScreenshotsModal() {
+    const modal = document.querySelector('.screenshots-modal-overlay');
+    if (modal) {
+        modal.remove();
+        document.body.style.overflow = '';
+    }
+}
+
+/**
+ * Download individual screenshot
+ */
+function downloadScreenshot(screenshotPath) {
+    const link = document.createElement('a');
+    link.href = screenshotPath;
+    link.download = screenshotPath.split('/').pop() || 'screenshot.png';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+/**
+ * Download all screenshots for a test
+ */
+function downloadAllScreenshots(testId) {
+    const test = window.testDetailsData && window.testDetailsData[testId];
+    if (!test || !test.screenshots || test.screenshots.length === 0) {
+        alert('No screenshots to download');
+        return;
+    }
+    
+    test.screenshots.forEach((screenshot, index) => {
+        const screenshotPath = screenshot.path || screenshot.url || screenshot;
+        setTimeout(() => {
+            downloadScreenshot(screenshotPath);
+        }, index * 100); // Stagger downloads
+    });
+}
+
+// Export screenshot functions globally
+window.showScreenshot = showScreenshot;
+window.showAllScreenshots = showAllScreenshots;
+window.closeScreenshotModal = closeScreenshotModal;
+window.closeScreenshotsModal = closeScreenshotsModal;
+window.downloadScreenshot = downloadScreenshot;
+window.downloadAllScreenshots = downloadAllScreenshots;

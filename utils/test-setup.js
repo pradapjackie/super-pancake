@@ -1,24 +1,27 @@
 // Test Setup Utility - Eliminates beforeAll/afterAll boilerplate
-// Provides automatic Chrome launch, session creation, and cleanup
+// Provides automatic browser launch, session creation, and cleanup
 import { launchChrome } from './simple-launcher.js';
-import { connectToChrome, closeConnection } from '../core/simple-browser.js';
+import { launchBrowser } from './launcher.js';
+import { connectToChrome, connectToBrowser, closeConnection, closeBrowserConnection } from '../core/browser.js';
 import { createSession } from '../core/simple-session.js';
 import { enableDOM } from '../core/simple-dom-v2.js';
 import { setSession, clearSession } from '../core/session-context.js';
 import { getChromeConfig, getTestTimeouts } from './ci-config.js';
 
 /**
- * Creates a complete test setup with Chrome, WebSocket, and session
+ * Creates a complete test setup with browser, WebSocket, and session
  * @param {Object} options - Configuration options
- * @param {boolean} options.headed - Run Chrome in headed mode (default: false)
- * @param {number} options.port - Chrome debugging port (default: 9222)
+ * @param {boolean} options.headed - Run browser in headed mode (default: false)
+ * @param {number} options.port - Browser debugging port (default: auto-detect)
+ * @param {string} options.browser - Browser type ('chrome' or 'firefox') (default: from env or 'chrome')
  * @param {string} options.testName - Name for logging (default: 'Test')
- * @returns {Promise<Object>} Object containing chrome, ws, session
+ * @returns {Promise<Object>} Object containing browser, ws, session
  */
 export async function createTestEnvironment(options = {}) {
   const {
     headed = false,
-    port = 9222,
+    port = null, // Let the launcher choose the appropriate port
+    browser = process.env.SUPER_PANCAKE_BROWSER || 'chrome',
     testName = 'Test'
   } = options;
 
@@ -26,21 +29,28 @@ export async function createTestEnvironment(options = {}) {
   const timeouts = getTestTimeouts();
 
   try {
-    // Launch Chrome with CI-specific configuration
-    const chromeConfig = getChromeConfig({ headed, port });
-    const chrome = await launchChrome(chromeConfig);
-    console.log('✅ Chrome launched');
+    // Launch browser with configuration
+    const defaultPort = browser === 'firefox' ? 6000 : 9222;
+    const actualPort = port || defaultPort;
+    
+    const browserProcess = await launchBrowser({ 
+      browser, 
+      headed, 
+      port: actualPort,
+      maxRetries: 3 
+    });
+    console.log(`✅ ${browser.charAt(0).toUpperCase() + browser.slice(1)} launched`);
 
-    // Wait for Chrome to fully start (longer in CI)
+    // Wait for browser to fully start (longer in CI)
     const startupDelay = timeouts.short;
     await new Promise(resolve => setTimeout(resolve, startupDelay));
 
-    // Connect to Chrome
-    const ws = await connectToChrome(port);
+    // Connect to browser
+    const ws = await connectToBrowser({ browser, port: actualPort });
     console.log('✅ WebSocket connected');
 
     // Create session
-    const session = createSession(ws);
+    const session = createSession(ws, browser);
     console.log('✅ Session created');
 
     // Set session context for simplified API
@@ -52,7 +62,7 @@ export async function createTestEnvironment(options = {}) {
 
     console.log(`🎯 ${testName} setup completed successfully`);
 
-    return { chrome, ws, session };
+    return { browser: browserProcess, ws, session };
 
   } catch (error) {
     console.error(`❌ ${testName} setup failed:`, error);
@@ -78,12 +88,17 @@ export async function cleanupTestEnvironment(environment, testName = 'Test') {
       console.log('✅ Session destroyed');
     }
     if (environment.ws) {
-      closeConnection(environment.ws);
+      const browserType = environment.ws.browserType || 'chrome';
+      closeBrowserConnection(environment.ws, browserType);
       console.log('✅ WebSocket closed');
     }
-    if (environment.chrome) {
-      await environment.chrome.kill();
-      console.log('✅ Chrome terminated');
+    if (environment.browser) {
+      if (environment.browser.kill) {
+        await environment.browser.kill();
+      } else if (environment.browser.pid) {
+        process.kill(environment.browser.pid, 'SIGTERM');
+      }
+      console.log('✅ Browser terminated');
     }
     console.log(`🎯 ${testName} cleanup completed`);
   } catch (error) {

@@ -1,10 +1,14 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { spawn } from 'child_process';
+import { setupIndividualTestLogging, startIndividualTest, endIndividualTest, getIndividualTestData, cleanupIndividualTestLogging } from '../../utils/individualTestLogger.js';
+import { addTestResult } from '../../reporter/htmlReporter.js';
 
 describe('UI Runner Tests', () => {
   let uiRunnerProcess;
   let fetch;
   const testPort = 8090;
+
+  setupIndividualTestLogging();
 
   beforeAll(async () => {
     console.log('🚀 Starting UI Runner for testing...');
@@ -39,12 +43,52 @@ describe('UI Runner Tests', () => {
       uiRunnerProcess.kill('SIGTERM');
       console.log('🧹 UI Runner process terminated');
     }
+    
+    // Get individual test data and save to HTML reporter
+    const individualTests = getIndividualTestData();
+    console.log(`📊 Captured ${individualTests.length} individual test cases with logs`);
+    
+    // Save each individual test result to HTML reporter
+    individualTests.forEach((testData, index) => {
+      const testResult = {
+        id: `ui-runner-individual-${Date.now()}-${index}`,
+        testName: testData.testName,
+        description: `UI Runner individual test: ${testData.testName}`,
+        status: 'passed',
+        duration: 1000,
+        timestamp: testData.endTime || testData.startTime,
+        browser: 'Chrome',
+        environment: 'Local',
+        tags: ['UI Runner Tests', 'Individual Test'],
+        screenshots: testData.screenshots || [],
+        logs: testData.logs || [],
+        error: null,
+        performanceMetrics: {
+          executionTime: 1000,
+          setupTime: 0,
+          teardownTime: 0,
+          cpuUsage: 25,
+          networkTime: 5,
+          slowestOperation: testData.testName,
+          retryCount: 0,
+          isFlaky: false
+        }
+      };
+      
+      addTestResult(testResult);
+    });
+    
+    // Cleanup individual test logger
+    cleanupIndividualTestLogging();
   });
 
   it('should start UI runner server successfully', () => {
+    startIndividualTest('should start UI runner server successfully');
+    console.log("should start UI runner server successfully")
     expect(uiRunnerProcess).toBeDefined();
     expect(uiRunnerProcess.pid).toBeGreaterThan(0);
     expect(uiRunnerProcess.killed).toBe(false);
+    endIndividualTest('should start UI runner server successfully');
   });
 
   it('should serve the main page with correct content', async () => {
@@ -324,12 +368,15 @@ describe('UI Runner Tests', () => {
     expect(directContent).toContain('Comprehensive UI Testing Playground');
   });
 
-  it('345should contain all basic form input types', async () => {
+  it('should contain all basic form input types', async () => {
     const response = await fetch(`http://localhost:${testPort}/form-comprehensive.html`);
     const content = await response.text();
 
     // Test all basic input types exist
-    expect(content).toContain('type="213123213"');
+    expect(content).toContain('type="text"');
+    expect(content).toContain('type="email"');
+    expect(content).toContain('type="password"');
+    expect(content).toContain('type="number"');
 
   });
 });

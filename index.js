@@ -49,6 +49,30 @@ export {
   configureCaching
 } from './core/query-cache.js';
 
+// Export screenshot and test failure utilities
+export {
+  captureScreenshot,
+  captureFailureScreenshot,
+  getCurrentTestScreenshots,
+  clearCurrentTestScreenshots,
+  setScreenshotDirectory,
+  getScreenshotDirectory
+} from './core/screenshot.js';
+
+export {
+  handleTestFailure,
+  executeTestWithFailureCapture
+} from './utils/individualTestLogger.js';
+
+export {
+  expectWithScreenshot,
+  testWithAutoScreenshot,
+  itWithScreenshots,
+  executeWithScreenshot,
+  setupAutomaticScreenshots,
+  runTestWithFailureCapture
+} from './utils/testWithScreenshots.js';
+
 // Export port utilities (needed for dynamic port allocation)
 export {
   findAvailablePort,
