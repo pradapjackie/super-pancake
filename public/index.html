@@ -1312,6 +1312,10 @@
                     <i class="fas fa-eye" id="headless-icon"></i>
                     <span class="btn-text-small" id="headless-text">Headed</span>
                 </button>
+                <button class="btn btn-icon" onclick="toggleBrowserType()" title="Toggle browser (Chrome/Firefox)" id="browser-btn">
+                    <i class="fab fa-chrome" id="browser-icon"></i>
+                    <span class="btn-text-small" id="browser-text">Chrome</span>
+                </button>
                 <button class="btn btn-icon" onclick="toggleTheme()" title="Toggle dark/light mode">
                     <i class="fas fa-moon" id="theme-icon"></i>
                     <span class="btn-text-small">Theme</span>
@@ -1373,6 +1377,10 @@
                             <i class="fas fa-play"></i>
                             Run Tests
                         </button>
+                        <button class="console-btn btn-success" id="live-btn" onclick="toggleLiveMode()" title="Toggle live monitoring mode">
+                            <i class="fas fa-video"></i>
+                            <span id="live-btn-text">Live Mode</span>
+                        </button>
                         <button class="console-btn btn-danger" id="stop-btn" onclick="stopTests()" disabled>
                             <i class="fas fa-stop"></i>
                             Stop Tests
@@ -1402,7 +1410,9 @@
     <script>
         // WebSocket connection
         let ws;
+        let liveWs;  // Separate WebSocket for live monitoring
         let isConnected = false;
+        let isLiveModeEnabled = false;
         let selectedTests = new Set();
         let executionStartTime = null;
         let executionTimer = null;
@@ -1760,7 +1770,8 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
                         tests,
-                        headless: isHeadlessMode 
+                        headless: isHeadlessMode,
+                        browser: selectedBrowser
                     })
                 });
                 
@@ -1769,7 +1780,8 @@
                 }
                 
                 const modeText = isHeadlessMode ? 'headless' : 'headed';
-                logMessage(`📤 Test execution request sent successfully (${modeText} mode)`, 'success');
+                const browserName = selectedBrowser === 'chrome' ? 'Chrome' : 'Firefox';
+                logMessage(`📤 Test execution request sent successfully (${browserName} ${modeText} mode)`, 'success');
             } catch (error) {
                 logMessage(`❌ Failed to start test execution: ${error.message}`, 'error');
                 stopTestExecution();
@@ -1778,14 +1790,23 @@
         
         async function stopTests() {
             try {
-                const response = await fetch('/stop', {
-                    method: 'POST'
-                });
-                
-                if (response.ok) {
-                    logMessage('🛑 Test execution stop requested', 'warning');
+                // Stop via live WebSocket if in live mode
+                if (isLiveModeEnabled && liveWs && liveWs.readyState === WebSocket.OPEN) {
+                    liveWs.send(JSON.stringify({
+                        type: 'stop_tests'
+                    }));
+                    logMessage('🔴 [LIVE] Test stop requested', 'warning');
                 } else {
-                    logMessage('⚠️ Failed to stop tests - they may complete naturally', 'warning');
+                    // Regular stop via HTTP
+                    const response = await fetch('/stop', {
+                        method: 'POST'
+                    });
+                    
+                    if (response.ok) {
+                        logMessage('🛑 Test execution stop requested', 'warning');
+                    } else {
+                        logMessage('⚠️ Failed to stop tests - they may complete naturally', 'warning');
+                    }
                 }
             } catch (error) {
                 logMessage(`❌ Error stopping tests: ${error.message}`, 'error');
@@ -1822,8 +1843,197 @@
                 `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
         }
 
+        // Live Mode Functionality
+        function toggleLiveMode() {
+            isLiveModeEnabled = !isLiveModeEnabled;
+            
+            const liveBtn = document.getElementById('live-btn');
+            const liveBtnText = document.getElementById('live-btn-text');
+            const liveIcon = liveBtn.querySelector('i');
+            
+            if (isLiveModeEnabled) {
+                // Enable live mode
+                liveBtn.style.background = 'linear-gradient(135deg, #10b981, #34d399)';
+                liveBtn.style.borderColor = '#10b981';
+                liveIcon.className = 'fas fa-video';
+                liveBtnText.textContent = 'Live ON';
+                liveBtn.title = 'Live monitoring enabled - Click to disable';
+                
+                // Connect to live WebSocket server
+                connectLiveWebSocket();
+                
+                logMessage('🔴 Live monitoring mode enabled - Real-time test streaming active', 'success');
+                localStorage.setItem('liveModeEnabled', 'true');
+            } else {
+                // Disable live mode
+                liveBtn.style.background = '';
+                liveBtn.style.borderColor = '';
+                liveIcon.className = 'fas fa-video';
+                liveBtnText.textContent = 'Live Mode';
+                liveBtn.title = 'Toggle live monitoring mode';
+                
+                // Disconnect live WebSocket
+                if (liveWs) {
+                    liveWs.close();
+                    liveWs = null;
+                }
+                
+                logMessage('⚪ Live monitoring mode disabled', 'info');
+                localStorage.setItem('liveModeEnabled', 'false');
+            }
+        }
+
+        // Connect to Live WebSocket Server for real-time monitoring
+        async function connectLiveWebSocket() {
+            try {
+                // Try to discover live server port
+                let livePort = 3002; // fallback
+                try {
+                    const response = await fetch('/api/config');
+                    const config = await response.json();
+                    livePort = config.wsPort || 3002;
+                } catch (error) {
+                    console.warn('Could not fetch live server config, using default port');
+                }
+
+                const liveWsUrl = `ws://${window.location.hostname}:${livePort}`;
+                liveWs = new WebSocket(liveWsUrl);
+                
+                liveWs.onopen = () => {
+                    logMessage('🔴 Connected to live monitoring server', 'success');
+                };
+                
+                liveWs.onmessage = (event) => {
+                    try {
+                        const message = JSON.parse(event.data);
+                        handleLiveMessage(message);
+                    } catch (error) {
+                        // Handle plain text messages from live server
+                        const plainMessage = event.data.toString();
+                        logMessage(`[LIVE] ${plainMessage}`, 'info');
+                    }
+                };
+                
+                liveWs.onclose = () => {
+                    logMessage('🔴 Live monitoring disconnected', 'warning');
+                    if (isLiveModeEnabled) {
+                        // Try to reconnect after 3 seconds if live mode is still enabled
+                        setTimeout(() => {
+                            if (isLiveModeEnabled) {
+                                connectLiveWebSocket();
+                            }
+                        }, 3000);
+                    }
+                };
+                
+                liveWs.onerror = (error) => {
+                    console.error('Live WebSocket error:', error);
+                    logMessage('⚠️ Live monitoring connection error', 'warning');
+                };
+                
+            } catch (error) {
+                console.error('Failed to create live WebSocket:', error);
+                logMessage('❌ Failed to connect to live monitoring server', 'error');
+            }
+        }
+
+        // Handle live monitoring messages
+        function handleLiveMessage(message) {
+            switch (message.type) {
+                case 'test_started':
+                    logMessage(`🔴 [LIVE] Test execution started - ${message.data.totalTests || 'unknown'} tests`, 'success');
+                    break;
+                    
+                case 'console_output':
+                    const outputData = message.data;
+                    const outputClass = outputData.type === 'stderr' ? 'error' : 'info';
+                    logMessage(`🔴 [LIVE] ${outputData.output}`, outputClass);
+                    break;
+                    
+                case 'test_completed':
+                    const status = message.data.exitCode === 0 ? 'passed' : 'failed';
+                    const statusClass = status === 'passed' ? 'success' : 'error';
+                    logMessage(`🔴 [LIVE] Tests completed - Exit code: ${message.data.exitCode}`, statusClass);
+                    break;
+                    
+                case 'test_stopped':
+                    logMessage('🔴 [LIVE] Test execution stopped', 'warning');
+                    break;
+                    
+                case 'state_update':
+                    // Update progress indicators based on live state
+                    updateLiveProgress(message.data);
+                    break;
+                    
+                default:
+                    logMessage(`🔴 [LIVE] ${message.data?.output || JSON.stringify(message)}`, 'info');
+                    break;
+            }
+        }
+
+        // Update progress indicators in live mode
+        function updateLiveProgress(liveState) {
+            if (!isLiveModeEnabled) return;
+            
+            // Update execution time for live mode
+            if (liveState.startTime && liveState.status === 'running') {
+                const startTime = new Date(liveState.startTime).getTime();
+                const elapsed = Math.floor((Date.now() - startTime) / 1000);
+                const minutes = Math.floor(elapsed / 60);
+                const seconds = elapsed % 60;
+                
+                document.getElementById('execution-time').textContent = 
+                    `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            }
+            
+            // Show current test in status
+            if (liveState.currentTest) {
+                const statusText = document.getElementById('status-text');
+                statusText.textContent = `Running: ${liveState.currentTest}`;
+            }
+        }
+
+        // Enhanced run tests function with live mode support
+        async function runTestsWithLiveMode() {
+            if (isLiveModeEnabled && liveWs && liveWs.readyState === WebSocket.OPEN) {
+                // Use live WebSocket to run tests
+                const checkboxes = document.querySelectorAll('.test-case-checkbox:checked');
+                const tests = Array.from(checkboxes).map(cb => cb.value);
+                
+                if (tests.length === 0) {
+                    logMessage('⚠️ Please select at least one test to run.', 'warning');
+                    return;
+                }
+                
+                liveWs.send(JSON.stringify({
+                    type: 'run_tests',
+                    testFiles: tests
+                }));
+                
+                logMessage(`🔴 [LIVE] Starting ${tests.length} tests in live monitoring mode...`, 'success');
+                
+                // Update UI state
+                document.getElementById('run-btn').disabled = true;
+                document.getElementById('stop-btn').disabled = false;
+                
+                // Start pancake animation
+                const icon = document.querySelector('.icon');
+                icon.classList.add('running');
+                
+            } else {
+                // Fall back to regular execution
+                await runTests();
+            }
+        }
+
         // Event listeners
-        document.getElementById('run-btn').addEventListener('click', runTests);
+        document.getElementById('run-btn').addEventListener('click', () => {
+            if (isLiveModeEnabled) {
+                runTestsWithLiveMode();
+            } else {
+                runTests();
+            }
+        });
 
         // Event delegation for dynamically created checkboxes
         document.addEventListener('change', function(e) {
@@ -1894,6 +2104,12 @@
             
             // Load saved headless mode
             loadSavedHeadlessMode();
+            
+            // Load saved browser type
+            loadSavedBrowserType();
+            
+            // Load saved live mode state
+            loadSavedLiveModeState();
             
             // Setup search and filter functionality
             setupSearchAndFilter();
@@ -2051,6 +2267,71 @@
                 headlessBtn.title = 'Toggle headless/headed mode (Currently: Headed)';
                 localStorage.setItem('headlessMode', 'false');
                 logMessage('👀 Switched to headed mode - browser windows will be visible', 'info');
+            }
+        }
+        
+        // Browser type toggle functionality
+        let selectedBrowser = 'chrome';
+        
+        function toggleBrowserType() {
+            const browserIcon = document.getElementById('browser-icon');
+            const browserText = document.getElementById('browser-text');
+            const browserBtn = document.getElementById('browser-btn');
+            
+            selectedBrowser = selectedBrowser === 'chrome' ? 'firefox' : 'chrome';
+            
+            if (selectedBrowser === 'firefox') {
+                // Switch to Firefox
+                browserIcon.className = 'fab fa-firefox-browser';
+                browserText.textContent = 'Firefox';
+                browserBtn.style.background = 'linear-gradient(135deg, #ff6600, #ff9500)';
+                browserBtn.style.color = 'white';
+                browserBtn.style.borderColor = '#ff6600';
+                browserBtn.title = 'Toggle browser (Chrome/Firefox) - Currently: Firefox';
+                localStorage.setItem('selectedBrowser', 'firefox');
+                logMessage('🦊 Switched to Firefox browser - tests will run in Firefox', 'info');
+            } else {
+                // Switch to Chrome
+                browserIcon.className = 'fab fa-chrome';
+                browserText.textContent = 'Chrome';
+                browserBtn.style.background = '';
+                browserBtn.style.color = '';
+                browserBtn.style.borderColor = '';
+                browserBtn.title = 'Toggle browser (Chrome/Firefox) - Currently: Chrome';
+                localStorage.setItem('selectedBrowser', 'chrome');
+                logMessage('🔶 Switched to Chrome browser - tests will run in Chrome', 'info');
+            }
+        }
+        
+        // Load saved browser type
+        function loadSavedBrowserType() {
+            const savedBrowser = localStorage.getItem('selectedBrowser');
+            const browserIcon = document.getElementById('browser-icon');
+            const browserText = document.getElementById('browser-text');
+            const browserBtn = document.getElementById('browser-btn');
+            
+            if (savedBrowser === 'firefox') {
+                selectedBrowser = 'firefox';
+                browserIcon.className = 'fab fa-firefox-browser';
+                browserText.textContent = 'Firefox';
+                browserBtn.style.background = 'linear-gradient(135deg, #ff6600, #ff9500)';
+                browserBtn.style.color = 'white';
+                browserBtn.style.borderColor = '#ff6600';
+                browserBtn.title = 'Toggle browser (Chrome/Firefox) - Currently: Firefox';
+            } else {
+                selectedBrowser = 'chrome';
+                browserIcon.className = 'fab fa-chrome';
+                browserText.textContent = 'Chrome';
+                browserBtn.title = 'Toggle browser (Chrome/Firefox) - Currently: Chrome';
+            }
+        }
+
+        // Load saved live mode state
+        function loadSavedLiveModeState() {
+            const savedLiveMode = localStorage.getItem('liveModeEnabled');
+            if (savedLiveMode === 'true') {
+                // Auto-enable live mode on page load
+                toggleLiveMode();
             }
         }
         

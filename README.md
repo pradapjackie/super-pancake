@@ -5,7 +5,7 @@
 [![Node.js](https://img.shields.io/badge/Node.js-16%2B-green.svg)](https://nodejs.org/)
 [![Chrome DevTools](https://img.shields.io/badge/Chrome-DevTools%20Protocol-blue.svg)](https://chromedevtools.github.io/devtools-protocol/)
 
-A **lightweight DOM-based UI automation framework** using Chrome DevTools Protocol (CDP). Super Pancake provides a simple, powerful API for browser automation, testing, and reporting with a beautiful web UI.
+A **lightweight DOM-based UI automation framework** supporting both **Chrome** and **Firefox** browsers. Super Pancake provides a simple, powerful API for browser automation, testing, and reporting with a beautiful web UI and **live test execution** monitoring.
 
 ## 🚀 Quick Start
 
@@ -26,9 +26,11 @@ super-pancake-init my-project
 ```
 
 This creates a complete project with:
-- ✅ Screenshot capture (including on failure)
-- ✅ HTML test reporting  
-- ✅ Sample test files
+- ✅ **Multi-browser support** (Chrome & Firefox)
+- ✅ **Automatic screenshot capture** on test failures
+- ✅ **Live test execution** monitoring with WebSocket streaming
+- ✅ **HTML test reporting** with modern UI
+- ✅ Sample test files with comprehensive guides
 - ✅ Sensible default configuration
 - ✅ Ready to run immediately
 
@@ -58,19 +60,38 @@ npm install super-pancake-automation
 ```
 
 ### Basic Usage
+
+#### **Interactive UI (Recommended)**
 ```bash
-# Run tests with Super Pancake (Sequential execution)
+# Launch web-based test runner with live monitoring
+super-pancake-ui
+```
+
+#### **Command Line**
+```bash
+# Run all tests using Super Pancake configuration
 npm test
 
-# Launch interactive UI
-super-pancake-ui
+# Run specific test file with Super Pancake settings
+node scripts/super-pancake-test.js tests/examples/sample.test.js
 
-# Run specific test commands
-super-pancake-run
-super-pancake-test
-
-# Run tests with headed mode for debugging
+# Run with visible browser
 HEADED=true npm test
+
+# Run Firefox tests
+SUPER_PANCAKE_BROWSER=firefox npm test
+
+# Direct Vitest for watch mode
+npx vitest watch tests/examples/
+```
+
+#### **Generate Reports**
+```bash
+# Generate HTML report after tests
+npm run report:generate
+
+# Open report in browser
+npm run report:test
 ```
 
 ## 📱 Interactive Test Runner UI
@@ -85,10 +106,12 @@ npx super-pancake-ui
 
 ### UI Features:
 - ✅ **Test Selection**: Choose which tests to run
-- 📊 **Real-time Logs**: Watch test execution live
+- 📊 **Real-time Logs**: Watch test execution live with WebSocket streaming
 - 🎯 **Individual Test Control**: Run specific test cases
 - 🔄 **Auto-refresh**: Automatic test discovery
 - 📱 **Responsive Design**: Works on desktop and mobile
+- 🦊 **Multi-browser Support**: Switch between Chrome and Firefox
+- 🔴 **Live Test Execution**: Real-time progress indicators and console streaming
 
 ## 📊 Beautiful HTML Reports
 
@@ -103,10 +126,12 @@ open automationTestReport.html
 
 ### Report Features:
 - 📈 **Test Statistics**: Pass/fail/skipped counts with charts
-- 📸 **Screenshots**: Automatic capture on failures
+- 📸 **Screenshots**: Automatic capture on failures with modal preview
 - 🕐 **Timestamps**: Detailed timing information
 - 📝 **Error Details**: Stack traces and error messages
 - 🎨 **Professional Design**: Clean, modern interface
+- 🦊 **Multi-browser Results**: Chrome and Firefox test results
+- 📊 **Individual Test Logs**: Comprehensive console output for each test
 
 ## 🛠️ Installation & Setup
 
@@ -143,6 +168,277 @@ npx super-pancake --help                   # Show help
 | `super-pancake-generate` | Generate sample test files | `npx super-pancake-generate` |
 | `super-pancake` | Main CLI with help/version | `npx super-pancake --version` |
 | `domtest` | Basic CLI test runner (legacy) | `npx domtest --url=https://example.com` |
+
+### Live Test Monitoring
+```bash
+# Live monitoring is now integrated into the main UI
+super-pancake-ui
+
+# Click the "Live Mode" button in the interface for real-time monitoring
+# Access at http://localhost:3000 and toggle Live Mode ON
+```
+
+## 💻 Command Line Usage
+
+### 🚀 Quick Test Execution
+
+#### **Run Single Test File**
+```bash
+# Using Super Pancake test runner (recommended)
+node scripts/super-pancake-test.js tests/api/sample-api.test.js
+
+# With specific browser
+SUPER_PANCAKE_BROWSER=chrome node scripts/super-pancake-test.js tests/ui-runner/ui-runner.test.js
+SUPER_PANCAKE_BROWSER=firefox node scripts/super-pancake-test.js tests/firefox/firefox-browser.test.js
+
+# Or use npm scripts
+npm run test:integration  # Runs tests/integration/
+npm run test:examples     # Runs tests/examples/
+```
+
+#### **Run Multiple Test Files**
+```bash
+# Run all tests in a directory
+npx vitest run tests/integration/
+
+# Run specific test pattern
+npx vitest run tests/**/ui-*.test.js
+
+# Run all API tests
+npx vitest run tests/api/
+```
+
+### 🎯 Headed vs Headless Mode
+
+#### **Headless Mode (Default)**
+```bash
+# Headless execution (browser runs in background)
+npx vitest run tests/npm-package/npm-package-firefox.test.js
+
+# Explicit headless mode
+HEADED=false npx vitest run tests/ui-runner/ui-runner.test.js
+SUPER_PANCAKE_HEADLESS=true npx vitest run tests/firefox/firefox-browser.test.js
+```
+
+#### **Headed Mode (Visible Browser)**
+```bash
+# Show browser window during test execution
+HEADED=true npx vitest run tests/examples/sample.test.js
+
+# Alternative syntax
+SUPER_PANCAKE_HEADLESS=false npx vitest run tests/integration/end-to-end.test.js
+```
+
+### 🦊 Multi-Browser Testing
+
+#### **Chrome Browser (Default)**
+```bash
+# Default Chrome execution
+npx vitest run tests/unit/core-functions.test.js
+
+# Explicit Chrome
+SUPER_PANCAKE_BROWSER=chrome npx vitest run tests/reporter/html-reporter.test.js
+```
+
+#### **Firefox Browser**
+```bash
+# Firefox execution
+SUPER_PANCAKE_BROWSER=firefox npx vitest run tests/npm-package/npm-package-firefox.test.js
+
+# Firefox in headed mode
+SUPER_PANCAKE_BROWSER=firefox HEADED=true npx vitest run tests/firefox/firefox-browser.test.js
+```
+
+### 📁 Directory & Pattern Testing
+
+#### **Run Entire Test Suites**
+```bash
+# All integration tests
+npx vitest run tests/integration/
+
+# All unit tests
+npx vitest run tests/unit/
+
+# All Firefox-specific tests
+npx vitest run tests/firefox/
+
+# All NPM package tests
+npx vitest run tests/npm-package/
+```
+
+#### **Pattern-Based Testing**
+```bash
+# All test files ending with specific pattern
+npx vitest run tests/**/*-api.test.js
+
+# All UI tests across directories
+npx vitest run tests/**/ui-*.test.js
+
+# All reporter tests
+npx vitest run tests/**/reporter*.test.js
+
+# All browser tests
+npx vitest run tests/**/*browser*.test.js
+```
+
+### 🔧 Advanced Command Options
+
+#### **Test Selection with Filters**
+```bash
+# Run specific test by name pattern
+npx vitest run tests/ui-runner/ui-runner.test.js -t "should start UI runner"
+
+# Run tests matching description
+npx vitest run tests/integration/ -t "end-to-end"
+
+# Skip specific tests
+npx vitest run tests/unit/ --reporter=verbose --exclude="**/slow-*"
+```
+
+#### **Watch Mode for Development**
+```bash
+# Watch single test file for changes
+npx vitest watch tests/examples/sample.test.js
+
+# Watch entire directory
+npx vitest watch tests/integration/
+
+# Watch with browser visible
+HEADED=true npx vitest watch tests/ui-runner/ui-runner.test.js
+```
+
+#### **Parallel vs Sequential Execution**
+```bash
+# Sequential execution (recommended for browser tests)
+npx vitest run tests/firefox/ --reporter=verbose --threads=false
+
+# Parallel execution (for unit tests)
+npx vitest run tests/unit/ --threads=true
+
+# Custom thread count
+npx vitest run tests/integration/ --threads=2
+```
+
+### 📊 Reporting & Output
+
+#### **Generate HTML Reports**
+```bash
+# Run tests and generate HTML report
+npx vitest run tests/npm-package/ && npm run report:generate
+
+# Clean and fresh report
+npm run report:fresh
+
+# Generate report for specific test suite
+npx vitest run tests/firefox/ --reporter=json --outputFile=test-results.json
+npm run report:generate
+```
+
+#### **Verbose Output**
+```bash
+# Detailed test output
+npx vitest run tests/integration/ --reporter=verbose
+
+# JSON output for processing
+npx vitest run tests/api/ --reporter=json
+
+# Multiple reporters
+npx vitest run tests/unit/ --reporter=verbose --reporter=json --outputFile=results.json
+```
+
+### 🔍 Debug & Development
+
+#### **Debug Mode**
+```bash
+# Debug with visible browser and detailed logs
+DEBUG=true HEADED=true npx vitest run tests/examples/sample.test.js
+
+# Debug specific browser
+DEBUG=true SUPER_PANCAKE_BROWSER=firefox HEADED=true npx vitest run tests/firefox/
+```
+
+#### **Environment-Specific Testing**
+```bash
+# Test with specific environment variables
+NODE_ENV=development npx vitest run tests/integration/
+
+# Custom configuration
+SUPER_PANCAKE_TIMEOUT=60000 npx vitest run tests/npm-package/
+
+# Memory optimization for large test suites
+NODE_OPTIONS="--max-old-space-size=4096" npx vitest run tests/
+```
+
+### 🧹 Cleanup & Maintenance
+
+#### **Clean Test Results**
+```bash
+# Clean all reports and screenshots
+npm run clean:all
+
+# Clean only HTML reports
+npm run clean:reports
+
+# Clean only screenshots
+npm run screenshots:clean
+
+# Clean test data
+npm run clean:data
+```
+
+### 📋 Complete Examples
+
+#### **Development Workflow**
+```bash
+# 1. Run tests in watch mode with browser visible
+HEADED=true npx vitest watch tests/examples/
+
+# 2. Run full test suite
+npx vitest run tests/integration/
+
+# 3. Generate and view report
+npm run report:test
+```
+
+#### **CI/CD Pipeline**
+```bash
+# 1. Clean previous results
+npm run clean:all
+
+# 2. Run all tests in headless mode
+npx vitest run tests/ --reporter=json --outputFile=test-results.json
+
+# 3. Generate HTML report
+npm run report:generate
+
+# 4. Archive results
+tar -czf test-results.tar.gz automationTestReport.html screenshots/
+```
+
+#### **Cross-Browser Testing**
+```bash
+# Chrome tests
+SUPER_PANCAKE_BROWSER=chrome npx vitest run tests/npm-package/
+
+# Firefox tests  
+SUPER_PANCAKE_BROWSER=firefox npx vitest run tests/npm-package/
+
+# Generate combined report
+npm run report:generate
+```
+
+### 🎯 Quick Reference
+
+| Command | Description | Example |
+|---------|-------------|---------|
+| `npx vitest run <path>` | Run tests | `npx vitest run tests/api/` |
+| `HEADED=true` | Show browser | `HEADED=true npx vitest run tests/ui/` |
+| `SUPER_PANCAKE_BROWSER=firefox` | Use Firefox | `SUPER_PANCAKE_BROWSER=firefox npx vitest run tests/` |
+| `npx vitest watch <path>` | Watch mode | `npx vitest watch tests/unit/` |
+| `-t "pattern"` | Filter tests | `npx vitest run tests/ -t "should login"` |
+| `--reporter=verbose` | Detailed output | `npx vitest run tests/ --reporter=verbose` |
+| `npm run report:generate` | Generate HTML report | After running tests |
+| `npm run clean:all` | Clean all results | Before new test runs |
 
 ## 💻 Code Examples
 
@@ -247,7 +543,28 @@ Comprehensive guides and resources:
 
 ## 🔧 Configuration
 
-The framework provides a comprehensive, environment-aware configuration system. See the **[Configuration Guide](docs/CONFIGURATION.md)** for complete details.
+The framework uses a **unified configuration approach** where `super-pancake.config.js` controls both Super Pancake and Vitest settings. See the **[Configuration Guide](docs/CONFIGURATION.md)** for complete details.
+
+### **Single Configuration File**
+
+✅ **Only one configuration file needed:** `super-pancake.config.js`
+
+❌ **No vitest.config.js required** - Super Pancake handles all Vitest settings via CLI arguments
+
+### **Configuration Flow**
+```mermaid
+graph LR
+    A[super-pancake.config.js] --> B[Super Pancake Test Runner]
+    B --> C[Vitest with CLI args]
+    A --> D[Super Pancake Framework]
+    D --> C
+```
+
+**Advantages:**
+- ✅ **Single Source of Truth** - All settings in one file
+- ✅ **No Config Duplication** - Super Pancake converts settings to Vitest CLI args
+- ✅ **Simplified Setup** - No need to maintain multiple config files
+- ✅ **User-Friendly** - Edit one file, everything works
 
 ### Super Pancake Configuration (super-pancake.config.js)
 ```javascript
@@ -351,12 +668,39 @@ const timeout = getConfig('timeouts.testTimeout');
 ## 🎨 Features
 
 ### ✨ Core Features
-- 🎯 **Chrome DevTools Protocol**: Direct browser control
-- 📸 **Screenshot Capture**: Automatic on failures
+- 🎯 **Multi-browser Support**: Chrome (CDP) and Firefox (WebDriver BiDi)
+- 📸 **Automatic Screenshot Capture**: On test failures with enhanced error reporting
 - 🕐 **Smart Waits**: Built-in element waiting strategies
-- 📊 **HTML Reports**: Beautiful test reports
-- 🖥️ **Web UI**: Interactive test runner
-- 🔄 **Real-time Logs**: Live test execution feedback
+- 📊 **HTML Reports**: Beautiful test reports with screenshot modal previews
+- 🖥️ **Interactive Web UI**: Test runner with real-time monitoring
+- 🔄 **Live Test Execution**: WebSocket-based real-time console streaming
+- 📋 **Individual Test Logging**: Comprehensive per-test console output tracking
+
+### 🦊 Multi-Browser Support
+
+Super Pancake now supports both **Chrome** and **Firefox** browsers with seamless switching:
+
+```javascript
+// Chrome (Default - Chrome DevTools Protocol)
+const chromeEnv = await createTestEnvironment({ 
+  browser: 'chrome',
+  headed: true 
+});
+
+// Firefox (WebDriver BiDi compatible)
+const firefoxEnv = await createTestEnvironment({ 
+  browser: 'firefox',
+  headed: true,
+  startUrl: 'https://example.com'  // Direct URL loading for Firefox
+});
+```
+
+#### Firefox Features:
+- ✅ **WebDriver BiDi Protocol**: Modern Firefox automation standard
+- ✅ **Direct URL Loading**: Bypasses navigation limitations
+- ✅ **Automatic Window Focus**: Firefox appears in foreground on macOS
+- ✅ **Comprehensive Test Guides**: Step-by-step validation checklists
+- ✅ **Individual Test Logging**: Full console output capture per test
 
 ### 🧪 Testing Capabilities
 - **Form Testing**: Input fields, dropdowns, checkboxes, radio buttons
@@ -364,6 +708,7 @@ const timeout = getConfig('timeouts.testTimeout');
 - **Advanced Interactions**: Drag & drop, file uploads, mouse events
 - **Visual Testing**: Screenshots, element positioning, viewport checks
 - **Wait Strategies**: Visibility, clickability, text content, attributes
+- **Multi-browser Testing**: Chrome and Firefox compatibility testing
 
 ### 🚀 Sessionless API Advantages
 
@@ -446,8 +791,22 @@ it('should work seamlessly', async () => {
 
 ## 🚀 NPM Scripts
 
-Add these scripts to your `package.json`:
+### **Essential Commands**
+```json
+{
+  "scripts": {
+    "test": "node scripts/super-pancake-test.js",
+    "test:ui": "super-pancake-ui",
+    "test:run": "super-pancake-run",
+    "test:headed": "HEADED=true npm test",
+    "test:firefox": "SUPER_PANCAKE_BROWSER=firefox npx vitest run tests/",
+    "test:chrome": "SUPER_PANCAKE_BROWSER=chrome npx vitest run tests/",
+    "report:generate": "node scripts/test-report-generator.js"
+  }
+}
+```
 
+### **Complete Script Collection**
 ```json
 {
   "scripts": {
@@ -458,9 +817,20 @@ Add these scripts to your `package.json`:
     "test:generate": "super-pancake-generate",
     "test:tier1": "npm test tests/tier1-*.test.js --run",
     "test:headed": "HEADED=true npm test",
+    "test:headless": "HEADED=false npm test",
+    "test:chrome": "SUPER_PANCAKE_BROWSER=chrome npx vitest run tests/",
+    "test:firefox": "SUPER_PANCAKE_BROWSER=firefox npx vitest run tests/",
+    "test:firefox:headed": "SUPER_PANCAKE_BROWSER=firefox HEADED=true npx vitest run tests/",
     "test:sequential": "npm test --sequential",
     "test:quick": "npm run test:unit-stable && npm run test:config",
-    "test:stability": "vitest run tests/stability-test-suite.test.js"
+    "test:stability": "vitest run tests/stability-test-suite.test.js",
+    "test:integration": "npx vitest run tests/integration/",
+    "test:unit": "npx vitest run tests/unit/",
+    "test:api": "npx vitest run tests/api/",
+    "report:generate": "node scripts/test-report-generator.js",
+    "report:test": "npm run report:generate && open automationTestReport.html",
+    "clean:all": "node scripts/cleanup-reports.js --all",
+    "clean:reports": "node scripts/cleanup-reports.js"
   }
 }
 ```
@@ -623,6 +993,34 @@ await emulateDevice('iPhone 12');
 await takeScreenshot('./screenshots/mobile-view.png');
 ```
 
+### Automatic Screenshot Capture on Failures
+```javascript
+import { 
+  testWithAutoScreenshot, 
+  expectWithScreenshot,
+  executeTestWithFailureCapture 
+} from 'super-pancake-automation';
+
+// Automatic screenshot when test fails
+const testWrapper = testWithAutoScreenshot('login_test', async () => {
+  await navigateTo('https://example.com/login');
+  await fillInput('#username', 'testuser');
+  await click('#submit');
+  
+  // If this assertion fails, screenshot is automatically captured
+  expectWithScreenshot(await getText('#result')).toBe('Success');
+});
+
+// Enhanced expect with screenshot capture
+expectWithScreenshot(await getText('#title'), 'page_title_check')
+  .toContain('Expected Text');
+
+// Execute test with comprehensive failure capture
+await executeTestWithFailureCapture('form_submission', async () => {
+  // Test code here - screenshot captured automatically on any failure
+});
+```
+
 ### Advanced Form Testing
 ```javascript
 // Multi-step form with smart locators
@@ -717,6 +1115,38 @@ jobs:
 - **Quick Tests**: Unit tests, config validation, performance checks
 - **TIER 1 Core**: Smart locators, advanced waiting, keyboard actions  
 - **Comprehensive**: Full stability suite with long-running tests
+
+## 🆕 Recent Updates (v2.9.5)
+
+### 🦊 Firefox Browser Support
+- **Full Firefox compatibility** with WebDriver BiDi protocol
+- **Automatic window focus** on macOS for headed testing
+- **Direct URL loading** bypassing Firefox navigation limitations
+- **Comprehensive test guides** with step-by-step validation checklists
+
+### 📸 Enhanced Screenshot Capture
+- **Automatic screenshot capture** on test failures
+- **Enhanced expect functions** with built-in screenshot support
+- **Test wrapper utilities** for comprehensive failure detection
+- **Modal preview** in HTML reports for screenshot viewing
+
+### 🔴 Live Test Execution UI
+- **Integrated live monitoring** directly in the main Super Pancake UI
+- **WebSocket-based real-time monitoring** of test execution
+- **Live console streaming** with real-time progress indicators
+- **Live Mode toggle** - Switch between static and real-time execution
+- **Single unified interface** at `http://localhost:3000`
+
+### 📊 Improved Reporting
+- **Individual test logging** with comprehensive console output tracking
+- **Deduplication logic** for cleaner test result data
+- **Template literal fixes** for proper log display in reports
+- **Enhanced test result processor** with screenshot integration
+
+### 🧹 Code Quality Improvements
+- **Cleaned up temporary files** and debug scripts
+- **Optimized file structure** with removed unused components
+- **Enhanced error handling** and graceful fallback mechanisms
 
 ## 🤝 Contributing
 

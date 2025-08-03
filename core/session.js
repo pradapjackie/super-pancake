@@ -10,13 +10,14 @@ import {
 let msgId = 0;
 const sessionTimeouts = new Map(); // Track message timeouts
 
-export function createSession(ws) {
+export function createSession(ws, browser = 'chrome') {
   if (!ws || typeof ws.send !== 'function') {
     throw new SessionError('Invalid WebSocket provided to createSession', { wsState: ws?.readyState });
   }
 
-  const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  console.log(`📞 Creating session: ${sessionId}`);
+  const browserType = ws.browserType || browser;
+  const sessionId = `session_${browserType}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  console.log(`📞 Creating ${browserType} session: ${sessionId}`);
 
   // Enhanced send with comprehensive error handling
   const send = withCircuitBreaker(

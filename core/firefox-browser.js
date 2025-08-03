@@ -1,93 +1,12 @@
 import WebSocket from 'ws';
 import fetch from 'node-fetch';
-import { connectToFirefox, isFirefoxConnectionHealthy, closeFirefoxConnection, createRobustFirefoxConnection } from './firefox-browser.js';
 
-/**
- * Connect to browser (Chrome or Firefox) based on browser type
- * @param {Object} options
- * @param {string} options.browser - Browser type ('chrome' or 'firefox')
- * @param {number} options.port - Port for remote debugging
- * @param {number} options.maxRetries - Maximum retry attempts
- */
-export async function connectToBrowser({ browser = 'chrome', port = null, maxRetries = 3 } = {}) {
-  const normalizedBrowser = browser.toLowerCase();
-
-  switch (normalizedBrowser) {
-    case 'chrome':
-      const chromePort = port || 9222;
-      return await connectToChrome(chromePort, maxRetries);
-    case 'firefox':
-      const firefoxPort = port || 6000;
-      return await connectToFirefox(firefoxPort, maxRetries);
-    default:
-      throw new Error(`Unsupported browser: ${browser}. Supported browsers: chrome, firefox`);
-  }
-}
-
-/**
- * Check if browser connection is healthy
- * @param {WebSocket} ws - WebSocket connection
- * @param {string} browser - Browser type
- */
-export function isBrowserConnectionHealthy(ws, browser = 'chrome') {
-  const normalizedBrowser = browser.toLowerCase();
-
-  switch (normalizedBrowser) {
-    case 'chrome':
-      return isConnectionHealthy(ws);
-    case 'firefox':
-      return isFirefoxConnectionHealthy(ws);
-    default:
-      return isConnectionHealthy(ws); // Fallback to Chrome logic
-  }
-}
-
-/**
- * Close browser connection safely
- * @param {WebSocket} ws - WebSocket connection
- * @param {string} browser - Browser type
- */
-export function closeBrowserConnection(ws, browser = 'chrome') {
-  const normalizedBrowser = browser.toLowerCase();
-
-  switch (normalizedBrowser) {
-    case 'chrome':
-      return closeConnection(ws);
-    case 'firefox':
-      return closeFirefoxConnection(ws);
-    default:
-      return closeConnection(ws); // Fallback to Chrome logic
-  }
-}
-
-/**
- * Create robust browser connection with crash recovery
- * @param {Object} options
- * @param {string} options.browser - Browser type
- * @param {number} options.port - Port for remote debugging
- * @param {number} options.maxRetries - Maximum retry attempts
- */
-export async function createRobustBrowserConnection({ browser = 'chrome', port = null, maxRetries = 3 } = {}) {
-  const normalizedBrowser = browser.toLowerCase();
-
-  switch (normalizedBrowser) {
-    case 'chrome':
-      const chromePort = port || 9222;
-      return await createRobustConnection(chromePort, maxRetries);
-    case 'firefox':
-      const firefoxPort = port || 6000;
-      return await createRobustFirefoxConnection(firefoxPort, maxRetries);
-    default:
-      throw new Error(`Unsupported browser: ${browser}. Supported browsers: chrome, firefox`);
-  }
-}
-
-async function waitForDebuggerReady(port = 9222, retries = 30, backoffMultiplier = 1.2) {
+async function waitForFirefoxDebuggerReady(port = 6000, retries = 30, backoffMultiplier = 1.2) {
   let currentDelay = 500; // Start with 500ms delay
 
   for (let i = 0; i < retries; i++) {
     try {
-      console.log(`🔄 Checking Chrome debugger readiness... [Attempt ${i + 1}/${retries}]`);
+      console.log(`🔄 Checking Firefox debugger readiness... [Attempt ${i + 1}/${retries}]`);
 
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout per request
@@ -113,22 +32,22 @@ async function waitForDebuggerReady(port = 9222, retries = 30, backoffMultiplier
       }
 
       if (targets.length === 0) {
-        throw new Error('No Chrome targets available');
+        throw new Error('No Firefox targets available');
       }
 
-      // Validate we have a page target with WebSocket URL
-      const pageTarget = targets.find(target =>
-        target.type === 'page' &&
-                target.webSocketDebuggerUrl
+      // Find a suitable tab target
+      const tabTarget = targets.find(target =>
+        target.type === 'tab' &&
+        target.webSocketDebuggerUrl
       );
 
-      if (!pageTarget) {
-        console.log(`⚠️ Found ${targets.length} targets but no suitable page target`);
-        throw new Error('No suitable page target found');
+      if (!tabTarget) {
+        console.log(`⚠️ Found ${targets.length} targets but no suitable tab target`);
+        throw new Error('No suitable tab target found');
       }
 
-      console.log(`✅ Chrome debugger ready! Found ${targets.length} targets`);
-      console.log(`📍 Using target: ${pageTarget.title || 'Untitled'} (${pageTarget.url || 'about:blank'})`);
+      console.log(`✅ Firefox debugger ready! Found ${targets.length} targets`);
+      console.log(`📍 Using target: ${tabTarget.title || 'Untitled'} (${tabTarget.url || 'about:blank'})`);
 
       return targets;
 
@@ -138,16 +57,16 @@ async function waitForDebuggerReady(port = 9222, retries = 30, backoffMultiplier
       if (err.name === 'AbortError') {
         console.log(`⏱️ Request timeout on attempt ${i + 1}`);
       } else if (err.code === 'ECONNREFUSED') {
-        console.log(`🔌 Connection refused on attempt ${i + 1} - Chrome may not be started yet`);
+        console.log(`🔌 Connection refused on attempt ${i + 1} - Firefox may not be started yet`);
       } else {
         console.log(`❌ Error on attempt ${i + 1}: ${err.message}`);
       }
 
       if (isLastAttempt) {
         const detailedError = new Error(
-          `Chrome debugger connection failed after ${retries} attempts. ` +
-                    `Last error: ${err.message}. ` +
-                    `Ensure Chrome is running with --remote-debugging-port=${port}`
+          `Firefox debugger connection failed after ${retries} attempts. ` +
+          `Last error: ${err.message}. ` +
+          `Ensure Firefox is running with --remote-debugging-port=${port}`
         );
         detailedError.originalError = err;
         detailedError.port = port;
@@ -167,33 +86,33 @@ async function waitForDebuggerReady(port = 9222, retries = 30, backoffMultiplier
   }
 }
 
-export async function connectToChrome(port = 9222, maxRetries = 3) {
+export async function connectToFirefox(port = 6000, maxRetries = 3) {
   let lastError = null;
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      console.log(`🔗 Attempting WebSocket connection... [Attempt ${attempt}/${maxRetries}]`);
+      console.log(`🔗 Attempting Firefox WebSocket connection... [Attempt ${attempt}/${maxRetries}]`);
 
-      const targets = await waitForDebuggerReady(port);
+      const targets = await waitForFirefoxDebuggerReady(port);
 
       if (!targets || targets.length === 0) {
-        throw new Error(`No Chrome targets available on port ${port}`);
+        throw new Error(`No Firefox targets available on port ${port}`);
       }
 
-      // Find the best target (prefer page type)
-      const pageTarget = targets.find(target =>
-        target.type === 'page' &&
-                target.webSocketDebuggerUrl
+      // Find the best target (prefer tab type, then any with WebSocket URL)
+      const tabTarget = targets.find(target =>
+        target.type === 'tab' &&
+        target.webSocketDebuggerUrl
       ) || targets.find(target => target.webSocketDebuggerUrl);
 
-      if (!pageTarget || !pageTarget.webSocketDebuggerUrl) {
-        throw new Error('No suitable WebSocket URL available from Chrome targets');
+      if (!tabTarget || !tabTarget.webSocketDebuggerUrl) {
+        throw new Error('No suitable WebSocket URL available from Firefox targets');
       }
 
-      const wsUrl = pageTarget.webSocketDebuggerUrl;
-      console.log(`📡 Connecting to WebSocket: ${wsUrl.substring(0, 50)}...`);
+      const wsUrl = tabTarget.webSocketDebuggerUrl;
+      console.log(`📡 Connecting to Firefox WebSocket: ${wsUrl.substring(0, 50)}...`);
 
-      const ws = await connectWebSocket(wsUrl, port);
+      const ws = await connectFirefoxWebSocket(wsUrl, port);
 
       // Add enhanced connection health monitoring with auto-reconnect
       ws.isHealthy = true;
@@ -205,8 +124,9 @@ export async function connectToChrome(port = 9222, maxRetries = 3) {
       ws.originalUrl = wsUrl;
       ws.port = port;
       ws.isReconnecting = false;
+      ws.browserType = 'firefox';
 
-      // Set up aggressive ping-pong for connection health (5 seconds instead of 30)
+      // Set up health monitoring for Firefox
       const pingInterval = setInterval(() => {
         if (ws.readyState === WebSocket.OPEN) {
           try {
@@ -217,29 +137,29 @@ export async function connectToChrome(port = 9222, maxRetries = 3) {
             const timeSinceLastPong = Date.now() - ws.lastPongTime;
             if (timeSinceLastPong > 15000) { // 15 second pong timeout
               ws.consecutiveFailures++;
-              console.log(`⚠️ Ping timeout detected (${ws.consecutiveFailures} consecutive failures)`);
+              console.log(`⚠️ Firefox ping timeout detected (${ws.consecutiveFailures} consecutive failures)`);
 
               if (ws.consecutiveFailures >= 3) {
-                console.log('❌ Connection unhealthy - too many ping failures');
+                console.log('❌ Firefox connection unhealthy - too many ping failures');
                 ws.isHealthy = false;
                 ws.emit('connection-unhealthy', { reason: 'ping-timeout', failures: ws.consecutiveFailures });
               }
             }
           } catch (pingError) {
-            console.log(`❌ Ping failed: ${pingError.message}`);
+            console.log(`❌ Firefox ping failed: ${pingError.message}`);
             ws.consecutiveFailures++;
             ws.isHealthy = false;
           }
         } else {
           clearInterval(pingInterval);
         }
-      }, 5000); // Ping every 5 seconds for faster failure detection
+      }, 5000); // Ping every 5 seconds
 
       ws.on('pong', () => {
         ws.lastPongTime = Date.now();
         ws.consecutiveFailures = 0; // Reset failure counter on successful pong
         if (!ws.isHealthy) {
-          console.log('✅ Connection recovered - pong received');
+          console.log('✅ Firefox connection recovered - pong received');
           ws.isHealthy = true;
         }
       });
@@ -248,11 +168,11 @@ export async function connectToChrome(port = 9222, maxRetries = 3) {
         clearInterval(pingInterval);
         ws.isHealthy = false;
         const reasonText = reason ? reason.toString() : 'Unknown';
-        console.log(`🔌 WebSocket connection closed (Code: ${code}, Reason: ${reasonText})`);
+        console.log(`🔌 Firefox WebSocket connection closed (Code: ${code}, Reason: ${reasonText})`);
 
         // Attempt automatic reconnection if not a normal closure and within retry limits
         if (code !== 1000 && !ws.isReconnecting && ws.reconnectAttempts < ws.maxReconnectAttempts) {
-          attemptReconnection(ws);
+          attemptFirefoxReconnection(ws);
         } else {
           ws.emit('connection-closed', { code, reason: reasonText, reconnectable: false });
         }
@@ -261,22 +181,22 @@ export async function connectToChrome(port = 9222, maxRetries = 3) {
       ws.on('error', (error) => {
         ws.isHealthy = false;
         ws.consecutiveFailures++;
-        console.log(`❌ WebSocket error (failure #${ws.consecutiveFailures}): ${error.message}`);
+        console.log(`❌ Firefox WebSocket error (failure #${ws.consecutiveFailures}): ${error.message}`);
 
         // Attempt automatic reconnection on error if within retry limits
         if (!ws.isReconnecting && ws.reconnectAttempts < ws.maxReconnectAttempts) {
-          attemptReconnection(ws);
+          attemptFirefoxReconnection(ws);
         } else {
           ws.emit('connection-error', { error: error.message, failures: ws.consecutiveFailures, reconnectable: false });
         }
       });
 
-      console.log(`✅ Successfully connected to Chrome WebSocket on attempt ${attempt}`);
+      console.log(`✅ Successfully connected to Firefox WebSocket on attempt ${attempt}`);
       return ws;
 
     } catch (error) {
       lastError = error;
-      console.log(`❌ Connection attempt ${attempt} failed: ${error.message}`);
+      console.log(`❌ Firefox connection attempt ${attempt} failed: ${error.message}`);
 
       if (attempt < maxRetries) {
         const delay = Math.min(1000 * attempt, 3000); // Progressive delay: 1s, 2s, 3s
@@ -288,10 +208,10 @@ export async function connectToChrome(port = 9222, maxRetries = 3) {
 
   // All attempts failed
   const finalError = new Error(
-    `Failed to connect to Chrome after ${maxRetries} attempts. ` +
-        `Last error: ${lastError?.message || 'Unknown error'}. ` +
-        `Troubleshooting: Ensure Chrome is running with --remote-debugging-port=${port} ` +
-        'and no firewall is blocking the connection.'
+    `Failed to connect to Firefox after ${maxRetries} attempts. ` +
+    `Last error: ${lastError?.message || 'Unknown error'}. ` +
+    `Troubleshooting: Ensure Firefox is running with --remote-debugging-port=${port} ` +
+    'and no firewall is blocking the connection.'
   );
   finalError.originalError = lastError;
   finalError.port = port;
@@ -299,11 +219,11 @@ export async function connectToChrome(port = 9222, maxRetries = 3) {
   throw finalError;
 }
 
-async function connectWebSocket(wsUrl, port) {
+async function connectFirefoxWebSocket(wsUrl, port) {
   return new Promise((resolve, reject) => {
     const startTime = Date.now();
 
-    // Enhanced WebSocket configuration for stability
+    // Enhanced WebSocket configuration for Firefox
     const ws = new WebSocket(wsUrl, {
       handshakeTimeout: 15000, // Increased to 15 seconds for slower systems
       perMessageDeflate: false, // Disable compression for stability
@@ -320,9 +240,9 @@ async function connectWebSocket(wsUrl, port) {
         const elapsed = Date.now() - startTime;
         ws.close();
         reject(new Error(
-          `WebSocket handshake timeout after ${elapsed}ms (limit: 15000ms). ` +
-                    `URL: ${wsUrl.substring(0, 100)}... ` +
-                    `Port: ${port}. Check if Chrome is responsive and not overloaded.`
+          `Firefox WebSocket handshake timeout after ${elapsed}ms (limit: 15000ms). ` +
+          `URL: ${wsUrl.substring(0, 100)}... ` +
+          `Port: ${port}. Check if Firefox is responsive and not overloaded.`
         ));
       }
     }, 15000);
@@ -332,7 +252,7 @@ async function connectWebSocket(wsUrl, port) {
         isResolved = true;
         clearTimeout(timeout);
         const elapsed = Date.now() - startTime;
-        console.log(`🚀 WebSocket connection established in ${elapsed}ms`);
+        console.log(`🚀 Firefox WebSocket connection established in ${elapsed}ms`);
         resolve(ws);
       }
     });
@@ -344,21 +264,21 @@ async function connectWebSocket(wsUrl, port) {
         const elapsed = Date.now() - startTime;
 
         // Enhanced error reporting with context
-        let errorMessage = `WebSocket connection failed after ${elapsed}ms. `;
+        let errorMessage = `Firefox WebSocket connection failed after ${elapsed}ms. `;
 
         if (error.code) {
           switch (error.code) {
             case 'ECONNREFUSED':
-              errorMessage += `Connection refused (${error.code}). Chrome may not be running on port ${port}.`;
+              errorMessage += `Connection refused (${error.code}). Firefox may not be running on port ${port}.`;
               break;
             case 'ENOTFOUND':
               errorMessage += `Host not found (${error.code}). Check if localhost is accessible.`;
               break;
             case 'ECONNRESET':
-              errorMessage += `Connection reset (${error.code}). Chrome may have crashed or restarted.`;
+              errorMessage += `Connection reset (${error.code}). Firefox may have crashed or restarted.`;
               break;
             case 'ETIMEDOUT':
-              errorMessage += `Connection timeout (${error.code}). Network or Chrome may be slow.`;
+              errorMessage += `Connection timeout (${error.code}). Network or Firefox may be slow.`;
               break;
             default:
               errorMessage += `Error code: ${error.code} - ${error.message}`;
@@ -380,7 +300,7 @@ async function connectWebSocket(wsUrl, port) {
         const elapsed = Date.now() - startTime;
 
         if (code !== 1000) { // 1000 is normal closure
-          let closeMessage = `WebSocket closed unexpectedly after ${elapsed}ms. `;
+          let closeMessage = `Firefox WebSocket closed unexpectedly after ${elapsed}ms. `;
 
           // Enhanced close code interpretation
           switch (code) {
@@ -388,13 +308,13 @@ async function connectWebSocket(wsUrl, port) {
               closeMessage += `Abnormal closure (${code}). Connection lost without proper handshake.`;
               break;
             case 1011:
-              closeMessage += `Server error (${code}). Chrome DevTools encountered an internal error.`;
+              closeMessage += `Server error (${code}). Firefox encountered an internal error.`;
               break;
             case 1012:
-              closeMessage += `Service restart (${code}). Chrome DevTools is restarting.`;
+              closeMessage += `Service restart (${code}). Firefox is restarting.`;
               break;
             case 1013:
-              closeMessage += `Try again later (${code}). Chrome DevTools is temporarily unavailable.`;
+              closeMessage += `Try again later (${code}). Firefox is temporarily unavailable.`;
               break;
             default:
               closeMessage += `Close code: ${code}`;
@@ -412,12 +332,12 @@ async function connectWebSocket(wsUrl, port) {
     });
 
     // Add connection state logging for debugging
-    console.log(`🔗 Initiating WebSocket connection to ${wsUrl.substring(0, 50)}...`);
+    console.log(`🔗 Initiating Firefox WebSocket connection to ${wsUrl.substring(0, 50)}...`);
   });
 }
 
-// Enhanced helper function to check if a WebSocket connection is healthy
-export function isConnectionHealthy(ws) {
+// Firefox-specific connection health check
+export function isFirefoxConnectionHealthy(ws) {
   if (!ws || !ws.isHealthy) {
     return false;
   }
@@ -428,30 +348,30 @@ export function isConnectionHealthy(ws) {
 
   // Check for too many consecutive failures
   if (ws.consecutiveFailures && ws.consecutiveFailures >= 3) {
-    console.log(`⚠️ WebSocket connection unhealthy - ${ws.consecutiveFailures} consecutive failures`);
+    console.log(`⚠️ Firefox WebSocket connection unhealthy - ${ws.consecutiveFailures} consecutive failures`);
     return false;
   }
 
   // Check if we've received a pong recently (within last 20 seconds with faster ping)
   const timeSinceLastPong = Date.now() - (ws.lastPongTime || 0);
   if (timeSinceLastPong > 20000) {
-    console.log(`⚠️ WebSocket connection may be stale - no pong for ${Math.round(timeSinceLastPong/1000)}s`);
+    console.log(`⚠️ Firefox WebSocket connection may be stale - no pong for ${Math.round(timeSinceLastPong/1000)}s`);
     return false;
   }
 
   // Check if ping is working
   const timeSinceLastPing = Date.now() - (ws.lastPingTime || 0);
   if (timeSinceLastPing > 30000) {
-    console.log(`⚠️ WebSocket ping system not active - last ping ${Math.round(timeSinceLastPing/1000)}s ago`);
+    console.log(`⚠️ Firefox WebSocket ping system not active - last ping ${Math.round(timeSinceLastPing/1000)}s ago`);
     return false;
   }
 
   return true;
 }
 
-// Helper function to safely close WebSocket connections
-export function closeConnection(ws) {
-  if (!ws) {return;}
+// Helper function to safely close Firefox WebSocket connections
+export function closeFirefoxConnection(ws) {
+  if (!ws) return;
 
   try {
     if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
@@ -459,12 +379,12 @@ export function closeConnection(ws) {
     }
     ws.isHealthy = false;
   } catch (error) {
-    console.log(`⚠️ Error closing WebSocket: ${error.message}`);
+    console.log(`⚠️ Error closing Firefox WebSocket: ${error.message}`);
   }
 }
 
-// Automatic reconnection function with exponential backoff
-async function attemptReconnection(originalWs) {
+// Automatic reconnection function for Firefox with exponential backoff
+async function attemptFirefoxReconnection(originalWs) {
   if (originalWs.isReconnecting) {
     return; // Already attempting reconnection
   }
@@ -472,36 +392,36 @@ async function attemptReconnection(originalWs) {
   originalWs.isReconnecting = true;
   originalWs.reconnectAttempts++;
 
-  console.log(`🔄 Attempting automatic reconnection [${originalWs.reconnectAttempts}/${originalWs.maxReconnectAttempts}]`);
+  console.log(`🔄 Attempting Firefox automatic reconnection [${originalWs.reconnectAttempts}/${originalWs.maxReconnectAttempts}]`);
 
   // Exponential backoff: 1s, 2s, 4s, 8s, 16s
   const delay = Math.min(1000 * Math.pow(2, originalWs.reconnectAttempts - 1), 16000);
-  console.log(`⏳ Waiting ${delay}ms before reconnection attempt...`);
+  console.log(`⏳ Waiting ${delay}ms before Firefox reconnection attempt...`);
 
   await new Promise(resolve => setTimeout(resolve, delay));
 
   try {
     // Get fresh targets and attempt to reconnect
-    const targets = await waitForDebuggerReady(originalWs.port);
+    const targets = await waitForFirefoxDebuggerReady(originalWs.port);
 
     if (!targets || targets.length === 0) {
-      throw new Error(`No Chrome targets available on port ${originalWs.port} during reconnection`);
+      throw new Error(`No Firefox targets available on port ${originalWs.port} during reconnection`);
     }
 
     // Find a suitable target
-    const pageTarget = targets.find(target =>
-      target.type === 'page' &&
-            target.webSocketDebuggerUrl
+    const tabTarget = targets.find(target =>
+      target.type === 'tab' &&
+      target.webSocketDebuggerUrl
     ) || targets.find(target => target.webSocketDebuggerUrl);
 
-    if (!pageTarget || !pageTarget.webSocketDebuggerUrl) {
-      throw new Error('No suitable WebSocket URL available during reconnection');
+    if (!tabTarget || !tabTarget.webSocketDebuggerUrl) {
+      throw new Error('No suitable WebSocket URL available during Firefox reconnection');
     }
 
-    const newWsUrl = pageTarget.webSocketDebuggerUrl;
-    console.log(`🔄 Reconnecting to: ${newWsUrl.substring(0, 50)}...`);
+    const newWsUrl = tabTarget.webSocketDebuggerUrl;
+    console.log(`🔄 Firefox reconnecting to: ${newWsUrl.substring(0, 50)}...`);
 
-    const newWs = await connectWebSocket(newWsUrl, originalWs.port);
+    const newWs = await connectFirefoxWebSocket(newWsUrl, originalWs.port);
 
     // Copy connection monitoring properties to new WebSocket
     newWs.isHealthy = true;
@@ -513,8 +433,9 @@ async function attemptReconnection(originalWs) {
     newWs.originalUrl = originalWs.originalUrl;
     newWs.port = originalWs.port;
     newWs.isReconnecting = false;
+    newWs.browserType = 'firefox';
 
-    console.log(`✅ Reconnection successful after ${originalWs.reconnectAttempts} attempts`);
+    console.log(`✅ Firefox reconnection successful after ${originalWs.reconnectAttempts} attempts`);
 
     // Emit reconnection success event
     originalWs.emit('connection-reconnected', {
@@ -526,13 +447,13 @@ async function attemptReconnection(originalWs) {
 
   } catch (error) {
     originalWs.isReconnecting = false;
-    console.log(`❌ Reconnection attempt ${originalWs.reconnectAttempts} failed: ${error.message}`);
+    console.log(`❌ Firefox reconnection attempt ${originalWs.reconnectAttempts} failed: ${error.message}`);
 
     if (originalWs.reconnectAttempts < originalWs.maxReconnectAttempts) {
       // Will try again on next error/close event
-      console.log('⏳ Will retry reconnection if another failure occurs');
+      console.log('⏳ Will retry Firefox reconnection if another failure occurs');
     } else {
-      console.log(`🛑 Maximum reconnection attempts (${originalWs.maxReconnectAttempts}) reached`);
+      console.log(`🛑 Maximum Firefox reconnection attempts (${originalWs.maxReconnectAttempts}) reached`);
       originalWs.emit('connection-exhausted', {
         attempts: originalWs.reconnectAttempts,
         lastError: error.message
@@ -543,8 +464,8 @@ async function attemptReconnection(originalWs) {
   }
 }
 
-// Browser crash detection and recovery system
-export async function createRobustConnection(port = 9222, maxRetries = 3) {
+// Firefox crash detection and recovery system
+export async function createRobustFirefoxConnection(port = 6000, maxRetries = 3) {
   const connectionManager = {
     ws: null,
     isActive: false,
@@ -552,34 +473,35 @@ export async function createRobustConnection(port = 9222, maxRetries = 3) {
     maxCrashRecoveries: 3,
     healthCheckInterval: null,
     port: port,
+    browserType: 'firefox',
 
     async initialize() {
-      console.log('🛡️ Initializing robust browser connection...');
-      this.ws = await connectToChrome(this.port, maxRetries);
+      console.log('🛡️ Initializing robust Firefox connection...');
+      this.ws = await connectToFirefox(this.port, maxRetries);
       this.isActive = true;
       this.startHealthMonitoring();
       return this.ws;
     },
 
     startHealthMonitoring() {
-      console.log('💓 Starting browser health monitoring...');
+      console.log('💓 Starting Firefox health monitoring...');
 
       this.healthCheckInterval = setInterval(async () => {
-        if (!this.isActive) {return;}
+        if (!this.isActive) return;
 
         try {
-          // Check if Chrome process is still running
+          // Check if Firefox process is still running
           const isAlive = await this.checkBrowserAlive();
 
           if (!isAlive) {
-            console.log('💀 Browser crash detected!');
+            console.log('💀 Firefox crash detected!');
             await this.handleCrash();
-          } else if (!isConnectionHealthy(this.ws)) {
-            console.log('⚕️ Connection health issue detected');
+          } else if (!isFirefoxConnectionHealthy(this.ws)) {
+            console.log('⚕️ Firefox connection health issue detected');
             await this.handleConnectionIssue();
           }
         } catch (error) {
-          console.log(`❌ Health check error: ${error.message}`);
+          console.log(`❌ Firefox health check error: ${error.message}`);
         }
       }, 10000); // Check every 10 seconds
     },
@@ -591,7 +513,7 @@ export async function createRobustConnection(port = 9222, maxRetries = 3) {
 
         const response = await fetch(`http://127.0.0.1:${this.port}/json`, {
           signal: controller.signal,
-          headers: { 'User-Agent': 'SuperPancake-HealthCheck' }
+          headers: { 'User-Agent': 'SuperPancake-FirefoxHealthCheck' }
         });
 
         clearTimeout(timeoutId);
@@ -603,39 +525,39 @@ export async function createRobustConnection(port = 9222, maxRetries = 3) {
 
     async handleCrash() {
       this.crashCount++;
-      console.log(`🚨 Browser crash #${this.crashCount} detected`);
+      console.log(`🚨 Firefox crash #${this.crashCount} detected`);
 
       if (this.crashCount > this.maxCrashRecoveries) {
-        console.log(`🛑 Maximum crash recoveries (${this.maxCrashRecoveries}) exceeded`);
+        console.log(`🛑 Maximum Firefox crash recoveries (${this.maxCrashRecoveries}) exceeded`);
         this.isActive = false;
         this.ws?.emit('browser-crash-exhausted', { crashes: this.crashCount });
         return;
       }
 
-      console.log(`🔄 Attempting crash recovery ${this.crashCount}/${this.maxCrashRecoveries}...`);
+      console.log(`🔄 Attempting Firefox crash recovery ${this.crashCount}/${this.maxCrashRecoveries}...`);
 
       try {
         // Clean up old connection
         if (this.ws) {
-          closeConnection(this.ws);
+          closeFirefoxConnection(this.ws);
         }
 
         // Wait before recovery attempt
         const delay = Math.min(5000 * this.crashCount, 30000); // 5s, 10s, 15s...
-        console.log(`⏳ Waiting ${delay}ms before crash recovery...`);
+        console.log(`⏳ Waiting ${delay}ms before Firefox crash recovery...`);
         await new Promise(resolve => setTimeout(resolve, delay));
 
         // Attempt to restart browser connection
-        this.ws = await connectToChrome(this.port, maxRetries);
+        this.ws = await connectToFirefox(this.port, maxRetries);
 
-        console.log('✅ Crash recovery successful! Browser reconnected.');
+        console.log('✅ Firefox crash recovery successful! Browser reconnected.');
         this.ws?.emit('browser-crash-recovered', {
           crashes: this.crashCount,
           recoveryTime: delay
         });
 
       } catch (error) {
-        console.log(`❌ Crash recovery ${this.crashCount} failed: ${error.message}`);
+        console.log(`❌ Firefox crash recovery ${this.crashCount} failed: ${error.message}`);
         this.ws?.emit('browser-crash-recovery-failed', {
           crashes: this.crashCount,
           error: error.message
@@ -644,26 +566,26 @@ export async function createRobustConnection(port = 9222, maxRetries = 3) {
     },
 
     async handleConnectionIssue() {
-      console.log('🔧 Handling connection issue...');
+      console.log('🔧 Handling Firefox connection issue...');
 
       try {
         // Attempt connection recovery without full restart
         if (this.ws && this.ws.readyState !== WebSocket.OPEN) {
-          console.log('🔗 WebSocket not open, attempting reconnection...');
-          closeConnection(this.ws);
-          this.ws = await connectToChrome(this.port, 2); // Fewer retries for connection issues
+          console.log('🔗 Firefox WebSocket not open, attempting reconnection...');
+          closeFirefoxConnection(this.ws);
+          this.ws = await connectToFirefox(this.port, 2); // Fewer retries for connection issues
 
-          console.log('✅ Connection issue resolved');
+          console.log('✅ Firefox connection issue resolved');
           this.ws?.emit('connection-issue-resolved');
         }
       } catch (error) {
-        console.log(`❌ Connection issue recovery failed: ${error.message}`);
+        console.log(`❌ Firefox connection issue recovery failed: ${error.message}`);
         // This will be caught by the crash detection on next health check
       }
     },
 
     destroy() {
-      console.log('🔒 Destroying robust connection manager...');
+      console.log('🔒 Destroying robust Firefox connection manager...');
       this.isActive = false;
 
       if (this.healthCheckInterval) {
@@ -672,11 +594,11 @@ export async function createRobustConnection(port = 9222, maxRetries = 3) {
       }
 
       if (this.ws) {
-        closeConnection(this.ws);
+        closeFirefoxConnection(this.ws);
         this.ws = null;
       }
 
-      console.log('✅ Connection manager destroyed');
+      console.log('✅ Firefox connection manager destroyed');
     }
   };
 

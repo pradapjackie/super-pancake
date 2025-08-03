@@ -22,45 +22,34 @@ async function buildVitestArgs() {
   const config = await loadSuperPancakeConfig();
   const vitestSettings = config.execution?.vitest || {};
   const timeouts = config.timeouts || {};
+  const testDir = config.testDir || 'tests';
 
-  const args = ['vitest'];
+  const args = ['vitest', 'run'];
 
-  // Add execution settings from super-pancake config
-  if (vitestSettings.pool) {
-    args.push('--pool', vitestSettings.pool);
-  }
-
-  if (vitestSettings.poolOptions?.forks?.singleFork) {
-    args.push('--poolOptions.forks.singleFork', 'true');
-  }
-
-  if (vitestSettings.fileParallelism === false) {
-    args.push('--fileParallelism', 'false');
-  }
-
-  if (vitestSettings.sequence?.concurrent === false) {
-    args.push('--sequence.concurrent', 'false');
-  }
-
+  // Essential settings for browser automation
+  args.push('--pool', vitestSettings.pool || 'forks');
+  args.push('--testTimeout', (timeouts.testTimeout || 60000).toString());
+  args.push('--hookTimeout', (timeouts.navigationTimeout || 30000).toString());
+  
   if (vitestSettings.bail) {
     args.push('--bail', vitestSettings.bail.toString());
   }
 
-  if (vitestSettings.retry !== undefined) {
-    args.push('--retry', vitestSettings.retry.toString());
+  // Reporter
+  const reporterConfig = config.reporter || {};
+  if (reporterConfig.console?.verbose) {
+    args.push('--reporter', 'verbose');
   }
 
-  // Add timeout from super-pancake config
-  if (timeouts.testTimeout) {
-    args.push('--testTimeout', timeouts.testTimeout.toString());
-  }
-
-  // Add reporter
-  args.push('--reporter', 'verbose');
-
-  // Add any additional args passed to the script
+  // Test files - either from additional args or default pattern
   const additionalArgs = process.argv.slice(2);
-  args.push(...additionalArgs);
+  if (additionalArgs.length > 0) {
+    // Use provided test files/patterns
+    args.push(...additionalArgs);
+  } else {
+    // Default to all test files
+    args.push(`${testDir}/**/*.test.js`);
+  }
 
   return args;
 }

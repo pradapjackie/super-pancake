@@ -2,6 +2,29 @@ import chromeLauncher from 'chrome-launcher';
 import { exec } from 'child_process';
 import fetch from 'node-fetch';
 import net from 'net';
+import { launchFirefox } from './firefox-launcher.js';
+
+/**
+ * Launch browser (Chrome or Firefox) based on browser type
+ * @param {Object} options
+ * @param {string} options.browser - Browser type ('chrome' or 'firefox')
+ * @param {boolean} options.headed - If true, launch with visible window
+ * @param {number} options.port - Port for remote debugging
+ * @param {number} options.maxRetries - Maximum retry attempts
+ */
+export async function launchBrowser({ browser = 'chrome', headed = false, port = null, maxRetries = 3 } = {}) {
+  const normalizedBrowser = browser.toLowerCase();
+
+  switch (normalizedBrowser) {
+    case 'chrome':
+      return await launchChrome({ headed, port, maxRetries });
+    case 'firefox':
+      const firefoxPort = port || 6000; // Firefox default port
+      return await launchFirefox({ headed, port: firefoxPort, maxRetries });
+    default:
+      throw new Error(`Unsupported browser: ${browser}. Supported browsers: chrome, firefox`);
+  }
+}
 
 /**
  * Launch Chrome in headed or headless mode
@@ -48,17 +71,21 @@ export async function launchChrome({ headed = false, port = null, maxRetries = 3
 
       const chrome = await chromeLauncher.launch({
         chromeFlags: [
-          ...(!headed ? ['--headless=new'] : []),
+          ...(!headed ? ['--headless=new'] : [
+            '--new-window', // Open in new window for headed mode
+            '--window-position=100,100', // Position window visibly
+            '--window-size=1280,800',
+            '--start-maximized'
+          ]),
           '--disable-gpu',
-          '--window-size=1280,800',
+          ...(headed ? [] : ['--window-size=1280,800']), // Only set size for headless
           '--disable-infobars',
           '--no-first-run',
           '--no-default-browser-check',
-          '--start-maximized',
+          ...(!headed ? [] : ['--disable-web-security']), // More permissive for headed testing
           '--no-sandbox',
           '--disable-dev-shm-usage',
           '--enable-automation',
-          '--disable-web-security',
           '--disable-features=VizDisplayCompositor',
           '--disable-background-timer-throttling',
           '--disable-backgrounding-occluded-windows',
@@ -78,10 +105,14 @@ export async function launchChrome({ headed = false, port = null, maxRetries = 3
 
       console.log(`✅ Chrome successfully launched at port ${chrome.port} in ${headed ? 'headed' : 'headless'} mode`);
 
-      // macOS: bring Chrome window to front
+      // macOS: bring Chrome window to front and make it visible
       if (headed && process.platform === 'darwin') {
         try {
+          // Wait a moment for Chrome to fully load
+          await new Promise(resolve => setTimeout(resolve, 1500));
           exec('osascript -e \'tell application "Google Chrome" to activate\'');
+          exec('osascript -e \'tell application "System Events" to set frontmost of process "Google Chrome" to true\'');
+          console.log('🖥️  Brought Chrome window to front');
         } catch (osError) {
           console.log('⚠️ Could not bring Chrome to front:', osError.message);
         }

@@ -104,16 +104,89 @@ function calculateSummary(tests) {
 
 /**
  * Group tests by file for overview display
+ * Includes deduplication logic to prioritize individual test entries with logs over suite entries
  */
 function groupTestsByFile(tests) {
     const testsByFile = {};
     
+    // First pass: collect all tests by file and test name
+    const testsByFileAndName = {};
+    
     tests.forEach(test => {
         const fileName = test.fileName || test.file || test.metadata?.testFile || 'Unknown File';
+        const testName = test.testName || test.description || test.name || 'Unknown Test';
+        
+        if (!testsByFileAndName[fileName]) {
+            testsByFileAndName[fileName] = {};
+        }
+        
+        if (!testsByFileAndName[fileName][testName]) {
+            testsByFileAndName[fileName][testName] = [];
+        }
+        
+        testsByFileAndName[fileName][testName].push(test);
+    });
+    
+    // Second pass: deduplicate by prioritizing individual test entries with logs
+    Object.entries(testsByFileAndName).forEach(([fileName, testsByName]) => {
         if (!testsByFile[fileName]) {
             testsByFile[fileName] = [];
         }
-        testsByFile[fileName].push(test);
+        
+        Object.entries(testsByName).forEach(([testName, duplicateTests]) => {
+            if (duplicateTests.length === 1) {
+                // No duplicates, add the single test
+                testsByFile[fileName].push(duplicateTests[0]);
+            } else {
+                // Debug logging for deduplication
+                console.log(`🔍 Deduplicating ${duplicateTests.length} entries for test: "${testName}" in file: "${fileName}"`);
+                console.log(`   - Individual tests with logs: ${duplicateTests.filter(test => test.metadata?.individualTest && test.logs && test.logs.length > 0).length}`);
+                console.log(`   - Individual tests without logs: ${duplicateTests.filter(test => test.metadata?.individualTest && (!test.logs || test.logs.length === 0)).length}`);
+                console.log(`   - Suite tests with logs: ${duplicateTests.filter(test => !test.metadata?.individualTest && test.logs && test.logs.length > 0).length}`);
+                console.log(`   - Suite tests without logs: ${duplicateTests.filter(test => !test.metadata?.individualTest && (!test.logs || test.logs.length === 0)).length}`);
+                // Handle duplicates by prioritizing:
+                // 1. Individual test entries (have metadata.individualTest flag) with logs
+                // 2. Individual test entries without logs  
+                // 3. Suite entries with logs
+                // 4. Suite entries without logs
+                
+                const individualTestsWithLogs = duplicateTests.filter(test => 
+                    test.metadata?.individualTest && test.logs && Array.isArray(test.logs) && test.logs.length > 0
+                );
+                
+                const individualTestsWithoutLogs = duplicateTests.filter(test => 
+                    test.metadata?.individualTest && (!test.logs || !Array.isArray(test.logs) || test.logs.length === 0)
+                );
+                
+                const suiteTestsWithLogs = duplicateTests.filter(test => 
+                    !test.metadata?.individualTest && test.logs && Array.isArray(test.logs) && test.logs.length > 0
+                );
+                
+                const suiteTestsWithoutLogs = duplicateTests.filter(test => 
+                    !test.metadata?.individualTest && (!test.logs || !Array.isArray(test.logs) || test.logs.length === 0)
+                );
+                
+                // Pick the best test entry based on priority
+                let selectedTest = null;
+                
+                if (individualTestsWithLogs.length > 0) {
+                    selectedTest = individualTestsWithLogs[0];
+                } else if (individualTestsWithoutLogs.length > 0) {
+                    selectedTest = individualTestsWithoutLogs[0];
+                } else if (suiteTestsWithLogs.length > 0) {
+                    selectedTest = suiteTestsWithLogs[0];
+                } else if (suiteTestsWithoutLogs.length > 0) {
+                    selectedTest = suiteTestsWithoutLogs[0];
+                } else {
+                    // Fallback to first test if none match criteria
+                    selectedTest = duplicateTests[0];
+                }
+                
+                if (selectedTest) {
+                    testsByFile[fileName].push(selectedTest);
+                }
+            }
+        });
     });
     
     return testsByFile;

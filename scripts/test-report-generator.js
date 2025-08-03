@@ -42,21 +42,98 @@ async function generateTestReport(jsonFilePath, outputPath = 'test-report.html')
         // Import the template generator
         const { generateSelfContainedTemplate } = await import(templatePath);
         
-        // Calculate the summary manually with correct field names
+        // Deduplicate tests using the same logic as the frontend
+        function deduplicateTests(tests) {
+            const testsByFileAndName = {};
+            
+            // First pass: collect all tests by file and test name
+            tests.forEach(test => {
+                const fileName = test.fileName || test.file || test.metadata?.testFile || 'Unknown File';
+                const testName = test.testName || test.description || test.name || 'Unknown Test';
+                
+                if (!testsByFileAndName[fileName]) {
+                    testsByFileAndName[fileName] = {};
+                }
+                
+                if (!testsByFileAndName[fileName][testName]) {
+                    testsByFileAndName[fileName][testName] = [];
+                }
+                
+                testsByFileAndName[fileName][testName].push(test);
+            });
+            
+            // Second pass: deduplicate by prioritizing individual test entries with logs
+            const deduplicatedTests = [];
+            
+            Object.entries(testsByFileAndName).forEach(([fileName, testsByName]) => {
+                Object.entries(testsByName).forEach(([testName, duplicateTests]) => {
+                    if (duplicateTests.length === 1) {
+                        // No duplicates, add the single test
+                        deduplicatedTests.push(duplicateTests[0]);
+                    } else {
+                        // Handle duplicates by prioritizing individual test entries with logs
+                        const individualTestsWithLogs = duplicateTests.filter(test => 
+                            test.metadata?.individualTest && test.logs && Array.isArray(test.logs) && test.logs.length > 0
+                        );
+                        
+                        const individualTestsWithoutLogs = duplicateTests.filter(test => 
+                            test.metadata?.individualTest && (!test.logs || !Array.isArray(test.logs) || test.logs.length === 0)
+                        );
+                        
+                        const suiteTestsWithLogs = duplicateTests.filter(test => 
+                            !test.metadata?.individualTest && test.logs && Array.isArray(test.logs) && test.logs.length > 0
+                        );
+                        
+                        const suiteTestsWithoutLogs = duplicateTests.filter(test => 
+                            !test.metadata?.individualTest && (!test.logs || !Array.isArray(test.logs) || test.logs.length === 0)
+                        );
+                        
+                        // Pick the best test entry based on priority
+                        let selectedTest = null;
+                        
+                        if (individualTestsWithLogs.length > 0) {
+                            selectedTest = individualTestsWithLogs[0];
+                        } else if (individualTestsWithoutLogs.length > 0) {
+                            selectedTest = individualTestsWithoutLogs[0];
+                        } else if (suiteTestsWithLogs.length > 0) {
+                            selectedTest = suiteTestsWithLogs[0];
+                        } else if (suiteTestsWithoutLogs.length > 0) {
+                            selectedTest = suiteTestsWithoutLogs[0];
+                        } else {
+                            // Fallback to first test if none match criteria
+                            selectedTest = duplicateTests[0];
+                        }
+                        
+                        if (selectedTest) {
+                            deduplicatedTests.push(selectedTest);
+                        }
+                    }
+                });
+            });
+            
+            return deduplicatedTests;
+        }
+        
+        // Apply deduplication to get the actual tests that will be displayed
+        const deduplicatedTests = deduplicateTests(testData);
+        
+        console.log('📊 Deduplication results:', testData.length, '→', deduplicatedTests.length, 'tests');
+        
+        // Calculate the summary using deduplicated data
         const summary = {
-            totalTests: testData.length,
-            passedTests: testData.filter(t => t.status === 'passed').length,
-            failedTests: testData.filter(t => t.status === 'failed').length,
-            skippedTests: testData.filter(t => t.status === 'skipped').length,
-            totalDuration: Math.round(testData.reduce((sum, test) => sum + (test.duration || 0), 0) * 100) / 100,
+            totalTests: deduplicatedTests.length,
+            passedTests: deduplicatedTests.filter(t => t.status === 'passed').length,
+            failedTests: deduplicatedTests.filter(t => t.status === 'failed').length,
+            skippedTests: deduplicatedTests.filter(t => t.status === 'skipped').length,
+            totalDuration: Math.round(deduplicatedTests.reduce((sum, test) => sum + (test.duration || 0), 0) * 100) / 100,
             successRate: 0
         };
         summary.successRate = summary.totalTests > 0 ? Math.round((summary.passedTests / summary.totalTests) * 100) : 0;
         
         console.log('📊 Calculated summary:', summary);
         
-        // Generate the HTML content
-        const htmlContent = generateSelfContainedTemplate(summary, testData);
+        // Generate the HTML content using deduplicated test data
+        const htmlContent = generateSelfContainedTemplate(summary, deduplicatedTests);
         
         // Write the report
         fs.writeFileSync(outputPath, htmlContent);
