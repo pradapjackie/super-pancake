@@ -687,14 +687,15 @@ async function generateTestSummary(results) {
     tags: new Set()
   };
 
-  // Get assertion statistics
+  // Get assertion statistics (optional - don't block report generation)
   let assertionStats = { total: 0, passed: 0, failed: 0, passRate: 0 };
   try {
     // Use dynamic import for ES modules
     const assertModule = await import('../core/assert.js');
     assertionStats = assertModule.getAssertionStats();
   } catch (error) {
-    console.warn('Could not get assertion stats:', error.message);
+    // Silently ignore assertion stats errors - they're optional
+    console.log('Note: Assertion stats not available for this report');
   }
 
   results.forEach(result => {
