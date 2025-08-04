@@ -58,39 +58,12 @@ describe('Automatic Screenshot Capture Tests', () => {
   afterAll(async () => {
     console.log('🧹 Cleaning up screenshot test environment...');
     
-    // Get individual test data and save to HTML reporter
+    // Get individual test data for logging purposes only
     const individualTests = getIndividualTestData();
     console.log(`📊 Captured ${individualTests.length} individual test cases with screenshots`);
     
-    // Save each individual test result to HTML reporter
-    individualTests.forEach((testData, index) => {
-      const testResult = {
-        id: `auto-screenshot-test-${Date.now()}-${index}`,
-        testName: testData.testName,
-        description: `Auto Screenshot Test: ${testData.testName}`,
-        status: testData.error ? 'failed' : 'passed',
-        duration: 1000,
-        timestamp: testData.endTime || testData.startTime,
-        browser: 'Chrome',
-        environment: 'Local',
-        tags: ['Auto Screenshot Test', 'Individual Test'],
-        screenshots: testData.screenshots || [],
-        logs: testData.logs || [],
-        error: testData.error || null,
-        performanceMetrics: {
-          executionTime: 1000,
-          setupTime: 0,
-          teardownTime: 0,
-          cpuUsage: 25,
-          networkTime: 5,
-          slowestOperation: testData.testName,
-          retryCount: 0,
-          isFlaky: false
-        }
-      };
-      
-      addTestResult(testResult);
-    });
+    // Don't create separate test result entries - the screenshots are already captured
+    // and will be included in the main test results through the HTML reporter
     
     // Cleanup
     cleanupIndividualTestLogging();

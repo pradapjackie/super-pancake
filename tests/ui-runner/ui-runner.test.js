@@ -44,39 +44,12 @@ describe('UI Runner Tests', () => {
       console.log('🧹 UI Runner process terminated');
     }
     
-    // Get individual test data and save to HTML reporter
+    // Get individual test data for logging purposes only
     const individualTests = getIndividualTestData();
     console.log(`📊 Captured ${individualTests.length} individual test cases with logs`);
     
-    // Save each individual test result to HTML reporter
-    individualTests.forEach((testData, index) => {
-      const testResult = {
-        id: `ui-runner-individual-${Date.now()}-${index}`,
-        testName: testData.testName,
-        description: `UI Runner individual test: ${testData.testName}`,
-        status: 'passed',
-        duration: 1000,
-        timestamp: testData.endTime || testData.startTime,
-        browser: 'Chrome',
-        environment: 'Local',
-        tags: ['UI Runner Tests', 'Individual Test'],
-        screenshots: testData.screenshots || [],
-        logs: testData.logs || [],
-        error: null,
-        performanceMetrics: {
-          executionTime: 1000,
-          setupTime: 0,
-          teardownTime: 0,
-          cpuUsage: 25,
-          networkTime: 5,
-          slowestOperation: testData.testName,
-          retryCount: 0,
-          isFlaky: false
-        }
-      };
-      
-      addTestResult(testResult);
-    });
+    // Don't create separate test result entries - the logs are already captured
+    // and will be included in the main test results through the HTML reporter
     
     // Cleanup individual test logger
     cleanupIndividualTestLogging();

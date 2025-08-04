@@ -73,7 +73,10 @@
     "lint:errors-only": "eslint . --quiet",
     "lint:report": "eslint . --format html --output-file eslint-report.html",
     "build": "echo 'No build step required'",
-    "prepare": "npm run build"
+    "prepare": "npm run build",
+    "test:end-user": "node scripts/test-end-user-experience.js",
+    "test:ci-end-user": "npm run build && npm pack && node scripts/test-end-user-experience.js",
+    "test:end-user-sh": "bash scripts/test-end-user.sh"
   },
   "engines": {
     "node": ">=16.0.0",
