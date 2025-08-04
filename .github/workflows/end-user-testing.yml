@@ -97,8 +97,8 @@ jobs:
           }
         "
         
-        # Install package using the actual filename
-        TARBALL_NAME=$(cat tarball-name.txt)
+        # Install package using the actual filename (cross-platform)
+        TARBALL_NAME=$(node -e "console.log(require('fs').readFileSync('tarball-name.txt', 'utf8').trim())")
         npm install "$TARBALL_NAME"
         
         # Create simple test
@@ -209,8 +209,8 @@ jobs:
           }
         "
         
-        # Install package using the actual filename
-        TARBALL_NAME=$(cat tarball-name.txt)
+        # Install package using the actual filename (cross-platform)
+        TARBALL_NAME=$(node -e "console.log(require('fs').readFileSync('tarball-name.txt', 'utf8').trim())")
         npm install "$TARBALL_NAME"
         
         echo "✅ Cross-platform test passed on ${{ matrix.os }}"
@@ -238,6 +238,7 @@ jobs:
         npm pack
         
     - name: Test integration scenarios
+      shell: bash
       run: |
         # Scenario 1: New user workflow
         echo "Testing new user workflow..."
@@ -261,8 +262,8 @@ jobs:
           }
         "
         
-        # Install package using the actual filename
-        TARBALL_NAME=$(cat tarball-name.txt)
+        # Install package using the actual filename (cross-platform)
+        TARBALL_NAME=$(node -e "console.log(require('fs').readFileSync('tarball-name.txt', 'utf8').trim())")
         npm install "$TARBALL_NAME"
         
         # Test help and version
@@ -293,8 +294,8 @@ jobs:
           }
         "
         
-        # Install package using the actual filename
-        TARBALL_NAME=$(cat tarball-name.txt)
+        # Install package using the actual filename (cross-platform)
+        TARBALL_NAME=$(node -e "console.log(require('fs').readFileSync('tarball-name.txt', 'utf8').trim())")
         npm install "$TARBALL_NAME"
         
         # Create test file
