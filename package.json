@@ -76,7 +76,8 @@
     "prepare": "npm run build",
     "test:end-user": "node scripts/test-end-user-experience.js",
     "test:ci-end-user": "npm run build && npm pack && node scripts/test-end-user-experience.js",
-    "test:end-user-sh": "bash scripts/test-end-user.sh"
+    "test:end-user-sh": "bash scripts/test-end-user.sh",
+    "test:ci-locally": "bash scripts/test-ci-locally.sh"
   },
   "engines": {
     "node": ">=16.0.0",

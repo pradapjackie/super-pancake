@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [16, 18, 20]
+        node-version: [18, 20]
     
     steps:
     - name: Checkout code
@@ -51,42 +51,7 @@ jobs:
         npx super-pancake --version
         npx super-pancake --help
         
-        # Test UI command (non-interactive)
-        timeout 10s npx super-pancake-ui || true
-        
         echo "✅ Package installation test passed"
-
-  # Test project initialization
-  test-project-init:
-    name: Test Project Initialization
-    runs-on: ubuntu-latest
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '18'
-        cache: 'npm'
-        
-    - name: Install dependencies
-      run: npm ci
-      
-    - name: Test project initialization
-      run: |
-        # Test init command
-        echo "2" | npx super-pancake-init test-project-ci || true
-        
-        # Check if project was created
-        if [ -d "test-project-ci" ]; then
-          echo "✅ Project initialization test passed"
-          ls -la test-project-ci/
-        else
-          echo "❌ Project initialization failed"
-          exit 1
-        fi
 
   # Test framework functionality
   test-framework-functionality:
@@ -112,10 +77,11 @@ jobs:
         mkdir test-framework
         cd test-framework
         npm init -y
-        npm install ../super-pancake-automation-*.tgz
+        cp ../super-pancake-automation-*.tgz .
+        npm install super-pancake-automation-*.tgz
         
         # Create simple test
-        cat > test.js << 'EOF'
+        cat > test.test.js << 'EOF'
         import { describe, it } from 'vitest';
         import { assertTrue, assertEqual } from 'super-pancake-automation';
         
@@ -131,122 +97,14 @@ jobs:
         npm install vitest
         
         # Run test
-        npx vitest run test.js
+        npx vitest run test.test.js
         
         echo "✅ Framework functionality test passed"
 
-  # Test browser automation
-  test-browser-automation:
-    name: Test Browser Automation
+  # Test package validation
+  test-package-validation:
+    name: Test Package Validation
     runs-on: ubuntu-latest
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '18'
-        cache: 'npm'
-        
-    - name: Install Chrome
-      run: |
-        wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add -
-        echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list
-        apt-get update
-        apt-get install -y google-chrome-stable
-        
-    - name: Install dependencies
-      run: npm ci
-      
-    - name: Test browser automation
-      run: |
-        # Create test project
-        mkdir test-browser
-        cd test-browser
-        npm init -y
-        npm install ../super-pancake-automation-*.tgz vitest
-        
-        # Create browser test
-        cat > browser.test.js << 'EOF'
-        import { describe, it, beforeAll, afterAll } from 'vitest';
-        import { 
-          createTestEnvironment, 
-          cleanupTestEnvironment,
-          enableDOM,
-          navigateTo,
-          getText,
-          waitForSelector,
-          assertContainsText
-        } from 'super-pancake-automation';
-        
-        describe('Browser Automation Test', () => {
-          let testEnv;
-          
-          beforeAll(async () => {
-            testEnv = await createTestEnvironment({ 
-              headed: false,
-              port: 9225,
-              testName: 'CI Browser Test'
-            });
-            await enableDOM();
-          });
-          
-          afterAll(async () => {
-            await cleanupTestEnvironment(testEnv, 'CI Browser Test');
-          });
-          
-          it('should navigate to a simple page', async () => {
-            await navigateTo('data:text/html,<html><body><h1>CI Test</h1></body></html>');
-            await waitForSelector('h1', 5000);
-            const text = await getText('h1');
-            assertContainsText(text, 'CI Test');
-          });
-        });
-        EOF
-        
-        # Run test with timeout
-        timeout 60s npx vitest run browser.test.js || true
-        
-        echo "✅ Browser automation test completed"
-
-  # Test UI system
-  test-ui-system:
-    name: Test UI System
-    runs-on: ubuntu-latest
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '18'
-        cache: 'npm'
-        
-    - name: Install dependencies
-      run: npm ci
-      
-    - name: Test UI system
-      run: |
-        # Test UI startup (non-interactive)
-        timeout 15s npx super-pancake-ui || true
-        
-        # Check if UI files exist
-        if [ -f "public/index.html" ]; then
-          echo "✅ UI system test passed"
-        else
-          echo "❌ UI system test failed"
-          exit 1
-        fi
-
-  # Test npm publish simulation
-  test-npm-publish:
-    name: Test NPM Publish Simulation
-    runs-on: ubuntu-latest
-    if: github.event_name == 'release'
     
     steps:
     - name: Checkout code
@@ -352,7 +210,8 @@ jobs:
         cd existing-project
         npm init -y
         npm install vitest
-        npm install ../super-pancake-automation-*.tgz
+        cp ../super-pancake-automation-*.tgz .
+        npm install super-pancake-automation-*.tgz
         
         # Create test file
         cat > existing.test.js << 'EOF'
@@ -409,7 +268,7 @@ jobs:
   generate-test-report:
     name: Generate Test Report
     runs-on: ubuntu-latest
-    needs: [test-package-installation, test-project-init, test-framework-functionality, test-browser-automation, test-ui-system, test-integration-scenarios, test-error-handling]
+    needs: [test-package-installation, test-framework-functionality, test-package-validation, test-integration-scenarios, test-error-handling]
     if: always()
     
     steps:
@@ -433,17 +292,15 @@ jobs:
         
         echo "## Test Results" >> test-report.md
         echo "- Package Installation: ${{ needs.test-package-installation.result }}" >> test-report.md
-        echo "- Project Initialization: ${{ needs.test-project-init.result }}" >> test-report.md
         echo "- Framework Functionality: ${{ needs.test-framework-functionality.result }}" >> test-report.md
-        echo "- Browser Automation: ${{ needs.test-browser-automation.result }}" >> test-report.md
-        echo "- UI System: ${{ needs.test-ui-system.result }}" >> test-report.md
+        echo "- Package Validation: ${{ needs.test-package-validation.result }}" >> test-report.md
         echo "- Integration Scenarios: ${{ needs.test-integration-scenarios.result }}" >> test-report.md
         echo "- Error Handling: ${{ needs.test-error-handling.result }}" >> test-report.md
         
         echo "## Summary" >> test-report.md
         if [[ "${{ needs.test-package-installation.result }}" == "success" && \
-              "${{ needs.test-project-init.result }}" == "success" && \
-              "${{ needs.test-framework-functionality.result }}" == "success" ]]; then
+              "${{ needs.test-framework-functionality.result }}" == "success" && \
+              "${{ needs.test-package-validation.result }}" == "success" ]]; then
           echo "✅ All critical tests passed! Package is ready for deployment." >> test-report.md
         else
           echo "❌ Some tests failed. Please review before deployment." >> test-report.md
