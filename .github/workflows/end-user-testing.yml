@@ -69,6 +69,11 @@ jobs:
     - name: Install dependencies
       run: npm install
       
+    - name: Build and package
+      run: |
+        npm run build
+        npm pack
+        
     - name: Test basic functionality
       run: |
         # Create test project
@@ -155,6 +160,11 @@ jobs:
     - name: Install dependencies
       run: npm install
       
+    - name: Build and package
+      run: |
+        npm run build
+        npm pack
+        
     - name: Test basic functionality
       run: |
         # Test CLI
@@ -164,7 +174,8 @@ jobs:
         mkdir test-cross
         cd test-cross
         npm init -y
-        npm install ../super-pancake-automation-*.tgz
+        cp ../super-pancake-automation-*.tgz .
+        npm install super-pancake-automation-*.tgz
         
         echo "✅ Cross-platform test passed on ${{ matrix.os }}"
 
@@ -185,6 +196,11 @@ jobs:
     - name: Install dependencies
       run: npm install
       
+    - name: Build and package
+      run: |
+        npm run build
+        npm pack
+        
     - name: Test integration scenarios
       run: |
         # Scenario 1: New user workflow
@@ -192,7 +208,8 @@ jobs:
         mkdir new-user-test
         cd new-user-test
         npm init -y
-        npm install ../super-pancake-automation-*.tgz
+        cp ../super-pancake-automation-*.tgz .
+        npm install super-pancake-automation-*.tgz
         
         # Test help and version
         npx super-pancake --help
