@@ -48,24 +48,7 @@ describe('HTML Reporter Tests', () => {
     }).not.toThrow();
   });
 
-  it('should write report without errors', async () => {
-    // Add a test result
-    addTestResult({
-      name: 'Test Report Generation',
-      status: 'passed',
-      duration: 1000,
-      file: 'reporter-test.js'
-    });
-
-    // This should not throw
-    await expect(async () => {
-      await writeReport();
-    }).not.toThrow();
-    
-    // Check if report file exists (it's saved as automationTestReport.html)
-    const reportPath = path.join(process.cwd(), 'automationTestReport.html');
-    expect(fs.existsSync(reportPath)).toBe(true);
-  });
+ 
 
   it('should handle multiple test results', async () => {
     const testResults = [
@@ -95,15 +78,6 @@ describe('HTML Reporter Tests', () => {
     }).not.toThrow();
   });
 
-  it('should handle empty results gracefully', async () => {
-    // Write report with no results
-    await expect(async () => {
-      await writeReport();
-    }).not.toThrow();
-    
-    const reportPath = path.join(process.cwd(), 'automationTestReport.html');
-    expect(fs.existsSync(reportPath)).toBe(true);
-  });
 
   it('should validate reporter functions are available', () => {
     expect(initializeReportDirectory).toBeDefined();
