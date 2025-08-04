@@ -21,33 +21,52 @@ function showHelp() {
   console.log(`
 🥞 Super Pancake Framework v${getVersion()}
 
-Usage:
-  npx super-pancake [command] [options]
+USAGE PATTERNS:
+
+1. CREATE NEW PROJECT (Recommended):
+   npx super-pancake-automation init <project-name>
+   cd <project-name>
+   npm test
+
+2. INTERACTIVE SETUP:
+   npx super-pancake-automation setup
+
+3. QUICK UI INTERFACE:
+   npx super-pancake-automation-ui
+
+4. DIRECT USAGE IN EXISTING PROJECTS:
+   npm install super-pancake-automation
+   # Then import in your test files
 
 Commands:
-  init <project>    Create new project
-  setup             Interactive project setup
+  init <project>    Create new project with templates
+  setup             Interactive project setup wizard
+  run [files...]    Run tests (in existing projects)
+  generate <type>   Generate test templates
+  check             Health check & diagnostics
   browsers          Detect available browsers
   --version, -v     Show version number
   --help, -h        Show help
-  --url=<url>       Run test with specific URL (legacy)
 
-Main Commands:
-  npx super-pancake-ui        Launch interactive UI
-  npx super-pancake-server    Start test server
-  npx super-pancake-run       Run tests programmatically
-  npx super-pancake-generate  Generate test templates
-
-Project Setup:
-  npx super-pancake init my-project    Create new project (recommended)
-  npx super-pancake setup              Interactive setup wizard
+Standalone Commands:
+  npx super-pancake-automation-ui        Launch interactive web UI
+  npx super-pancake-automation-init      Quick project setup
+  npx super-pancake-automation-setup     Interactive setup wizard
 
 Examples:
-  npx super-pancake init my-project
-  npx super-pancake setup
-  npx super-pancake browsers
-  npx super-pancake --version
-  npx super-pancake-ui
+  # Create new project (recommended for new users)
+  npx super-pancake-automation init my-automation-project
+  cd my-automation-project
+  npm test
+
+  # Interactive setup
+  npx super-pancake-automation setup
+
+  # Quick UI interface
+  npx super-pancake-automation-ui
+
+  # Check system compatibility
+  npx super-pancake-automation browsers
 
 For more information, visit:
 https://github.com/pradapjackie/super-pancake
@@ -109,6 +128,63 @@ https://github.com/pradapjackie/super-pancake
       return;
     } catch (error) {
       console.error('❌ Error running setup command:', error.message);
+      process.exit(1);
+    }
+  }
+
+  // Handle run command
+  if (args[0] === 'run') {
+    try {
+      const testFiles = args.slice(1);
+      const { spawn } = await import('child_process');
+      const runArgs = testFiles.length > 0 ? testFiles : [];
+      const child = spawn('node', [path.join(__dirname, 'super-pancake-run.js'), ...runArgs], {
+        stdio: 'inherit'
+      });
+
+      child.on('exit', (code) => {
+        process.exit(code);
+      });
+      return;
+    } catch (error) {
+      console.error('❌ Error running tests:', error.message);
+      process.exit(1);
+    }
+  }
+
+  // Handle generate command
+  if (args[0] === 'generate') {
+    try {
+      const generateType = args.slice(1);
+      const { spawn } = await import('child_process');
+      const child = spawn('node', [path.join(__dirname, 'generate-test.js'), ...generateType], {
+        stdio: 'inherit'
+      });
+
+      child.on('exit', (code) => {
+        process.exit(code);
+      });
+      return;
+    } catch (error) {
+      console.error('❌ Error generating tests:', error.message);
+      process.exit(1);
+    }
+  }
+
+  // Handle check command
+  if (args[0] === 'check') {
+    try {
+      const { spawn } = await import('child_process');
+      const child = spawn('node', [path.join(__dirname, 'check-install.js')], {
+        stdio: 'inherit'
+      });
+
+      child.on('exit', (code) => {
+        process.exit(code);
+      });
+      return;
+    } catch (error) {
+      console.error('❌ Error running health check:', error.message);
       process.exit(1);
     }
   }

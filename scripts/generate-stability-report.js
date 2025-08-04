@@ -15,7 +15,7 @@ const REPORT_CONFIG = {
   OUTPUT_DIR: path.join(rootDir, 'stability-reports'),
   TIMESTAMP: new Date().toISOString(),
   REPORT_VERSION: '1.0.0',
-  FRAMEWORK_VERSION: '2.6.10'
+  FRAMEWORK_VERSION: '2.10.0'
 };
 
 // Initialize report structure

@@ -4,7 +4,7 @@
 export default {
   // Framework settings
   framework: 'super-pancake',
-  version: '1.0.0',
+  version: '2.10.0',
 
   // Test configuration
   testDir: 'tests',

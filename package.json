@@ -6,16 +6,10 @@
   "type": "module",
   "types": "./index.d.ts",
   "bin": {
-    "super-pancake-automation": "./bin/cli.js",
-    "domtest": "./bin/cli.js",
     "super-pancake": "./bin/cli.js",
     "super-pancake-ui": "./bin/ui-runner.js",
-    "super-pancake-run": "./bin/super-pancake-run.js",
-    "super-pancake-test": "./bin/super-pancake-run-alt.js",
-    "super-pancake-generate": "./bin/generate-test.js",
-    "super-pancake-check": "./bin/check-install.js",
-    "super-pancake-setup": "./bin/setup.js",
-    "super-pancake-init": "./bin/init.js"
+    "super-pancake-init": "./bin/init.js",
+    "super-pancake-setup": "./bin/setup.js"
   },
   "keywords": [
     "automation",
@@ -79,7 +73,11 @@
     "lint:errors-only": "eslint . --quiet",
     "lint:report": "eslint . --format html --output-file eslint-report.html",
     "build": "echo 'No build step required'",
-    "prepare": "npm run build"
+    "prepare": "npm run build",
+    "test:end-user": "node scripts/test-end-user-experience.js",
+    "test:ci-end-user": "npm run build && npm pack && node scripts/test-end-user-experience.js",
+    "test:end-user-sh": "bash scripts/test-end-user.sh",
+    "test:ci-locally": "bash scripts/test-ci-locally.sh"
   },
   "engines": {
     "node": ">=16.0.0",

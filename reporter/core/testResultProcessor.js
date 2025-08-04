@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { getAssertionResults, getAssertionStats } from '../../core/assert.js';
 
 export function generateTestId() {
   return `test_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -97,8 +98,23 @@ export function collectResultFiles() {
   
   scanDirectory(resultsDir);
   
+  // Include individual assertion results (but don't count them as separate tests)
+  const assertionResults = getAssertionResults();
+  const assertionStats = getAssertionStats();
+  
+  // Add individual assertions as metadata to existing test results
+  // but don't create separate test entries for them
+  results.forEach(result => {
+    if (!result.metadata) result.metadata = {};
+    result.metadata.assertionResults = assertionResults.filter(a => 
+      a.timestamp >= result.startTime && a.timestamp <= result.endTime
+    );
+  });
+
   console.log(`📊 Collected ${results.length} test results from ${totalTests} total tests`);
   console.log(`   Actually executed: ${actuallyExecutedTests}`);
+  console.log(`   Individual assertions: ${assertionResults.length} (included as metadata)`);
+  console.log(`   Assertion stats: ${assertionStats.passed}/${assertionStats.total} passed (${assertionStats.passRate}%)`);
   
   return results;
 }

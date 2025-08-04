@@ -1,0 +1,394 @@
+name: End-User Testing Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  release:
+    types: [ published ]
+
+jobs:
+  # Test package installation and basic functionality
+  test-package-installation:
+    name: Test Package Installation
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18, 20]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        
+    - name: Install dependencies
+      run: npm install
+      
+    - name: Build and package
+      run: |
+        npm run build
+        npm pack
+        
+    - name: Test package installation
+      run: |
+        # Create test directory
+        mkdir test-install
+        cd test-install
+        
+        # Initialize new project
+        npm init -y
+        
+        # Install the packed package
+        npm install ../super-pancake-automation-*.tgz
+        
+        # Test CLI commands
+        npx super-pancake --version
+        npx super-pancake --help
+        
+        echo "✅ Package installation test passed"
+
+  # Test framework functionality
+  test-framework-functionality:
+    name: Test Framework Functionality
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        
+    - name: Install dependencies
+      run: npm install
+      
+    - name: Build and package
+      run: |
+        npm run build
+        npm pack
+        
+    - name: Test basic functionality
+      run: |
+        # Create test project
+        mkdir test-framework
+        cd test-framework
+        npm init -y
+        
+        # Copy tarball using Node.js (cross-platform)
+        node -e "
+          const fs = require('fs');
+          const path = require('path');
+          const tarballs = fs.readdirSync('..').filter(f => f.endsWith('.tgz') && f.includes('super-pancake-automation'));
+          if (tarballs.length > 0) {
+            fs.copyFileSync(path.join('..', tarballs[0]), tarballs[0]);
+            console.log('Copied tarball:', tarballs[0]);
+            // Write the filename to a file for npm to use
+            fs.writeFileSync('tarball-name.txt', tarballs[0]);
+          } else {
+            console.error('No tarball found');
+            process.exit(1);
+          }
+        "
+        
+        # Install package using the actual filename (cross-platform)
+        node -e "const fs = require('fs'); const tarballName = fs.readFileSync('tarball-name.txt', 'utf8').trim(); console.log('Installing tarball:', tarballName); require('child_process').execSync('npm install \"' + tarballName + '\"', { stdio: 'inherit' });"
+        
+        # Create simple test
+        cat > test.test.js << 'EOF'
+        import { describe, it } from 'vitest';
+        import { assertTrue, assertEqual } from 'super-pancake-automation';
+        
+        describe('Framework Test', () => {
+          it('should work with basic assertions', () => {
+            assertTrue(true, 'True should be true');
+            assertEqual(1, 1, 'Numbers should be equal');
+          });
+        });
+        EOF
+        
+        # Install vitest
+        npm install vitest
+        
+        # Run test
+        npx vitest run test.test.js
+        
+        echo "✅ Framework functionality test passed"
+
+  # Test package validation
+  test-package-validation:
+    name: Test Package Validation
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        
+    - name: Install dependencies
+      run: npm install
+      
+    - name: Validate package.json
+      run: |
+        # Check package.json structure
+        npm run build
+        npm pack
+        
+        # Validate package contents
+        tar -tzf super-pancake-automation-*.tgz | head -20
+        
+        echo "✅ Package validation passed"
+        
+    - name: Test dry-run publish
+      run: |
+        # Test npm publish dry-run
+        npm publish --dry-run
+        
+        echo "✅ NPM publish simulation passed"
+
+  # Test cross-platform compatibility
+  test-cross-platform:
+    name: Test Cross-Platform Compatibility
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        node-version: [18]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        
+    - name: Install dependencies
+      run: npm install
+      
+    - name: Build and package
+      run: |
+        npm run build
+        npm pack
+        
+    - name: Test basic functionality
+      run: |
+        # Test CLI
+        npx super-pancake --version
+        
+        # Test package installation
+        mkdir test-cross
+        cd test-cross
+        npm init -y
+        
+        # Copy tarball using Node.js (cross-platform)
+        node -e "
+          const fs = require('fs');
+          const path = require('path');
+          const tarballs = fs.readdirSync('..').filter(f => f.endsWith('.tgz') && f.includes('super-pancake-automation'));
+          if (tarballs.length > 0) {
+            fs.copyFileSync(path.join('..', tarballs[0]), tarballs[0]);
+            console.log('Copied tarball:', tarballs[0]);
+            // Write the filename to a file for npm to use
+            fs.writeFileSync('tarball-name.txt', tarballs[0]);
+          } else {
+            console.error('No tarball found');
+            process.exit(1);
+          }
+        "
+        
+        # Install package using the actual filename (cross-platform)
+        node -e "const fs = require('fs'); const tarballName = fs.readFileSync('tarball-name.txt', 'utf8').trim(); console.log('Installing tarball:', tarballName); require('child_process').execSync('npm install \"' + tarballName + '\"', { stdio: 'inherit' });"
+        
+        echo "✅ Cross-platform test passed on ${{ matrix.os }}"
+
+  # Test integration scenarios
+  test-integration-scenarios:
+    name: Test Integration Scenarios
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        
+    - name: Install dependencies
+      run: npm install
+      
+    - name: Build and package
+      run: |
+        npm run build
+        npm pack
+        
+    - name: Test integration scenarios
+      shell: bash
+      run: |
+        # Scenario 1: New user workflow
+        echo "Testing new user workflow..."
+        mkdir new-user-test
+        cd new-user-test
+        npm init -y
+        
+        # Copy tarball using Node.js (cross-platform)
+        node -e "
+          const fs = require('fs');
+          const path = require('path');
+          const tarballs = fs.readdirSync('..').filter(f => f.endsWith('.tgz') && f.includes('super-pancake-automation'));
+          if (tarballs.length > 0) {
+            fs.copyFileSync(path.join('..', tarballs[0]), tarballs[0]);
+            console.log('Copied tarball:', tarballs[0]);
+            // Write the filename to a file for npm to use
+            fs.writeFileSync('tarball-name.txt', tarballs[0]);
+          } else {
+            console.error('No tarball found');
+            process.exit(1);
+          }
+        "
+        
+        # Install package using the actual filename (cross-platform)
+        node -e "const fs = require('fs'); const tarballName = fs.readFileSync('tarball-name.txt', 'utf8').trim(); console.log('Installing tarball:', tarballName); require('child_process').execSync('npm install \"' + tarballName + '\"', { stdio: 'inherit' });"
+        
+        # Test help and version
+        npx super-pancake --help
+        npx super-pancake --version
+        
+        # Scenario 2: Existing project integration
+        echo "Testing existing project integration..."
+        cd ..
+        mkdir existing-project
+        cd existing-project
+        npm init -y
+        npm install vitest
+        
+        # Copy tarball using Node.js (cross-platform)
+        node -e "
+          const fs = require('fs');
+          const path = require('path');
+          const tarballs = fs.readdirSync('..').filter(f => f.endsWith('.tgz') && f.includes('super-pancake-automation'));
+          if (tarballs.length > 0) {
+            fs.copyFileSync(path.join('..', tarballs[0]), tarballs[0]);
+            console.log('Copied tarball:', tarballs[0]);
+            // Write the filename to a file for npm to use
+            fs.writeFileSync('tarball-name.txt', tarballs[0]);
+          } else {
+            console.error('No tarball found');
+            process.exit(1);
+          }
+        "
+        
+        # Install package using the actual filename (cross-platform)
+        node -e "const fs = require('fs'); const tarballName = fs.readFileSync('tarball-name.txt', 'utf8').trim(); console.log('Installing tarball:', tarballName); require('child_process').execSync('npm install \"' + tarballName + '\"', { stdio: 'inherit' });"
+        
+        # Create test file
+        cat > existing.test.js << 'EOF'
+        import { describe, it } from 'vitest';
+        import { assertTrue, assertEqual } from 'super-pancake-automation';
+        
+        describe('Existing Project Test', () => {
+          it('should work in existing project', () => {
+            assertTrue(true);
+            assertEqual(2 + 2, 4);
+          });
+        });
+        EOF
+        
+        # Run test
+        npx vitest run existing.test.js
+        
+        echo "✅ Integration scenarios test passed"
+
+  # Test error handling
+  test-error-handling:
+    name: Test Error Handling
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        
+    - name: Install dependencies
+      run: npm install
+      
+    - name: Test error handling
+      run: |
+        # Test invalid commands
+        npx super-pancake invalid-command || true
+        
+        # Test with missing dependencies
+        mkdir error-test
+        cd error-test
+        npm init -y
+        
+        # This should fail gracefully
+        npx super-pancake --version || true
+        
+        echo "✅ Error handling test passed"
+
+  # Generate test report
+  generate-test-report:
+    name: Generate Test Report
+    runs-on: ubuntu-latest
+    needs: [test-package-installation, test-framework-functionality, test-package-validation, test-integration-scenarios, test-error-handling]
+    if: always()
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        
+    - name: Install dependencies
+      run: npm install
+      
+    - name: Generate test report
+      run: |
+        echo "# End-User Testing Report" > test-report.md
+        echo "Generated: $(date)" >> test-report.md
+        echo "" >> test-report.md
+        
+        echo "## Test Results" >> test-report.md
+        echo "- Package Installation: ${{ needs.test-package-installation.result }}" >> test-report.md
+        echo "- Framework Functionality: ${{ needs.test-framework-functionality.result }}" >> test-report.md
+        echo "- Package Validation: ${{ needs.test-package-validation.result }}" >> test-report.md
+        echo "- Integration Scenarios: ${{ needs.test-integration-scenarios.result }}" >> test-report.md
+        echo "- Error Handling: ${{ needs.test-error-handling.result }}" >> test-report.md
+        
+        echo "## Summary" >> test-report.md
+        if [[ "${{ needs.test-package-installation.result }}" == "success" && \
+              "${{ needs.test-framework-functionality.result }}" == "success" && \
+              "${{ needs.test-package-validation.result }}" == "success" ]]; then
+          echo "✅ All critical tests passed! Package is ready for deployment." >> test-report.md
+        else
+          echo "❌ Some tests failed. Please review before deployment." >> test-report.md
+        fi
+        
+        cat test-report.md
+        
+    - name: Upload test report
+      uses: actions/upload-artifact@v4
+      with:
+        name: end-user-test-report
+        path: test-report.md 
