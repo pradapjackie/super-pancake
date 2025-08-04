@@ -901,10 +901,20 @@ async function executeTests(selected, headless = false, browser = 'chrome') {
       broadcast(`File: ${entry.file}  |  Tests: ${entry.count}\n`);
     });
     broadcast('--------------------------------------------------\n');
-    broadcast(`Total Tests:       ${totalTests}\n`);
+    broadcast(`Total Test Cases:  ${totalTests}\n`);
     broadcast(`✅ Passed:         ${passed}\n`);
     broadcast(`❌ Failed:         ${failed}\n`);
     broadcast(`⚠️ Skipped:        ${skipped}\n`);
+    
+    // Add assertion count information
+    const { getAssertionStats } = await import('../core/assert.js');
+    const assertionStats = getAssertionStats();
+    broadcast('--------------------------------------------------\n');
+    broadcast(`📊 Individual Assertions:\n`);
+    broadcast(`   Total Assertions: ${assertionStats.total}\n`);
+    broadcast(`   ✅ Passed:        ${assertionStats.passed}\n`);
+    broadcast(`   ❌ Failed:        ${assertionStats.failed}\n`);
+    broadcast(`   📈 Pass Rate:     ${assertionStats.passRate}%\n`);
     broadcast('--------------------------------------------------\n');
 
     // Generate HTML report after all tests complete

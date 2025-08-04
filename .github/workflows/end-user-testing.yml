@@ -98,7 +98,9 @@ jobs:
         "
         
         # Install package using the actual filename (cross-platform)
+
         node -e "const fs = require('fs'); const tarballName = fs.readFileSync('tarball-name.txt', 'utf8').trim(); console.log('Installing tarball:', tarballName); require('child_process').execSync('npm install \"' + tarballName + '\"', { stdio: 'inherit' });"
+
         
         # Create simple test
         cat > test.test.js << 'EOF'
@@ -162,7 +164,9 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
+
         os: [ubuntu-latest, macos-latest]
+
         node-version: [18]
     
     steps:
@@ -209,6 +213,7 @@ jobs:
         "
         
         # Install package using the actual filename (cross-platform)
+
         node -e "const fs = require('fs'); const tarballName = fs.readFileSync('tarball-name.txt', 'utf8').trim(); console.log('Installing tarball:', tarballName); require('child_process').execSync('npm install \"' + tarballName + '\"', { stdio: 'inherit' });"
         
         echo "✅ Cross-platform test passed on ${{ matrix.os }}"
@@ -261,6 +266,7 @@ jobs:
         "
         
         # Install package using the actual filename (cross-platform)
+
         node -e "const fs = require('fs'); const tarballName = fs.readFileSync('tarball-name.txt', 'utf8').trim(); console.log('Installing tarball:', tarballName); require('child_process').execSync('npm install \"' + tarballName + '\"', { stdio: 'inherit' });"
         
         # Test help and version

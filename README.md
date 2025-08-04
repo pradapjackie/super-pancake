@@ -8,7 +8,7 @@ A lightweight DOM-based UI automation framework using Chrome DevTools Protocol. 
 
 ```bash
 # Create a new automation project
-npx super-pancake-automation init my-automation-project
+npx super-pancake-automation@latest init my-automation-project
 
 # Navigate to the project
 cd my-automation-project
