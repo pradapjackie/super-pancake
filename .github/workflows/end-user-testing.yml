@@ -89,13 +89,17 @@ jobs:
           if (tarballs.length > 0) {
             fs.copyFileSync(path.join('..', tarballs[0]), tarballs[0]);
             console.log('Copied tarball:', tarballs[0]);
+            // Write the filename to a file for npm to use
+            fs.writeFileSync('tarball-name.txt', tarballs[0]);
           } else {
             console.error('No tarball found');
             process.exit(1);
           }
         "
         
-        npm install super-pancake-automation-*.tgz
+        # Install package using the actual filename
+        TARBALL_NAME=$(cat tarball-name.txt)
+        npm install "$TARBALL_NAME"
         
         # Create simple test
         cat > test.test.js << 'EOF'
@@ -197,14 +201,17 @@ jobs:
           if (tarballs.length > 0) {
             fs.copyFileSync(path.join('..', tarballs[0]), tarballs[0]);
             console.log('Copied tarball:', tarballs[0]);
+            // Write the filename to a file for npm to use
+            fs.writeFileSync('tarball-name.txt', tarballs[0]);
           } else {
             console.error('No tarball found');
             process.exit(1);
           }
         "
         
-        # Install package
-        npm install super-pancake-automation-*.tgz
+        # Install package using the actual filename
+        TARBALL_NAME=$(cat tarball-name.txt)
+        npm install "$TARBALL_NAME"
         
         echo "✅ Cross-platform test passed on ${{ matrix.os }}"
 
@@ -246,13 +253,17 @@ jobs:
           if (tarballs.length > 0) {
             fs.copyFileSync(path.join('..', tarballs[0]), tarballs[0]);
             console.log('Copied tarball:', tarballs[0]);
+            // Write the filename to a file for npm to use
+            fs.writeFileSync('tarball-name.txt', tarballs[0]);
           } else {
             console.error('No tarball found');
             process.exit(1);
           }
         "
         
-        npm install super-pancake-automation-*.tgz
+        # Install package using the actual filename
+        TARBALL_NAME=$(cat tarball-name.txt)
+        npm install "$TARBALL_NAME"
         
         # Test help and version
         npx super-pancake --help
@@ -274,13 +285,17 @@ jobs:
           if (tarballs.length > 0) {
             fs.copyFileSync(path.join('..', tarballs[0]), tarballs[0]);
             console.log('Copied tarball:', tarballs[0]);
+            // Write the filename to a file for npm to use
+            fs.writeFileSync('tarball-name.txt', tarballs[0]);
           } else {
             console.error('No tarball found');
             process.exit(1);
           }
         "
         
-        npm install super-pancake-automation-*.tgz
+        # Install package using the actual filename
+        TARBALL_NAME=$(cat tarball-name.txt)
+        npm install "$TARBALL_NAME"
         
         # Create test file
         cat > existing.test.js << 'EOF'
