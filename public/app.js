@@ -529,8 +529,9 @@ function setupWebSocket() {
         // Execution info and timing (blue)
         else if (message.includes('RUN') || message.includes('Duration') || message.includes('Start at') ||
                 message.includes('Running:') || message.includes('Processing file') ||
-                message.includes('Total Tests:') || message.includes('File:') ||
-                message.includes('Test Summary') || message.includes('JSON report')) {
+                message.includes('Total Test Cases:') || message.includes('Total Assertions:') || 
+                message.includes('File:') || message.includes('Test Summary') || 
+                message.includes('JSON report') || message.includes('Individual Assertions:')) {
             className = 'log-info';
         }
 

@@ -144,14 +144,14 @@ export function clearPreviousResults() {
   }
 }
 
-export function writeReport() {
+export async function writeReport() {
   const reportPath = 'automationTestReport.html';
   const dataPath = 'automationTestData.json';
   
   try {
     // Collect all results
     const resultFiles = collectResultFiles();
-    const testSummary = generateTestSummary(resultFiles);
+    const testSummary = await generateTestSummary(resultFiles);
     
     // Write sanitized test data to external JSON file
     const sanitizedResults = sanitizeResults(resultFiles);
@@ -668,7 +668,7 @@ function collectResultFiles() {
   return results.sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0));
 }
 
-function generateTestSummary(results) {
+async function generateTestSummary(results) {
   const summary = {
     total: results.length,
     passed: 0,
@@ -681,6 +681,16 @@ function generateTestSummary(results) {
     environments: new Set(),
     tags: new Set()
   };
+
+  // Get assertion statistics
+  let assertionStats = { total: 0, passed: 0, failed: 0, passRate: 0 };
+  try {
+    // Use dynamic import for ES modules
+    const assertModule = await import('../core/assert.js');
+    assertionStats = assertModule.getAssertionStats();
+  } catch (error) {
+    console.warn('Could not get assertion stats:', error.message);
+  }
 
   results.forEach(result => {
     // Count status
@@ -720,7 +730,8 @@ function generateTestSummary(results) {
     browsers: Array.from(summary.browsers),
     environments: Array.from(summary.environments),
     tags: Array.from(summary.tags),
-    successRate: summary.total > 0 ? ((summary.passed / summary.total) * 100).toFixed(1) : 0
+    successRate: summary.total > 0 ? ((summary.passed / summary.total) * 100).toFixed(1) : 0,
+    assertionStats: assertionStats
   };
 }
 
@@ -1080,6 +1091,61 @@ function generateModernHTML(summary, results) {
         .summary-card.skipped { border-color: var(--warning); }
         .summary-card.success-rate { border-color: var(--primary); }
         .summary-card.duration { border-color: #ec4899; }
+        .summary-card.assertions { border-color: #8b5cf6; }
+        
+        /* Assertion Details Section */
+        .assertion-details-section {
+            margin-top: 2rem;
+            padding: 1.5rem;
+            background: #f8fafc;
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+        }
+        .assertion-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        .assertion-stat-card {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            background: white;
+            border-radius: var(--radius);
+            border: 2px solid var(--border);
+            transition: all 0.3s ease;
+        }
+        .assertion-stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+        }
+        .assertion-stat-card.passed { border-color: var(--success); }
+        .assertion-stat-card.failed { border-color: var(--danger); }
+        .assertion-stat-card.rate { border-color: var(--primary); }
+        .assertion-stat-card .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--dark);
+        }
+        .assertion-stat-card .stat-label {
+            font-size: 0.875rem;
+            color: #64748b;
+            font-weight: 500;
+        }
+        .assertion-note {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: #fef3c7;
+            border-radius: var(--radius);
+            border-left: 4px solid #f59e0b;
+        }
+        .assertion-note p {
+            margin: 0;
+            color: #92400e;
+            font-size: 0.875rem;
+        }
         
         .card-icon {
             font-size: 2rem; width: 60px; height: 60px; display: flex;
@@ -1853,7 +1919,14 @@ function generateModernHTML(summary, results) {
                         <div class="card-icon"><i class="fas fa-vial"></i></div>
                         <div class="card-content">
                             <h3>${summary.total}</h3>
-                            <p>Total Tests</p>
+                            <p>Test Cases</p>
+                        </div>
+                    </div>
+                    <div class="summary-card assertions">
+                        <div class="card-icon"><i class="fas fa-check-double"></i></div>
+                        <div class="card-content">
+                            <h3>${summary.assertionStats?.total || 0}</h3>
+                            <p>Assertions</p>
                         </div>
                     </div>
                     <div class="summary-card passed">
@@ -1961,6 +2034,48 @@ function generateModernHTML(summary, results) {
                                 <div class="test-files-overview">
                                     ${generateTestFilesStructure(results)}
                                 </div>
+                                
+                                <!-- Assertion Details Section -->
+                                ${summary.assertionStats && summary.assertionStats.total > 0 ? `
+                                <div class="assertion-details-section">
+                                    <div class="section-header">
+                                        <h3><i class="fas fa-check-double"></i> Individual Assertion Details</h3>
+                                    </div>
+                                    <div class="assertion-stats-grid">
+                                        <div class="assertion-stat-card">
+                                            <div class="stat-icon"><i class="fas fa-list-ol"></i></div>
+                                            <div class="stat-content">
+                                                <div class="stat-value">${summary.assertionStats.total}</div>
+                                                <div class="stat-label">Total Assertions</div>
+                                            </div>
+                                        </div>
+                                        <div class="assertion-stat-card passed">
+                                            <div class="stat-icon"><i class="fas fa-check"></i></div>
+                                            <div class="stat-content">
+                                                <div class="stat-value">${summary.assertionStats.passed}</div>
+                                                <div class="stat-label">Passed</div>
+                                            </div>
+                                        </div>
+                                        <div class="assertion-stat-card failed">
+                                            <div class="stat-icon"><i class="fas fa-times"></i></div>
+                                            <div class="stat-content">
+                                                <div class="stat-value">${summary.assertionStats.failed}</div>
+                                                <div class="stat-label">Failed</div>
+                                            </div>
+                                        </div>
+                                        <div class="assertion-stat-card rate">
+                                            <div class="stat-icon"><i class="fas fa-percentage"></i></div>
+                                            <div class="stat-content">
+                                                <div class="stat-value">${summary.assertionStats.passRate}%</div>
+                                                <div class="stat-label">Pass Rate</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="assertion-note">
+                                        <p><i class="fas fa-info-circle"></i> Note: Assertions are individual validation checks within test cases. Each test case may contain multiple assertions.</p>
+                                    </div>
+                                </div>
+                                ` : ''}
                             </div>
                         </div>
                     </div>
