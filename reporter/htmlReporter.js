@@ -144,7 +144,12 @@ export function clearPreviousResults() {
   }
 }
 
-export async function writeReport() {
+export function writeReport() {
+  // Handle both sync and async calls
+  return writeReportAsync();
+}
+
+async function writeReportAsync() {
   const reportPath = 'automationTestReport.html';
   const dataPath = 'automationTestData.json';
   

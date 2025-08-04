@@ -171,7 +171,7 @@ describe('${projectName} - Sample Test Suite', () => {
   afterAll(async () => {
     if (ws) ws.close();
     if (chrome) await chrome.kill();
-    ${config.report.enabled ? 'writeReport();' : ''}
+    ${config.report.enabled ? 'await writeReport();' : ''}
     console.log('\\n🧹 Test complete. Chrome closed.');
   });
 

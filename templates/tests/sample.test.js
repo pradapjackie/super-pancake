@@ -78,7 +78,7 @@ describe(`${projectName} Assertion Validation Tests`, () => {
   afterAll(async () => {
     console.log(`Cleaning up ${projectName} assertion test environment...`);
     await cleanupTestEnvironment(testEnv, `${projectName} Assertion Tests`);
-    writeReport();
+    await writeReport();
     console.log('Assertion validation test report generated');
   });
 

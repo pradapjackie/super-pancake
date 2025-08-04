@@ -176,7 +176,7 @@ describe('Super Pancake NPM Website Tests', () => {
     
     clearSession();
     await cleanupTestEnvironment(testEnv, 'Super Pancake NPM Website Tests');
-    writeReport();
+    await writeReport();
     console.log('📄 UI test report generated');
   });
 

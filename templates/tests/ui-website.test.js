@@ -58,7 +58,7 @@ describe(`${projectName} Professional Profile UI Tests`, () => {
   afterAll(async () => {
     console.log(`🧹 Cleaning up ${projectName} Professional Profile test environment...`);
     await cleanupTestEnvironment(testEnv, `${projectName} Professional Profile Tests`);
-    writeReport();
+    await writeReport();
     console.log('📄 Professional Profile UI test report generated');
   });
 

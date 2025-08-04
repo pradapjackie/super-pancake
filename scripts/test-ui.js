@@ -940,7 +940,7 @@ async function executeTests(selected, headless = false, browser = 'chrome') {
 
       // Import the writeReport function dynamically
       const { writeReport } = await import('../reporter/htmlReporter.js');
-      writeReport();
+      await writeReport();
       broadcast('📊 HTML report generated: automationTestReport.html\n');
     } catch (error) {
       broadcast(`❌ Failed to generate HTML report: ${error.message}\n`);

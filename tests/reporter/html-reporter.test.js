@@ -48,7 +48,7 @@ describe('HTML Reporter Tests', () => {
     }).not.toThrow();
   });
 
-  it('should write report without errors', () => {
+  it('should write report without errors', async () => {
     // Add a test result
     addTestResult({
       name: 'Test Report Generation',
@@ -58,8 +58,8 @@ describe('HTML Reporter Tests', () => {
     });
 
     // This should not throw
-    expect(() => {
-      writeReport();
+    await expect(async () => {
+      await writeReport();
     }).not.toThrow();
     
     // Check if report file exists (it's saved as automationTestReport.html)
@@ -67,7 +67,7 @@ describe('HTML Reporter Tests', () => {
     expect(fs.existsSync(reportPath)).toBe(true);
   });
 
-  it('should handle multiple test results', () => {
+  it('should handle multiple test results', async () => {
     const testResults = [
       { name: 'Test 1', status: 'passed', duration: 1000, file: 'test1.js' },
       { name: 'Test 2', status: 'failed', duration: 800, file: 'test2.js' },
@@ -80,8 +80,8 @@ describe('HTML Reporter Tests', () => {
       }).not.toThrow();
     });
 
-    expect(() => {
-      writeReport();
+    await expect(async () => {
+      await writeReport();
     }).not.toThrow();
   });
 
@@ -95,10 +95,10 @@ describe('HTML Reporter Tests', () => {
     }).not.toThrow();
   });
 
-  it('should handle empty results gracefully', () => {
+  it('should handle empty results gracefully', async () => {
     // Write report with no results
-    expect(() => {
-      writeReport();
+    await expect(async () => {
+      await writeReport();
     }).not.toThrow();
     
     const reportPath = path.join(process.cwd(), 'automationTestReport.html');
@@ -119,7 +119,7 @@ describe('HTML Reporter Tests', () => {
     expect(typeof clearPreviousResults).toBe('function');
   });
 
-  it('should generate report with actual content', () => {
+  it('should generate report with actual content', async () => {
     // Add test results
     addTestResult({
       name: 'Content Test',
@@ -128,7 +128,7 @@ describe('HTML Reporter Tests', () => {
       file: 'content-test.js'
     });
 
-    writeReport();
+    await writeReport();
     
     const reportPath = path.join(process.cwd(), 'automationTestReport.html');
     const reportContent = fs.readFileSync(reportPath, 'utf8');
