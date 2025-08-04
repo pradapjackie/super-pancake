@@ -5,7 +5,7 @@ To become the **fastest, most secure, and developer-friendly** browser automatio
 
 ---
 
-## 📊 Current Status (v1.2.2)
+## 📊 Current Status (v2.10.0)
 - ✅ Core DOM automation with 60+ methods
 - ✅ Chrome DevTools Protocol integration
 - ✅ Security framework with input validation
@@ -298,19 +298,19 @@ To become the **fastest, most secure, and developer-friendly** browser automatio
 
 ### 📦 **Upcoming Releases**
 
-#### v1.3.0 - "Developer Experience" (February 2025)
+#### v2.11.0 - "Developer Experience" (February 2025)
 - Visual Test Builder MVP
 - VSCode extension beta
 - Enhanced documentation site
 - Interactive tutorials
 
-#### v1.4.0 - "Performance" (April 2025)
+#### v2.12.0 - "Performance" (April 2025)
 - Parallel test execution
 - Advanced caching strategies
 - Memory optimization
 - Performance monitoring
 
-#### v2.0.0 - "Enterprise Ready" (July 2025)
+#### v3.0.0 - "Enterprise Ready" (July 2025)
 - Multi-browser support
 - CI/CD integrations
 - Advanced reporting
@@ -325,7 +325,7 @@ To become the **fastest, most secure, and developer-friendly** browser automatio
 
 ---
 
-## 📊 Current Status (v1.2.2)
+## 📊 Current Status (v2.10.0)
 - ✅ Core DOM automation with 60+ methods
 - ✅ Chrome DevTools Protocol integration
 - ✅ Security framework with input validation
@@ -618,19 +618,19 @@ To become the **fastest, most secure, and developer-friendly** browser automatio
 
 ### 📦 **Upcoming Releases**
 
-#### v1.3.0 - "Developer Experience" (February 2025)
+#### v2.11.0 - "Developer Experience" (February 2025)
 - Visual Test Builder MVP
 - VSCode extension beta
 - Enhanced documentation site
 - Interactive tutorials
 
-#### v1.4.0 - "Performance" (April 2025)
+#### v2.12.0 - "Performance" (April 2025)
 - Parallel test execution
 - Advanced caching strategies
 - Memory optimization
 - Performance monitoring
 
-#### v2.0.0 - "Enterprise Ready" (July 2025)
+#### v3.0.0 - "Enterprise Ready" (July 2025)
 - Multi-browser support
 - CI/CD integrations
 - Advanced reporting

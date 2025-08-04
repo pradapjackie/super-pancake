@@ -6,7 +6,7 @@ Super Pancake Automation Framework is built on a **modular, secure, and performa
 
 ---
 
-## 🔧 Current Architecture (v1.2.2)
+## 🔧 Current Architecture (v2.10.0)
 
 ### 📊 **High-Level Architecture**
 

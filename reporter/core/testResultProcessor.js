@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { getAssertionResults, getAssertionStats } from '../../core/assert.js';
 
 export function generateTestId() {
   return `test_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -97,8 +98,47 @@ export function collectResultFiles() {
   
   scanDirectory(resultsDir);
   
+  // Include individual assertion results
+  const assertionResults = getAssertionResults();
+  const assertionStats = getAssertionStats();
+  
+  // Add individual assertions as separate result entries
+  assertionResults.forEach(assertion => {
+    const enhancedAssertion = {
+      testName: `${assertion.type}: ${assertion.message}`,
+      description: assertion.message || `${assertion.type} assertion`,
+      status: assertion.passed ? 'passed' : 'failed',
+      duration: 0,
+      startTime: assertion.timestamp,
+      endTime: assertion.timestamp,
+      browser: 'Chrome',
+      environment: process.env.NODE_ENV === 'test' ? 'Test' : 'Local',
+      tags: [assertion.type, 'assertion'],
+      screenshots: [],
+      logs: [],
+      error: assertion.error,
+      id: assertion.id,
+      timestamp: assertion.timestamp,
+      retryCount: 0,
+      testFilePath: 'individual-assertions',
+      metadata: {
+        framework: 'Super Pancake Automation',
+        version: '2.10.0',
+        nodeVersion: process.version,
+        platform: process.platform,
+        captureTime: Date.now(),
+        assertionType: assertion.type,
+        isIndividualAssertion: true
+      }
+    };
+    
+    results.push(enhancedAssertion);
+  });
+
   console.log(`📊 Collected ${results.length} test results from ${totalTests} total tests`);
   console.log(`   Actually executed: ${actuallyExecutedTests}`);
+  console.log(`   Individual assertions: ${assertionResults.length}`);
+  console.log(`   Assertion stats: ${assertionStats.passed}/${assertionStats.total} passed (${assertionStats.passRate}%)`);
   
   return results;
 }

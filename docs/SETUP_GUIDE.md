@@ -73,7 +73,7 @@ The `super-pancake.config.js` file contains all your settings:
 ```javascript
 module.exports = {
   "framework": "super-pancake",
-  "version": "1.0.0",
+  "version": "2.10.0",
   "testDir": "tests",
   "browser": {
     "name": "chrome",

@@ -7,6 +7,7 @@ import { createSession } from '../core/simple-session.js';
 import { enableDOM } from '../core/simple-dom-v2.js';
 import { setSession, clearSession } from '../core/session-context.js';
 import { getChromeConfig, getTestTimeouts } from './ci-config.js';
+import { clearAssertionResults } from '../core/assert.js';
 
 /**
  * Creates a complete test setup with browser, WebSocket, and session
@@ -27,6 +28,10 @@ export async function createTestEnvironment(options = {}) {
 
   console.log(`🚀 Starting ${testName}...`);
   const timeouts = getTestTimeouts();
+  
+  // Clear any previous assertion results
+  clearAssertionResults();
+  console.log('🧹 Cleared previous assertion results');
 
   try {
     // Launch browser with configuration
