@@ -98,8 +98,12 @@ jobs:
         "
         
         # Install package using the actual filename (cross-platform)
-        TARBALL_NAME=$(node -e "console.log(require('fs').readFileSync('tarball-name.txt', 'utf8').trim())")
-        npm install "$TARBALL_NAME"
+        node -e "
+          const fs = require('fs');
+          const tarballName = fs.readFileSync('tarball-name.txt', 'utf8').trim();
+          console.log('Installing tarball:', tarballName);
+          require('child_process').execSync('npm install \"' + tarballName + '\"', { stdio: 'inherit' });
+        "
         
         # Create simple test
         cat > test.test.js << 'EOF'
@@ -210,8 +214,12 @@ jobs:
         "
         
         # Install package using the actual filename (cross-platform)
-        TARBALL_NAME=$(node -e "console.log(require('fs').readFileSync('tarball-name.txt', 'utf8').trim())")
-        npm install "$TARBALL_NAME"
+        node -e "
+          const fs = require('fs');
+          const tarballName = fs.readFileSync('tarball-name.txt', 'utf8').trim();
+          console.log('Installing tarball:', tarballName);
+          require('child_process').execSync('npm install \"' + tarballName + '\"', { stdio: 'inherit' });
+        "
         
         echo "✅ Cross-platform test passed on ${{ matrix.os }}"
 
@@ -263,8 +271,12 @@ jobs:
         "
         
         # Install package using the actual filename (cross-platform)
-        TARBALL_NAME=$(node -e "console.log(require('fs').readFileSync('tarball-name.txt', 'utf8').trim())")
-        npm install "$TARBALL_NAME"
+        node -e "
+          const fs = require('fs');
+          const tarballName = fs.readFileSync('tarball-name.txt', 'utf8').trim();
+          console.log('Installing tarball:', tarballName);
+          require('child_process').execSync('npm install \"' + tarballName + '\"', { stdio: 'inherit' });
+        "
         
         # Test help and version
         npx super-pancake --help
@@ -295,8 +307,12 @@ jobs:
         "
         
         # Install package using the actual filename (cross-platform)
-        TARBALL_NAME=$(node -e "console.log(require('fs').readFileSync('tarball-name.txt', 'utf8').trim())")
-        npm install "$TARBALL_NAME"
+        node -e "
+          const fs = require('fs');
+          const tarballName = fs.readFileSync('tarball-name.txt', 'utf8').trim();
+          console.log('Installing tarball:', tarballName);
+          require('child_process').execSync('npm install \"' + tarballName + '\"', { stdio: 'inherit' });
+        "
         
         # Create test file
         cat > existing.test.js << 'EOF'
