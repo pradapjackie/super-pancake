@@ -80,7 +80,21 @@ jobs:
         mkdir test-framework
         cd test-framework
         npm init -y
-        cp ../super-pancake-automation-*.tgz .
+        
+        # Copy tarball using Node.js (cross-platform)
+        node -e "
+          const fs = require('fs');
+          const path = require('path');
+          const tarballs = fs.readdirSync('..').filter(f => f.endsWith('.tgz') && f.includes('super-pancake-automation'));
+          if (tarballs.length > 0) {
+            fs.copyFileSync(path.join('..', tarballs[0]), tarballs[0]);
+            console.log('Copied tarball:', tarballs[0]);
+          } else {
+            console.error('No tarball found');
+            process.exit(1);
+          }
+        "
+        
         npm install super-pancake-automation-*.tgz
         
         # Create simple test
@@ -174,7 +188,22 @@ jobs:
         mkdir test-cross
         cd test-cross
         npm init -y
-        cp ../super-pancake-automation-*.tgz .
+        
+        # Copy tarball using Node.js (cross-platform)
+        node -e "
+          const fs = require('fs');
+          const path = require('path');
+          const tarballs = fs.readdirSync('..').filter(f => f.endsWith('.tgz') && f.includes('super-pancake-automation'));
+          if (tarballs.length > 0) {
+            fs.copyFileSync(path.join('..', tarballs[0]), tarballs[0]);
+            console.log('Copied tarball:', tarballs[0]);
+          } else {
+            console.error('No tarball found');
+            process.exit(1);
+          }
+        "
+        
+        # Install package
         npm install super-pancake-automation-*.tgz
         
         echo "✅ Cross-platform test passed on ${{ matrix.os }}"
@@ -208,7 +237,21 @@ jobs:
         mkdir new-user-test
         cd new-user-test
         npm init -y
-        cp ../super-pancake-automation-*.tgz .
+        
+        # Copy tarball using Node.js (cross-platform)
+        node -e "
+          const fs = require('fs');
+          const path = require('path');
+          const tarballs = fs.readdirSync('..').filter(f => f.endsWith('.tgz') && f.includes('super-pancake-automation'));
+          if (tarballs.length > 0) {
+            fs.copyFileSync(path.join('..', tarballs[0]), tarballs[0]);
+            console.log('Copied tarball:', tarballs[0]);
+          } else {
+            console.error('No tarball found');
+            process.exit(1);
+          }
+        "
+        
         npm install super-pancake-automation-*.tgz
         
         # Test help and version
@@ -222,7 +265,21 @@ jobs:
         cd existing-project
         npm init -y
         npm install vitest
-        cp ../super-pancake-automation-*.tgz .
+        
+        # Copy tarball using Node.js (cross-platform)
+        node -e "
+          const fs = require('fs');
+          const path = require('path');
+          const tarballs = fs.readdirSync('..').filter(f => f.endsWith('.tgz') && f.includes('super-pancake-automation'));
+          if (tarballs.length > 0) {
+            fs.copyFileSync(path.join('..', tarballs[0]), tarballs[0]);
+            console.log('Copied tarball:', tarballs[0]);
+          } else {
+            console.error('No tarball found');
+            process.exit(1);
+          }
+        "
+        
         npm install super-pancake-automation-*.tgz
         
         # Create test file
